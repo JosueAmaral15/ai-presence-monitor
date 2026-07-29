@@ -185,6 +185,13 @@ RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapse
 PHONE_WEBHOOK_URL=
 ```
 
+Se o caminho do audio contiver espacos, coloque somente o caminho entre aspas.
+Por exemplo:
+
+```env
+RED_ALERT_COMMAND=ffplay -nodisp -loop 0 "/caminho/com espacos/alarm.mp3"
+```
+
 Modo telefonia externa:
 
 ```env
