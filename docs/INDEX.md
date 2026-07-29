@@ -3,6 +3,7 @@
 ## Uso
 
 - [Configuracao rapida do `.env`](CONFIGURANDO-ENV.md)
+- [Protocolo de comandos para AI-workers](AI-WORKER-COMMAND-PROTOCOL.md)
 - [Guia completo do ambiente](ENVIRONMENT-GUIDE.md)
 - [Continue integrado para o Codex](CONTINUE-CODEX.md)
 - [Respostas remotas Discord para Codex](RESPOSTAS-REMOTAS-DISCORD-CODEX.md)

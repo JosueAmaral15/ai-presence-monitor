@@ -32,6 +32,7 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
 - [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
+- [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md)
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 
@@ -63,6 +64,21 @@ Se quiser testar sem enviar mensagens reais:
 ```bash
 python3 main.py --dry-run
 ```
+
+## Operacao por AI-worker
+
+O pacote fornece o comando de terminal instalavel `ai-presence`. Para
+disponibiliza-lo no `PATH` do usuario Linux:
+
+```bash
+./scripts/install-user-command.sh
+ai-presence --help
+```
+
+Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md) e
+[docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md).
+O protocolo define inicio, atividade observada, perguntas, continuidade,
+encerramento, codigos de saida e limites da automacao GUI.
 
 Configuracao manual:
 

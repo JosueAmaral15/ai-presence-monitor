@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-29 - Operacao por AI-worker
+
+- Adicionados `AGENTS.md` e protocolo de comandos para outra IA.
+- Documentados ciclo `start`/hooks/`touch`/`finish` e codigos de saida.
+- Adicionado instalador Linux para expor `ai-presence` em `~/.local/bin`.
+- Documentados launcher Windows e limites atuais de systemd/X11.
+- Registrada a decisao de adiar Abstract Factory ate existir um segundo
+  adaptador concreto.
+
 ## 2026-07-29 - v0.4.0
 
 - Integrado o antigo fluxo de `prosseguir_tarefas.py` ao AI Presence Monitor.

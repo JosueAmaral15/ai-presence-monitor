@@ -140,3 +140,22 @@ O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam
 `PYTHONPATH=src` ou uma instalacao editavel. `main.py` e o wrapper de hook
 adicionam `src/` explicitamente somente para preservar os entrypoints locais de
 compatibilidade.
+
+## Fronteira de Plataforma
+
+O entrypoint `ai-presence` e gerado pelo empacotamento Python no Linux e no
+Windows. Alias de shell nao faz parte do contrato porque hooks, subprocessos e
+servicos podem executar sem carregar configuracao interativa do shell.
+
+O nucleo de configuracao, identidade, protocolos e SQLite e independente da
+plataforma. As integracoes externas atuais possuem fronteiras concretas:
+
+- `systemd_service.py`: processo continuo em Linux;
+- `gui_answer.py`: entrada grafica X11 com `xdotool` e `xclip`;
+- `notify.py`: transporte HTTP e comando local.
+
+Uma implementacao Windows deve adicionar interfaces estreitas para gerencia de
+servico e despacho de entrada. A selecao por plataforma pode usar Strategy ou
+Factory quando o segundo adaptador existir. Uma Abstract Factory completa nao
+e introduzida antes disso porque ainda nao ha duas familias concretas de
+objetos com contratos validados.

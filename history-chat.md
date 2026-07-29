@@ -170,3 +170,15 @@ O teste real de clique e Enter nao foi repetido por atuar na GUI. O fluxo foi
 coberto com dispatcher simulado, incluindo preservacao do clipboard,
 revalidacao de alvo, falha sem sincronizacao e regras dos dois protocolos. O
 primeiro uso real deve ser supervisionado visualmente.
+
+Em 2026-07-29, o worker do projeto AmaralAgenda foi iniciado como
+`notebook-josue:codex:project=AmaralAgenda-23813ab6` no Protocolo 2. O servico
+`ai-presence-monitor.service` foi habilitado e iniciado. Um `touch` silencioso
+confirmou a atualizacao do worker sem alerta; como o teste ocorreu depois das
+18:00, o journal confirmou a supressao prevista fora do expediente.
+
+O comando foi exposto em `~/.local/bin/ai-presence`. A documentacao passou a
+incluir um protocolo operacional para AI-workers, um `AGENTS.md`, diferenca
+entre monitor e observer de respostas e limites Linux/Windows. O titulo de uma
+aba GNOME Terminal nao foi tratado como janela X11 independente; a identidade
+operacional usa o caminho do projeto.

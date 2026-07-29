@@ -2,6 +2,23 @@
 
 ## Concluidas
 
+### Task 008 - UX de comandos para AI-workers
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: permitir que outra IA opere o monitor por um comando de terminal
+estavel, com identidade explicita de projeto e protocolo documentado.
+
+**Criterios de aceite**:
+
+- [x] `ai-presence` pode ser exposto no `PATH` sem alias interativo.
+- [x] `AGENTS.md` define regras operacionais e de seguranca.
+- [x] O protocolo documenta `start`, hooks, `touch`, perguntas e `finish`.
+- [x] Monitor, observer de respostas e dispatcher GUI sao diferenciados.
+- [x] A limitacao de titulos de abas do terminal esta documentada.
+- [x] Linux e Windows possuem limites de portabilidade explicitos.
+- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto.
+
 ### Task 007 - Unificacao com o comando de continuidade
 
 **Prioridade**: Alta

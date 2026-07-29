@@ -138,3 +138,29 @@ Protocolo 2 volta a alertar depois dos limites normais.
 Comandos de desenvolvimento usam instalacao editavel ou `PYTHONPATH=src`.
 Wrappers locais explicitam `src/`, e o wheel continua expondo o mesmo namespace
 e os mesmos entrypoints.
+
+## 2026-07-29 - Comando estavel para AI-workers
+
+**Decisao**: usar o console script `ai-presence` como contrato de automacao e
+documentar uma maquina de estados para AI-workers.
+
+**Motivo**:
+
+- aliases dependem de configuracao de shell interativo;
+- hooks, CI, subprocessos e servicos precisam de um caminho executavel estavel;
+- `pip` gera launchers adequados para Linux e Windows;
+- a identidade por projeto e mais confiavel que o titulo visual de uma aba.
+
+**Alternativas consideradas**:
+
+- alias Bash: descartado como contrato principal por nao ser portatil nem
+  carregado de forma consistente;
+- controlar uma aba por seu rotulo: descartado porque uma aba do terminal pode
+  nao ser uma janela X11;
+- Abstract Factory imediata: adiada ate existir um adaptador Windows concreto.
+
+**Consequencia**:
+
+`AGENTS.md` e `docs/AI-WORKER-COMMAND-PROTOCOL.md` definem os comandos. Linux
+usa systemd/X11; Windows pode reutilizar a CLI e o SQLite, mas ainda precisa de
+Task Scheduler e dispatcher GUI nativo para equivalencia operacional.
