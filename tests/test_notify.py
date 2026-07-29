@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+import json
+import unittest
+import urllib.error
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from ai_presence_monitor.notify import NotificationError, Notifier
+
+
+class FakeResponse:
+    def __enter__(self) -> FakeResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return b""
+
+
+class NotifierTransportTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.notifier = Notifier(SimpleNamespace(), dry_run=False)  # type: ignore[arg-type]
+
+    def test_post_json_sends_expected_payload_and_headers(self) -> None:
+        with patch(
+            "ai_presence_monitor.notify.urllib.request.urlopen",
+            return_value=FakeResponse(),
+        ) as urlopen:
+            self.notifier._post_json(
+                "https://example.invalid/webhook",
+                {"message": "teste"},
+                label="teste",
+            )
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.method, "POST")
+        self.assertEqual(json.loads(request.data.decode("utf-8")), {"message": "teste"})
+        self.assertEqual(request.headers["Content-type"], "application/json")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.3.0")
+        self.assertEqual(urlopen.call_args.kwargs["timeout"], 15)
+
+    def test_post_json_wraps_network_error(self) -> None:
+        with patch(
+            "ai_presence_monitor.notify.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("offline"),
+        ):
+            with self.assertRaisesRegex(NotificationError, "teste"):
+                self.notifier._post_json(
+                    "https://example.invalid/webhook",
+                    {"message": "teste"},
+                    label="teste",
+                )
+
+    def test_dry_run_does_not_open_network(self) -> None:
+        notifier = Notifier(SimpleNamespace(), dry_run=True)  # type: ignore[arg-type]
+        with patch("ai_presence_monitor.notify.urllib.request.urlopen") as urlopen:
+            notifier._post_json(
+                "https://example.invalid/webhook",
+                {"message": "teste"},
+                label="teste",
+            )
+
+        urlopen.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

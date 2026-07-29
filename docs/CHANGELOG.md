@@ -1,0 +1,62 @@
+# Changelog
+
+## 2026-07-16
+
+- Criado planejamento da Task 001 para observer de hooks do Codex.
+- Documentadas decisoes, arquitetura, seguranca e rollback antes da implementacao.
+- Implementado `ai_presence_monitor.codex_hook`.
+- Adicionado subcomando `codex-hook`.
+- Adicionado wrapper `hooks/codex_presence_hook.py`.
+- Adicionado exemplo `examples/codex/hooks.json`.
+- Adicionados testes unitarios para parsing, auto-start e registro de atividade.
+- Implementado instalador/desinstalador seguro de hooks do Codex com backup e dry-run.
+- Instalado hook real em `/home/josue/.codex/hooks.json` com 5 eventos configurados.
+- Criado `docs/ENVIRONMENT-GUIDE.md` com explicacao detalhada do `.env`, webhooks, Codex, fluxo interno, protocolos e possibilidades de uso.
+- Atualizado `.env.example` com defaults recomendados para Codex/Protocolo 2 e criado `docs/CONFIGURANDO-ENV.md` com checklist de preenchimento do `.env`.
+- Implementada janela de expediente via `.env` e repeticao configuravel de alertas enquanto o worker continuar atrasado.
+
+## 2026-07-27 - v0.2.0
+
+- Corrigida descoberta de pacotes e validada geracao de wheel.
+- Adicionada resolucao portatil de `.env` e banco relativo ao arquivo.
+- Adicionados escopos de worker `global`, `project`, `session` e
+  `project-session`.
+- Hook passou a usar o Python absoluto com `-m ai_presence_monitor.codex_hook`.
+- Mantida remocao de hooks legados baseados em `codex_presence_hook.py`.
+- Adicionado gerador idempotente de servico systemd de usuario com backup.
+- Menu interativo passou a preservar expediente e repeticao ao regravar `.env`.
+- Criado `docs/PORTABILIDADE.md`.
+- Configuracao local migrada para o diretorio XDG do usuario, mantendo link
+  simbolico no checkout para compatibilidade.
+- Corrigida compatibilidade com Python 3.10 substituindo `datetime.UTC` por
+  `timezone.utc`; a incompatibilidade foi encontrada no teste do wheel em tres
+  versoes do Python.
+- Adicionado `scripts/test-python-matrix.sh` para validar sequencialmente Python
+  3.10, 3.11 e 3.12.
+- Adicionados testes do transporte HTTP e persistencia completa do `.env`
+  gerado pelo menu interativo.
+- Auditoria final: 33 testes em cada uma das tres versoes do Python, lint e
+  tipagem sem erros, 82% de cobertura no nucleo e smoke real do systemd.
+- Cobertura total elevada de 61% para 89%, sem excluir CLI ou menu da medicao.
+- Suite ampliada para 46 testes, aprovada em Python 3.10, 3.11 e 3.12.
+- Adicionado gate permanente de cobertura total em 80% no `pyproject.toml`.
+
+## 2026-07-29 - v0.3.0
+
+- Adicionadas perguntas e respostas correlacionadas pelo Discord.
+- Implementado polling REST com bot, allowlist e resposta direta obrigatoria.
+- Adicionadas tabelas `remote_questions` e `observer_state`.
+- Implementado fallback X11 com `xdotool`, `xclip` e restauracao do clipboard.
+- Entrega exige o mesmo ID e titulo de janela capturados.
+- Adicionados estados `input_emitted` e `delivery_confirmed` pelo hook do Codex.
+- Falhas GUI ficam em `dispatch_failed` sem retry automatico.
+- Adicionados comandos `ask-user`, `observe-replies`, `questions` e
+  `dispatch-answer`.
+- Adicionado gerador de unidade `ai-presence-reply-observer.service`.
+- Menu e `.env.example` atualizados; recurso permanece desativado por padrao.
+- Criado `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`.
+- Suite ampliada para 62 testes, aprovada em Python 3.10, 3.11 e 3.12.
+- Cobertura total validada em 86%; lint, tipagem e scripts aprovados.
+- Wheel 0.3.0 instalado no ambiente dedicado. SHA-256:
+  `220f651cf3c6567f40378c02b6f935f6fdf028db2d36e934420786a387d6ac17`.
+- Migração validada em copia do banco real, sem alterar contagens anteriores.

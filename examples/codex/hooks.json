@@ -1,0 +1,63 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/seu-usuario/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor.codex_hook --env-file /home/seu-usuario/.config/ai-presence-monitor/.env",
+            "timeout": 5,
+            "statusMessage": "Registrando presença do Codex"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/seu-usuario/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor.codex_hook --env-file /home/seu-usuario/.config/ai-presence-monitor/.env",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/seu-usuario/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor.codex_hook --env-file /home/seu-usuario/.config/ai-presence-monitor/.env",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/seu-usuario/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor.codex_hook --env-file /home/seu-usuario/.config/ai-presence-monitor/.env",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/seu-usuario/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor.codex_hook --env-file /home/seu-usuario/.config/ai-presence-monitor/.env",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

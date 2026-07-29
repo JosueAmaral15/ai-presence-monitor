@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.env
+.ai-presence-monitor.env
+presence.db
+*.sqlite
+*.sqlite3
+build/
+dist/
+*.egg-info/
+.coverage

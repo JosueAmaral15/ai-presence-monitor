@@ -1,0 +1,360 @@
+# Respostas Remotas do Discord para o Codex GUI
+
+## Objetivo
+
+Este recurso permite que um AI-worker:
+
+1. publique uma pergunta em um canal dedicado do Discord;
+2. aguarde uma resposta de um usuario autorizado;
+3. correlacione a resposta com a pergunta original;
+4. entregue o texto na janela exata do Codex GUI;
+5. pressione Enter;
+6. aguarde um hook posterior do Codex para confirmar nova atividade.
+
+Esta e uma integracao de fallback. Uma API nativa de entrada por MCP ou App
+Server deve ser preferida quando estiver disponivel, pois controle de GUI pode
+ser afetado por foco, titulo de janela, sessao grafica e mudancas visuais.
+
+## Arquitetura
+
+```text
+AI-worker
+    |
+    | ai-presence ask-user
+    v
+Webhook do canal de perguntas
+    |
+    | mensagem Discord com ID conhecido
+    v
+Usuario autorizado usa "Responder"
+    |
+    | GET /channels/{id}/messages?after=...
+    v
+Observer local -> allowlist + referencia + SQLite
+    |
+    | resposta aceita
+    v
+xdotool + xclip -> janela X11 exata -> texto -> Enter
+    |
+    | proximo evento do hook do mesmo worker
+    v
+delivery_confirmed
+```
+
+O observer usa polling da API REST. Nao abre porta local e nao expoe servidor
+HTTP na Internet.
+
+## Pre-requisitos
+
+- Linux com sessao X11;
+- `xdotool`;
+- `xclip`;
+- bot e webhook do Discord;
+- hook do Codex instalado para confirmar a entrega;
+- observer `observe-replies` em execucao.
+
+Verifique:
+
+```bash
+command -v xdotool
+command -v xclip
+printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
+```
+
+O adaptador desta versao e X11. Wayland nao esta implementado.
+
+## Criar o Bot no Discord
+
+Use somente o [Discord Developer Portal
+oficial](https://discord.com/developers/applications).
+
+1. Clique em **New Application** e crie a aplicacao.
+2. Abra **Bot**.
+3. Em **Token**, use **Reset Token** ou a opcao equivalente para gerar o token.
+4. Guarde o token como senha. Ele sera `DISCORD_BOT_TOKEN`.
+5. Em **Privileged Gateway Intents**, habilite **Message Content Intent**.
+6. Abra **Installation**.
+7. Em **Guild Install**, inclua o escopo `bot`.
+8. Conceda somente `View Channel` e `Read Message History`.
+9. Use o link de instalacao para adicionar o bot ao servidor.
+10. No canal dedicado, confira se overrides nao negam essas permissoes.
+
+O bot nao precisa enviar a pergunta: isso e feito pelo webhook. Portanto
+`Send Messages` nao e necessario para este fluxo.
+
+Referencias oficiais:
+
+- [Bot e token](https://docs.discord.com/developers/quick-start/getting-started)
+- [Get Channel Messages](https://docs.discord.com/developers/resources/message#get-channel-messages)
+- [Message Content Intent](https://docs.discord.com/developers/events/gateway#message-content-intent)
+
+## Criar o Canal e o Webhook
+
+1. Crie um canal de texto dedicado, por exemplo `ai-perguntas`.
+2. Nas configuracoes do canal, abra **Integracoes**.
+3. Crie um webhook e copie a URL.
+4. Essa URL sera `DISCORD_QUESTION_WEBHOOK_URL`.
+
+O programa acrescenta `wait=true` ao webhook. Esse parametro faz o Discord
+retornar a mensagem criada, incluindo o ID usado na correlacao. O payload
+tambem desativa mencoes automaticas com `allowed_mentions`.
+
+Referencia oficial:
+[Execute Webhook](https://docs.discord.com/developers/resources/webhook#execute-webhook).
+
+## Obter IDs do Canal e dos Usuarios
+
+Ative **Configuracoes do Usuario > Avancado > Modo desenvolvedor**. Depois:
+
+- clique com o botao direito no canal e use **Copiar ID do canal**;
+- clique com o botao direito em cada usuario autorizado e use
+  **Copiar ID do usuario**.
+
+Guia oficial:
+[Where can I find IDs?](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID).
+
+## Configurar o `.env`
+
+Comece com o recurso remoto ativo, mas a GUI ainda inativa:
+
+```env
+PRESENCE_REMOTE_QUESTIONS_ENABLED=true
+DISCORD_QUESTION_WEBHOOK_URL=https://discord.com/api/webhooks/...
+DISCORD_BOT_TOKEN=token-secreto-do-bot
+DISCORD_QUESTION_CHANNEL_ID=123456789012345678
+DISCORD_ALLOWED_USER_IDS=111111111111111111
+PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
+PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
+
+PRESENCE_GUI_ANSWER_ENABLED=false
+PRESENCE_CODEX_GUI_WINDOW_TITLE=
+PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
+PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
+PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS=120
+```
+
+Para autorizar mais de um usuario:
+
+```env
+DISCORD_ALLOWED_USER_IDS=111111111111111111,222222222222222222
+```
+
+Nomes de usuario nao sao aceitos. IDs sao estaveis e evitam confusao por
+renomeacao.
+
+## Teste 1: Discord sem Controlar a GUI
+
+Mantenha:
+
+```env
+PRESENCE_GUI_ANSWER_ENABLED=false
+```
+
+Publique:
+
+```bash
+ai-presence ask-user \
+  --worker notebook-josue:codex \
+  --question "Qual opcao devo usar: A ou B?"
+```
+
+No Discord, use **Responder** na mensagem da pergunta. Uma mensagem solta no
+canal e ignorada.
+
+Consulte uma vez:
+
+```bash
+ai-presence observe-replies --once
+ai-presence questions
+```
+
+O estado esperado e `answered`. Nesta fase nenhum mouse, teclado ou Enter e
+executado.
+
+## Identificar a Janela do Codex
+
+Liste janelas candidatas sem mover o mouse:
+
+```bash
+xdotool search --onlyvisible --name 'Codex'
+```
+
+Para um ID retornado:
+
+```bash
+xdotool getwindowname ID_DA_JANELA
+```
+
+Defina uma expressao que encontre exatamente uma janela:
+
+```env
+PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
+```
+
+Se nenhuma janela ou mais de uma janela corresponder, `ask-user` falha antes de
+publicar. Tambem e possivel passar um ID explicitamente:
+
+```bash
+ai-presence ask-user \
+  --worker notebook-josue:codex \
+  --window-id 12345678 \
+  --question "Posso prosseguir?"
+```
+
+Mesmo com ID explicito, o titulo precisa corresponder ao padrao.
+
+## Teste 2: Entrega na GUI
+
+Ative somente depois do Teste 1:
+
+```env
+PRESENCE_GUI_ANSWER_ENABLED=true
+PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
+PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
+PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
+```
+
+Publique uma nova pergunta. A pergunta anterior, criada com GUI inativa, nao
+possui alvo e nao deve ser usada para esse teste.
+
+Quando a resposta autorizada chegar, o programa:
+
+1. revalida o mesmo ID X11;
+2. exige o mesmo titulo capturado;
+3. ativa a janela;
+4. clica em 50% da largura e 90% da altura;
+5. salva a area de transferencia atual;
+6. coloca a resposta no clipboard;
+7. cola com `Ctrl+V`;
+8. pressiona Enter;
+9. restaura o clipboard anterior.
+
+Nao existe o delay padrao de 60 segundos de `prosseguir_tarefas.py`. A latencia
+normal e o intervalo de polling, por padrao ate 5 segundos, mais rede e tempo da
+GUI.
+
+## Executar Continuamente
+
+Em terminal:
+
+```bash
+ai-presence observe-replies
+```
+
+Para gerar uma unidade systemd sem instalar:
+
+```bash
+ai-presence --dry-run install-reply-observer-service
+```
+
+Instalar o arquivo:
+
+```bash
+ai-presence install-reply-observer-service
+systemctl --user daemon-reload
+```
+
+Antes de iniciar com entrega GUI, importe a sessao grafica:
+
+```bash
+systemctl --user import-environment DISPLAY XAUTHORITY XDG_RUNTIME_DIR
+```
+
+Somente depois da configuracao e dos testes:
+
+```bash
+systemctl --user enable --now ai-presence-reply-observer.service
+systemctl --user status ai-presence-reply-observer.service
+journalctl --user -u ai-presence-reply-observer.service -n 100
+```
+
+O instalador gera o arquivo, mas nao habilita nem inicia o servico.
+
+## Uso pelo AI-worker
+
+Quando precisar de uma decisao humana, o AI-worker pode executar:
+
+```bash
+ai-presence ask-user \
+  --worker ID_EXATO_DO_WORKER \
+  --question "A pergunta objetiva ao usuario"
+```
+
+O observer recebe e entrega a resposta. O AI-worker nao deve publicar de novo
+se a primeira tentativa tiver resultado incerto.
+
+Com escopo `project`, o comando pode derivar o worker:
+
+```bash
+ai-presence ask-user \
+  --scope project \
+  --project "$PWD" \
+  --question "Devo alterar tambem a API publica?"
+```
+
+## Estados e Auditoria
+
+`ai-presence questions` mostra:
+
+| Estado | Significado |
+|---|---|
+| `pending` | Pergunta publicada e dentro do prazo. |
+| `publish_failed` | Publicacao falhou. |
+| `answered` | Resposta autorizada persistida. |
+| `input_emitted` | Clipboard, clique e Enter foram executados. |
+| `delivery_confirmed` | Hook posterior do mesmo worker registrou atividade. |
+| `dispatch_failed` | A entrega GUI falhou ou ficou incerta. |
+| `expired` | O prazo terminou antes de uma resposta valida. |
+
+Uma falha GUI nao e reenviada automaticamente. Depois de verificar visualmente
+que o texto nao foi enviado:
+
+```bash
+ai-presence dispatch-answer ID_DA_PERGUNTA
+```
+
+## Seguranca
+
+- Mantenha o canal restrito.
+- Autorize o menor numero possivel de IDs.
+- Trate `DISCORD_BOT_TOKEN` e webhooks como senhas.
+- Nunca publique o `.env`.
+- O texto autorizado vira entrada do Codex e pode mudar o trabalho executado.
+- Conta Discord comprometida dentro da allowlist equivale a controle do prompt.
+- Respostas vazias, anexos sem texto, bots e mensagens sem referencia sao
+  ignorados.
+- O programa nao passa a resposta para shell.
+- A entrega GUI fica desativada por padrao.
+- `--dry-run` nao toca rede, banco ou GUI nos comandos novos.
+
+## Limites
+
+- Apenas Discord esta implementado para respostas nesta versao.
+- Apenas texto e aceito.
+- Mais de 1000 mensagens novas entre ciclos causam falha fechada e exigem
+  intervencao manual; use um canal dedicado e restrito.
+- A confirmacao por hook prova atividade posterior, nao interpretacao correta.
+- Alteracao de titulo, fechamento da janela ou ausencia de X11 causa
+  `dispatch_failed`.
+- O programa nao le a resposta diretamente na memoria interna desta conversa;
+  ele usa o prompt visivel como fallback.
+
+## Rollback
+
+Desative:
+
+```env
+PRESENCE_REMOTE_QUESTIONS_ENABLED=false
+PRESENCE_GUI_ANSWER_ENABLED=false
+```
+
+Depois:
+
+```bash
+systemctl --user disable --now ai-presence-reply-observer.service
+ai-presence uninstall-reply-observer-service
+systemctl --user daemon-reload
+```
+
+Remova o token e o webhook do `.env` se nao forem mais usados. As tabelas novas
+nao afetam os protocolos de presenca.

@@ -1,0 +1,14 @@
+[Unit]
+Description=AI Presence Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/ai-presence-monitor/venv/bin/python -m ai_presence_monitor --env-file %h/.config/ai-presence-monitor/.env monitor
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
