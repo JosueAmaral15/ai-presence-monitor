@@ -112,3 +112,18 @@ O `.env` real continua sem as credenciais novas, os dois recursos continuam
 desativados e a unidade de respostas nao foi instalada. O teste externo real
 depende de criar o bot/canal, preencher a allowlist e autorizar o movimento de
 mouse e o Enter.
+
+O usuario solicitou aplicar integralmente o Protocolo Simplicidade 3, organizar
+o projeto em layout `src/` e unificar o antigo `mouse-control-clicker` com o AI
+Presence Monitor. Foi criada a baseline Git `4f0b71b` e a branch
+`COM-e776b5f7-30fd-43cb-9d44-cd2f6c1cf7d0`.
+
+A auditoria da Task 007 leu a documentacao, o codigo e os testes dos dois
+projetos. O monitor permaneceu com 62 testes aprovados, 86% de cobertura,
+`ruff`, `mypy`, compilacao, `pip check` e integridade SQLite aprovados. Nenhum
+ciclo de importacao foi encontrado. O componente X11 existente foi escolhido
+como base para o comando programado `continue`, evitando incorporar a arvore de
+dependencias PyAutoGUI e a selecao ambigua de janela do projeto antigo.
+
+Esta fase nao alterou `.env`, banco, hooks ou servicos. O plano detalhado e a
+implementacao aguardam aprovacao da fase seguinte.
