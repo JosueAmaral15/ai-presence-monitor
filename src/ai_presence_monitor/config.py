@@ -149,6 +149,9 @@ class AppConfig:
     codex_gui_click_x_ratio: float = 0.5
     codex_gui_click_y_ratio: float = 0.9
     gui_confirmation_timeout_seconds: int = 120
+    continue_message: str = "continue"
+    continue_delay_seconds: int = 60
+    continue_sync_activity: bool = True
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -227,5 +230,11 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         gui_confirmation_timeout_seconds=_env_int(
             "PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS",
             120,
+        ),
+        continue_message=_env_str("PRESENCE_CONTINUE_MESSAGE", "continue"),
+        continue_delay_seconds=_env_int("PRESENCE_CONTINUE_DELAY_SECONDS", 60),
+        continue_sync_activity=_env_bool(
+            "PRESENCE_CONTINUE_SYNC_ACTIVITY",
+            True,
         ),
     )

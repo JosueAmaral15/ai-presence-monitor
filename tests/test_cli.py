@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from ai_presence_monitor.cli import (
     _ask_user,
+    _continue_task,
     _dispatch_answer,
     _identity,
     _install_codex_hook,
@@ -106,6 +107,22 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertEqual(args.command, "start")
         self.assertTrue(args.dry_run)
         self.assertEqual(args.scope, "project-session")
+
+        continue_args = parser.parse_args(
+            [
+                "--dry-run",
+                "continue",
+                "--message",
+                "continue",
+                "--delay",
+                "60",
+                "--window-title",
+                "Codex",
+                "--no-sync-activity",
+            ]
+        )
+        self.assertEqual(continue_args.command, "continue")
+        self.assertFalse(continue_args.sync_activity)
 
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -282,6 +299,26 @@ class CliBehaviorTests(unittest.TestCase):
 
             with redirect_stdout(StringIO()):
                 self.assertEqual(_observe_replies_once(config, dry_run=True), 0)
+
+    def test_continue_cli_dry_run_does_not_use_gui_or_database(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = make_config(root)
+            args = event_args(
+                root,
+                message=None,
+                delay=None,
+                window_id=None,
+                window_title="Codex",
+                sync_activity=None,
+            )
+
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_continue_task(args, config), 0)
+
+            self.assertIn("[dry-run:continue]", output.getvalue())
+            self.assertIn("atraso=60s", output.getvalue())
+            self.assertFalse(config.db_path.exists())
 
     def test_run_codex_hook_reads_stdin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

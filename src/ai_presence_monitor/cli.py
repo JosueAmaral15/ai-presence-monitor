@@ -14,6 +14,7 @@ from .codex_hook_installer import (
     uninstall_codex_hook,
 )
 from .config import AppConfig, load_config
+from .continue_task import ContinueTaskError, execute_continue_task
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
 from .protocols import PROTOCOLS, choose_threshold, format_duration, get_protocol, should_escalate
@@ -311,6 +312,60 @@ def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    try:
+        result = execute_continue_task(
+            config=config,
+            worker_id=worker_id,
+            message=args.message,
+            delay_seconds=args.delay,
+            window_id=args.window_id,
+            title_pattern=args.window_title,
+            sync_activity=args.sync_activity,
+            dry_run=args.dry_run,
+        )
+    except ContinueTaskError as exc:
+        print(f"Falha ao executar continue: {exc}", file=sys.stderr)
+        return 2
+
+    if args.dry_run:
+        sync = (
+            config.continue_sync_activity
+            if args.sync_activity is None
+            else args.sync_activity
+        )
+        print(
+            f"[dry-run:continue] worker={worker_id} "
+            f"atraso={result.delay_seconds}s mensagem={result.message!r} "
+            f"sincronizar_atividade={str(sync).lower()}; "
+            "espera, GUI e banco nao foram acessados."
+        )
+        return 0
+
+    assert result.target is not None
+    print(
+        f"continue: input_emitted janela={result.target.window_id} "
+        f"worker={worker_id}"
+    )
+    if result.activity_synced:
+        print(
+            "continue: atividade sincronizada "
+            f"worker={worker_id} origem=automation:continue"
+        )
+        return 0
+    if result.sync_reason == "disabled":
+        print("continue: sincronizacao de atividade desativada.")
+        return 0
+
+    print(
+        "continue: entrada emitida, mas a atividade nao foi sincronizada; "
+        f"motivo={result.sync_reason}.",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _install_codex_hook(args: argparse.Namespace, config: AppConfig) -> int:
     result = install_codex_hook(
         target_path=args.target,
@@ -429,7 +484,11 @@ def _show_protocols() -> int:
     return 0
 
 
-def _add_identity_args(parser: argparse.ArgumentParser) -> None:
+def _add_identity_args(
+    parser: argparse.ArgumentParser,
+    *,
+    include_task_message: bool = True,
+) -> None:
     parser.add_argument(
         "--worker",
         help="ID exato do worker; quando informado, ignora a derivacao por escopo.",
@@ -448,8 +507,9 @@ def _add_identity_args(parser: argparse.ArgumentParser) -> None:
         help="Diretorio do projeto usado na identidade. Padrao: diretorio atual.",
     )
     parser.add_argument("--session", help="ID de sessao para escopos que usam sessao.")
-    parser.add_argument("--task", help="Nome ou ID da tarefa/algoritmo atual.")
-    parser.add_argument("--message", help="Mensagem descritiva para o registro.")
+    if include_task_message:
+        parser.add_argument("--task", help="Nome ou ID da tarefa/algoritmo atual.")
+        parser.add_argument("--message", help="Mensagem descritiva para o registro.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -535,6 +595,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dispatch_parser.add_argument("question_id", help="ID local da pergunta.")
     dispatch_parser.set_defaults(func=lambda args, config: _dispatch_answer(args, config))
+
+    continue_parser = subparsers.add_parser(
+        "continue-task",
+        aliases=["continue"],
+        help="Agenda e envia uma mensagem de continuidade ao Codex GUI.",
+    )
+    _add_identity_args(continue_parser, include_task_message=False)
+    continue_parser.add_argument(
+        "--message",
+        help="Texto enviado. Padrao: PRESENCE_CONTINUE_MESSAGE ou 'continue'.",
+    )
+    continue_parser.add_argument(
+        "--delay",
+        type=int,
+        help="Atraso em segundos. Padrao: PRESENCE_CONTINUE_DELAY_SECONDS ou 60.",
+    )
+    continue_parser.add_argument(
+        "--window-id",
+        help="ID X11 exato. Se omitido, exige um unico titulo correspondente.",
+    )
+    continue_parser.add_argument(
+        "--window-title",
+        help="Padrao de titulo; sobrescreve PRESENCE_CODEX_GUI_WINDOW_TITLE.",
+    )
+    continue_parser.add_argument(
+        "--sync-activity",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Sincroniza a emissao bem-sucedida com um worker ativo. "
+            "Padrao: PRESENCE_CONTINUE_SYNC_ACTIVITY."
+        ),
+    )
+    continue_parser.set_defaults(
+        func=lambda args, config: _continue_task(args, config)
+    )
 
     hook_parser = subparsers.add_parser(
         "codex-hook",

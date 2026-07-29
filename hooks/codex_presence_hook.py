@@ -3,8 +3,8 @@ from pathlib import Path
 import sys
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+SRC_ROOT = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(SRC_ROOT))
 
 from ai_presence_monitor.codex_hook import main  # noqa: E402
 

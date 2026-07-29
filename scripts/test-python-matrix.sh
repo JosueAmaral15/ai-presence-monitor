@@ -11,8 +11,9 @@ for python_command in python3.10 python3.11 python3.12; do
     fi
 
     echo "==> $python_command"
-    "$python_command" -m compileall -q ai_presence_monitor hooks tests main.py
-    "$python_command" -m unittest discover -s tests -q
+    "$python_command" -m compileall -q src/ai_presence_monitor hooks tests main.py
+    PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}" \
+        "$python_command" -m unittest discover -s tests -q
     tested=$((tested + 1))
 done
 
