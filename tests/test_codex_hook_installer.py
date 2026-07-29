@@ -7,12 +7,20 @@ from pathlib import Path
 
 from ai_presence_monitor.codex_hook_installer import (
     count_presence_hooks,
+    default_hook_script_path,
     install_codex_hook,
     uninstall_codex_hook,
 )
 
 
 class CodexHookInstallerTests(unittest.TestCase):
+    def test_compatibility_hook_path_uses_project_root_with_src_layout(self) -> None:
+        path = default_hook_script_path()
+
+        self.assertEqual(path.name, "codex_presence_hook.py")
+        self.assertTrue(path.is_file())
+        self.assertEqual(path.parent.name, "hooks")
+
     def test_install_creates_presence_hooks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hooks.json"

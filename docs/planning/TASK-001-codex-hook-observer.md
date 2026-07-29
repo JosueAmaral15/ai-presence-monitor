@@ -71,8 +71,8 @@ Escolha tecnica: usar apenas biblioteca padrao Python. Nao adiciona dependencia 
 - `README.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DECISIONS.md`
-- `docs/SECURITY.md`
-- `docs/ROLLBACK.md`
+- `docs/security/SECURITY.md`
+- `docs/rollback/ROLLBACK.md`
 - `docs/CHANGELOG.md`
 - `history-chat.md`
 

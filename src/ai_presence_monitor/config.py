@@ -33,7 +33,10 @@ def resolve_env_path(env_file: str | Path | None = None, cwd: Path | None = None
     if (
         legacy_env.exists()
         and (current_dir / "pyproject.toml").exists()
-        and (current_dir / "ai_presence_monitor").is_dir()
+        and (
+            (current_dir / "src" / "ai_presence_monitor").is_dir()
+            or (current_dir / "ai_presence_monitor").is_dir()
+        )
     ):
         return legacy_env.resolve()
     return (user_config_dir() / ".env").resolve()

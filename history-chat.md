@@ -136,3 +136,19 @@ Agendamento, espera, dry-run, falha e worker inativo nao contam como atividade.
 No Protocolo 1, `last_signal_at` permanece inalterado, de modo que `continue`
 nao substitui o heartbeat publico. Um hook posterior continua sendo a evidencia
 de retomada efetiva do Codex.
+
+A implementacao da Task 007 foi isolada no commit `f8bd9fb`. O pacote foi
+migrado para `src/ai_presence_monitor`, e a CLI passou a oferecer `continue` e
+`continue-task`, tambem disponiveis como opcao 18 do menu. O despacho X11
+captura uma unica janela, aguarda 60 segundos por padrao, revalida o alvo,
+preserva o clipboard e so entao sincroniza um worker ativo.
+
+Um teste comportamental confirmou que, no Protocolo 2, nao ha alerta quatro
+minutos apos a observacao de continuidade, mas o amarelo retorna aos seis
+minutos se nenhum hook ou outra atividade ocorrer. No Protocolo 1,
+`last_signal_at` permanece intacto.
+
+A documentacao foi organizada com indice, guia dedicado de continuidade,
+diretorios de seguranca e rollback, requisitos, arquitetura, decisoes e
+changelog. Foram adicionados gate local e workflow de qualidade. O `.env` real,
+o SQLite, os hooks e os servicos nao foram alterados nesta fase.

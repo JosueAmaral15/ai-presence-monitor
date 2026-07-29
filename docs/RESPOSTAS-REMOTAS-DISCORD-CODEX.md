@@ -229,9 +229,10 @@ Quando a resposta autorizada chegar, o programa:
 8. pressiona Enter;
 9. restaura o clipboard anterior.
 
-Nao existe o delay padrao de 60 segundos de `prosseguir_tarefas.py`. A latencia
-normal e o intervalo de polling, por padrao ate 5 segundos, mais rede e tempo da
-GUI.
+O observer de respostas nao aplica o delay de continuidade. Sua latencia normal
+e o intervalo de polling, por padrao ate 5 segundos, mais rede e tempo da GUI.
+O antigo fluxo de `prosseguir_tarefas.py` foi integrado separadamente como
+`ai-presence continue`; consulte `docs/CONTINUE-CODEX.md`.
 
 ## Executar Continuamente
 

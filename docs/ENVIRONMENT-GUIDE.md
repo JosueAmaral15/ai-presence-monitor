@@ -347,6 +347,26 @@ python3 -m ai_presence_monitor observe-replies
 Consulte o procedimento completo em
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`.
 
+## Automacao Local de Continue
+
+```env
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+```
+
+`PRESENCE_CONTINUE_MESSAGE` define o texto usado quando `--message` nao e
+informado. `PRESENCE_CONTINUE_DELAY_SECONDS` define a espera antes da emissao.
+
+Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, uma emissao GUI bem-sucedida
+registra `observation:automation:continue` para um worker existente e ativo. No
+Protocolo 2, isso atualiza `last_activity_at` e reinicia os limites 5/10/15
+minutos. Sem atividade posterior, os alertas retornam normalmente. No Protocolo
+1, `last_signal_at` nao muda.
+
+Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam o monitor. O
+guia completo esta em `docs/CONTINUE-CODEX.md`.
+
 ## Alerta Vermelho
 
 O alerta vermelho pode apenas mandar mensagem ou escalar para alarme/telefonema.
@@ -627,6 +647,9 @@ PRESENCE_CODEX_GUI_WINDOW_TITLE=
 PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
 PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
 PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS=120
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
 ```
 
 ## O Que o Usuario Pode Fazer
@@ -648,6 +671,8 @@ O usuario pode:
 - restringir respostas por ID de usuario e referencia;
 - manter respostas apenas no SQLite ou entrega-las ao Codex GUI;
 - executar o observer de respostas em terminal ou systemd separado.
+- agendar `continue` na mesma CLI e sincronizar uma emissao bem-sucedida com o
+  relogio de atividade do Protocolo 2.
 
 ## Cuidados
 

@@ -5,30 +5,30 @@
 ### Task 007 - Unificacao com o comando de continuidade
 
 **Prioridade**: Alta
-**Status**: auditoria concluida; aguardando aprovacao do planejamento
+**Status**: implementacao e documentacao concluidas; validacao final em andamento
 **Objetivo**: incorporar ao AI Presence Monitor o envio programado da mensagem
 `continue` para o Codex GUI, eliminar a necessidade de executar o projeto
 `mouse-control-clicker` separadamente e organizar o pacote no layout `src/`.
 
 **Criterios de aceite**:
 
-- [ ] Existe um unico pacote e uma unica CLI para monitoramento e continuidade.
-- [ ] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
-- [ ] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
-- [ ] O envio oferece `--dry-run` e preserva o clipboard.
-- [ ] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
+- [x] Existe um unico pacote e uma unica CLI para monitoramento e continuidade.
+- [x] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
+- [x] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
+- [x] O envio oferece `--dry-run` e preserva o clipboard.
+- [x] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
       observacao auditavel de automacao.
-- [ ] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia
+- [x] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia
       a contagem de inatividade, evitando alerta falso logo apos `continue`.
-- [ ] Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam
+- [x] Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam
       `last_activity_at`.
-- [ ] No Protocolo 1, `continue` nao atualiza `last_signal_at` nem substitui o
+- [x] No Protocolo 1, `continue` nao atualiza `last_signal_at` nem substitui o
       heartbeat publico obrigatorio.
-- [ ] Um hook posterior continua sendo a evidencia de que o Codex retomou
+- [x] Um hook posterior continua sendo a evidencia de que o Codex retomou
       atividade depois da entrada automatizada.
-- [ ] O menu interativo oferece o mesmo recurso.
-- [ ] O pacote usa layout `src/` com importacoes, hooks e scripts corrigidos.
-- [ ] O `.env` e o banco existentes permanecem compativeis e intocados.
+- [x] O menu interativo oferece o mesmo recurso.
+- [x] O pacote usa layout `src/` com importacoes, hooks e scripts corrigidos.
+- [x] O `.env` e o banco existentes permanecem compativeis e intocados.
 - [ ] Testes, cobertura, lint, tipos, wheel e instalacao isolada passam.
 - [ ] A retirada do projeto antigo ocorre somente apos validacao e aprovacao.
 

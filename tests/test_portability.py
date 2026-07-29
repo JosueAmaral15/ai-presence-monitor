@@ -65,6 +65,19 @@ class ConfigPortabilityTests(unittest.TestCase):
                 (config_home / "ai-presence-monitor" / ".env").resolve(),
             )
 
+    def test_checkout_dotenv_is_supported_with_src_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            (cwd / "pyproject.toml").touch()
+            (cwd / "src" / "ai_presence_monitor").mkdir(parents=True)
+            checkout_env = cwd / ".env"
+            checkout_env.touch()
+
+            with patch.dict(os.environ, {}, clear=True):
+                resolved = resolve_env_path(cwd=cwd)
+
+            self.assertEqual(resolved, checkout_env.resolve())
+
     def test_codex_hook_module_entrypoint_processes_stdin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"

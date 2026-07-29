@@ -28,8 +28,10 @@ Alertas:
 
 Guia detalhado do `.env` e dos dados necessarios:
 
+- [docs/INDEX.md](docs/INDEX.md)
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
+- [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 
@@ -147,6 +149,35 @@ ai-presence install-reply-observer-service
 ```
 
 O instalador nao habilita nem inicia a unidade automaticamente.
+
+## Continue Integrado
+
+A versao 0.4.0 incorpora o envio programado de `continue` ao mesmo pacote:
+
+```bash
+ai-presence --dry-run continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title 'Codex'
+
+ai-presence continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title 'Codex'
+```
+
+O atraso padrao e 60 segundos. O alvo deve ser uma unica janela X11 e e
+revalidado depois da espera.
+
+Quando a emissao termina com sucesso e o worker indicado esta `active`, o
+comando registra `observation:automation:continue`. No Protocolo 2 isso atualiza
+`last_activity_at` e reinicia a contagem de inatividade. Se nenhuma atividade
+posterior ocorrer, os alertas de 5/10/15 minutos retornam normalmente.
+
+No Protocolo 1, `last_signal_at` nao e alterado; o heartbeat publico continua
+obrigatorio. Agendamento, `dry-run`, falha GUI e worker inativo nao contam como
+atividade.
+
+Consulte [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) para configuracao,
+execucao em segundo plano, sincronizacao e rollback.
 
 ## Protocolo 1: exemplo
 
@@ -327,6 +358,17 @@ PHONE_WEBHOOK_URL=https://seu-servico-de-telefonia.example/webhook
 Use `--dry-run` para ver os payloads sem chamar Discord/Telegram:
 
 ```bash
-python3 -m ai_presence_monitor --dry-run heartbeat --ai codex --message "teste"
-python3 -m ai_presence_monitor --dry-run monitor --once
+ai-presence --dry-run heartbeat --ai codex --message "teste"
+ai-presence --dry-run monitor --once
+ai-presence --dry-run continue --worker worker-id --window-title 'Codex'
+```
+
+## Desenvolvimento
+
+O codigo do pacote fica em `src/ai_presence_monitor`. Para executar o gate
+local:
+
+```bash
+python3 -m pip install -e '.[dev]'
+./scripts/quality-check.sh
 ```

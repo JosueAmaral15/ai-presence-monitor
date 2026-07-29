@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-07-29 - v0.4.0
+
+- Integrado o antigo fluxo de `prosseguir_tarefas.py` ao AI Presence Monitor.
+- Adicionados comandos `continue` e `continue-task`.
+- Mensagem padrao definida como `continue` e delay padrao como 60 segundos.
+- Extraido despacho textual X11 reutilizavel com alvo exato e clipboard
+  restaurado.
+- Emissao bem-sucedida pode registrar
+  `observation:automation:continue` para worker ativo.
+- Protocolo 2 reinicia `last_activity_at`; Protocolo 1 preserva
+  `last_signal_at`.
+- Falha, cancelamento, `dry-run` e worker inativo nao sincronizam atividade.
+- Adicionada opcao 18 ao menu interativo.
+- Pacote migrado para layout `src/`.
+- Adicionados guia de continuidade, indice documental, gate local e workflow
+  de qualidade.
+- `.env.example` recebeu os campos `PRESENCE_CONTINUE_*`; o `.env` real nao foi
+  alterado.
+
 ## 2026-07-16
 
 - Criado planejamento da Task 001 para observer de hooks do Codex.

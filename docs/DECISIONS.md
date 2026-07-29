@@ -88,3 +88,53 @@ opcional, em processo separado.
 O recurso exige bot, `MESSAGE_CONTENT`, allowlist e canal dedicado. A entrega
 GUI permanece desativada por padrao e o proximo hook do worker confirma a
 atividade posterior.
+
+## 2026-07-29 - Continue integrado com sincronizacao limitada
+
+**Decisao**: integrar o envio de `continue` ao monitor e registrar uma
+observacao somente depois de uma emissao GUI bem-sucedida para um worker ja
+ativo.
+
+**Motivo**:
+
+- executar a automacao sem atualizar o Protocolo 2 pode gerar alerta de
+  inatividade enquanto o Codex recebe a nova entrada;
+- atualizar no agendamento ou antes do Enter registraria atividade que ainda nao
+  ocorreu;
+- auto-start esconderia erro de identidade ou ciclo de tarefa;
+- o Protocolo 1 exige sinal publico e nao pode aceitar a automacao como
+  heartbeat.
+
+**Alternativas consideradas**:
+
+- atualizar `last_activity_at` ao iniciar o delay: descartado por evidenciar uma
+  acao ainda nao emitida;
+- aguardar somente hook posterior: mantido como confirmacao, mas insuficiente
+  para evitar alerta durante o processamento inicial;
+- criar tabela nova: descartado porque `events` e `record_observation` atendem
+  ao requisito sem migracao;
+- incorporar PyAutoGUI: descartado pela arvore de dependencias e pelo fallback
+  global de coordenadas;
+- escolher a primeira janela encontrada: descartado por ambiguidade.
+
+**Consequencia**:
+
+`observation:automation:continue` atualiza `last_activity_at`, preserva
+`last_signal_at` e fica auditavel. Se nenhum hook ou outra atividade ocorrer, o
+Protocolo 2 volta a alertar depois dos limites normais.
+
+## 2026-07-29 - Layout `src/`
+
+**Decisao**: mover o pacote instalavel para `src/ai_presence_monitor`.
+
+**Motivo**:
+
+- separar fonte importavel de artefatos na raiz;
+- testar o pacote em condicoes mais proximas da instalacao;
+- impedir que um diretorio antigo masque falhas de empacotamento.
+
+**Consequencia**:
+
+Comandos de desenvolvimento usam instalacao editavel ou `PYTHONPATH=src`.
+Wrappers locais explicitam `src/`, e o wheel continua expondo o mesmo namespace
+e os mesmos entrypoints.

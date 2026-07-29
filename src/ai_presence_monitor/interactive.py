@@ -229,6 +229,20 @@ def _prompt_int(label: str, default: int) -> int:
         return value
 
 
+def _prompt_nonnegative_int(label: str, default: int) -> int:
+    while True:
+        raw = _prompt_text(label, str(default), required=True, allow_clear=False)
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Digite um numero inteiro.")
+            continue
+        if value < 0:
+            print("Digite zero ou um numero maior.")
+            continue
+        return value
+
+
 def _prompt_ratio(label: str, default: float) -> float:
     while True:
         raw = _prompt_text(label, str(default), required=True, allow_clear=False)
@@ -592,7 +606,7 @@ def configure_env(env_file: Path) -> None:
         allow_clear=False,
     )
     values["PRESENCE_CONTINUE_DELAY_SECONDS"] = str(
-        _prompt_int(
+        _prompt_nonnegative_int(
             "Atraso padrao de continuidade em segundos",
             _coerce_int(current.get("PRESENCE_CONTINUE_DELAY_SECONDS"), 60),
         )
@@ -741,7 +755,7 @@ def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
         required=True,
         allow_clear=False,
     )
-    delay = _prompt_int(
+    delay = _prompt_nonnegative_int(
         "Atraso antes do envio em segundos",
         config.continue_delay_seconds,
     )

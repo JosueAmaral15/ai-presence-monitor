@@ -25,7 +25,7 @@ O usuario pediu para prosseguir apos a implementacao do observer. A proxima etap
 
 - `ai_presence_monitor/cli.py` - novos subcomandos.
 - `ai_presence_monitor/interactive.py` - opcao no menu.
-- `README.md` e `docs/ROLLBACK.md` - uso e reversao.
+- `README.md` e `docs/rollback/ROLLBACK.md` - uso e reversao.
 
 **Arquivos novos**:
 

@@ -2,9 +2,10 @@
 
 ## Visao Geral
 
-O AI Presence Monitor tem quatro blocos:
+O AI Presence Monitor tem cinco blocos:
 
 - **Producers**: CLI manual, menu interativo e observers.
+- **GUI Automation**: entrada X11 local para respostas e continuidade.
 - **Event Store**: SQLite local via `PresenceStore`.
 - **Rule Engine**: protocolos e limiares em `protocols.py`, janela de expediente em `work_window.py` e avaliacao em `cli._check_once`.
 - **Notifiers**: Discord, Telegram e escalonamento vermelho.
@@ -34,8 +35,15 @@ monitor -> protocolos -> notificadores
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.
 - `touch`: atividade silenciosa manual.
 - `observation`: atividade silenciosa automatica de observer.
+- `observation:automation:continue`: entrada de continuidade emitida com
+  sucesso para um worker ja ativo.
 
 No Protocolo 2, o relogio monitorado e `last_activity_at`. Portanto `touch` e `observation` evitam falsos alertas enquanto houver evidencia recente de atividade.
+
+O evento de continuidade concede uma nova janela normal de inatividade, mas nao
+mantem o worker ativo indefinidamente. Um hook posterior continua sendo a
+evidencia de atividade subsequente do Codex. No Protocolo 1, observacoes
+preservam `last_signal_at` e nao substituem heartbeat.
 
 ## Work Window Policy
 
@@ -100,3 +108,35 @@ revalidado.
 
 O polling possui unidade systemd separada. Assim, falha de Discord ou da GUI nao
 interrompe o monitor de atrasos nem o hook passivo.
+
+## Continue Integrado
+
+```text
+CLI/menu -> captura alvo X11 unico -> delay -> revalidacao
+                                           |
+                                           v
+                               clique + clipboard + Enter
+                                           |
+                                           v
+                              input_emitted localmente
+                                           |
+                       worker active? -----+----- nao -> sem sync
+                             |
+                             v
+          observation:automation:continue -> last_activity_at
+                             |
+                             v
+                    hook posterior do Codex
+```
+
+`continue_task.py` coordena o caso de uso. `gui_answer.py` oferece a operacao
+generica de despacho textual, tambem reutilizada por respostas remotas. A
+sincronizacao ocorre depois do despacho; falha ou cancelamento nao alteram o
+SQLite.
+
+## Source Layout
+
+O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam
+`PYTHONPATH=src` ou uma instalacao editavel. `main.py` e o wrapper de hook
+adicionam `src/` explicitamente somente para preservar os entrypoints locais de
+compatibilidade.

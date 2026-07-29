@@ -149,6 +149,24 @@ passo, os testes em duas fases e o rollback estao em
 Ative `PRESENCE_GUI_ANSWER_ENABLED=true` somente depois de confirmar que uma
 resposta autorizada chega ao estado `answered` sem controlar mouse ou teclado.
 
+## Continue Integrado
+
+O envio local de continuidade reutiliza o mesmo titulo e as mesmas proporcoes
+da GUI:
+
+```env
+PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
+PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
+PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+```
+
+Com sincronizacao ativa, somente clique, colagem e Enter bem-sucedidos
+atualizam `last_activity_at` de um worker ja ativo. O Protocolo 1 preserva
+`last_signal_at`. Consulte `docs/CONTINUE-CODEX.md`.
+
 ## Alerta Vermelho
 
 Modo simples, apenas Discord/Telegram:
@@ -200,6 +218,10 @@ Antes de usar em producao local, confira:
 - o bot possui leitura de historico e Message Content Intent;
 - `PRESENCE_GUI_ANSWER_ENABLED=false` durante o primeiro teste;
 - o titulo configurado encontra exatamente uma janela do Codex.
+- `PRESENCE_CONTINUE_MESSAGE` nao esta vazio;
+- `PRESENCE_CONTINUE_DELAY_SECONDS` e zero ou maior;
+- o worker informado ao comando `continue` ja esta ativo, caso a sincronizacao
+  esteja ligada.
 
 ## Comandos de Teste
 
@@ -234,6 +256,14 @@ python3 -m ai_presence_monitor --dry-run ask-user \
   --worker teste:codex \
   --question "Pergunta de teste"
 python3 -m ai_presence_monitor --dry-run observe-replies --once
+```
+
+Testar o fluxo integrado sem espera, GUI ou banco:
+
+```bash
+ai-presence --dry-run continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title Codex
 ```
 
 ## Cuidados

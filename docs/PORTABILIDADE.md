@@ -212,6 +212,19 @@ Nao habilite a unidade antes de concluir os testes do guia
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`. O adaptador GUI desta versao nao e
 portatil para Wayland, Windows ou macOS.
 
+## Continue Integrado
+
+O comando faz parte do mesmo wheel:
+
+```bash
+ai-presence --dry-run continue --window-title Codex
+ai-presence continue --window-title Codex
+```
+
+Ele depende de `xdotool`, `xclip` e X11 no computador que executa a CLI. O
+pacote Python continua sem dependencia externa de runtime. A sincronizacao usa
+o mesmo SQLite e o mesmo escopo de worker do monitor.
+
 ## Verificacao de Release
 
 Quando as versoes estiverem instaladas na maquina:
@@ -227,6 +240,14 @@ O projeto tambem possui gate de cobertura total em 80%:
 
 ```bash
 COVERAGE_CORE=pytrace python3.12 -m coverage erase
-COVERAGE_CORE=pytrace python3.12 -m coverage run -m unittest discover -s tests
+PYTHONPATH=src COVERAGE_CORE=pytrace python3.12 -m coverage run \
+  -m unittest discover -s tests
 COVERAGE_CORE=pytrace python3.12 -m coverage report
+```
+
+O gate completo local e:
+
+```bash
+python3 -m pip install -e '.[dev]'
+./scripts/quality-check.sh
 ```

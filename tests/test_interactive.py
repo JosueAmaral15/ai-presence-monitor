@@ -13,6 +13,7 @@ from ai_presence_monitor.interactive import (
     _prompt_choice,
     _prompt_event_args,
     _prompt_int,
+    _prompt_nonnegative_int,
     _prompt_text,
     _prompt_yes_no,
     _read_env,
@@ -45,6 +46,10 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             StringIO()
         ):
             self.assertEqual(_prompt_int("Numero", 1), 7)
+        with patch("builtins.input", side_effect=["-1", "0"]), redirect_stdout(
+            StringIO()
+        ):
+            self.assertEqual(_prompt_nonnegative_int("Numero", 1), 0)
         with patch("builtins.input", side_effect=["invalid", "b"]), redirect_stdout(
             StringIO()
         ):
@@ -142,6 +147,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             ), patch(
                 "ai_presence_monitor.interactive._prompt_int",
                 side_effect=lambda _label, default: default,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_nonnegative_int",
+                side_effect=lambda _label, default: default,
             ), redirect_stdout(StringIO()):
                 configure_env(env_path)
 
@@ -175,6 +183,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                 side_effect=second_choice,
             ), patch(
                 "ai_presence_monitor.interactive._prompt_int",
+                side_effect=lambda _label, default: default,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_nonnegative_int",
                 side_effect=lambda _label, default: default,
             ), redirect_stdout(StringIO()):
                 configure_env(env_path)
