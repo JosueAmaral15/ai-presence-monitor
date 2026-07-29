@@ -152,3 +152,21 @@ A documentacao foi organizada com indice, guia dedicado de continuidade,
 diretorios de seguranca e rollback, requisitos, arquitetura, decisoes e
 changelog. Foram adicionados gate local e workflow de qualidade. O `.env` real,
 o SQLite, os hooks e os servicos nao foram alterados nesta fase.
+
+Resultado final da Task 007: 74 testes passaram em Python 3.10, 3.11 e 3.12,
+com 86% de cobertura total. Ruff, mypy, compilacao, scripts, links locais,
+wheel, sdist, instalacao limpa e todos os entrypoints passaram. O wheel 0.4.0
+tem SHA-256
+`543477a9218aaff6578aaaade0dd0c5f7b50332633f97a8649719763f4ea9968`.
+
+A copia do SQLite preservou 1 worker, 17 eventos, 0 alertas e as tabelas de
+perguntas vazias, com integridade `ok`. O hash do banco real permaneceu
+`54abee65b1af8a076f1929a8b60479ab50c494fff74bc26eb764ddf6eb8e1f94`.
+O ambiente dedicado foi atualizado para 0.4.0, e os cinco eventos de hook
+passaram em dry-run. `.env`, hooks e servicos nao foram modificados; monitor e
+observer continuaram inativos.
+
+O teste real de clique e Enter nao foi repetido por atuar na GUI. O fluxo foi
+coberto com dispatcher simulado, incluindo preservacao do clipboard,
+revalidacao de alvo, falha sem sincronizacao e regras dos dois protocolos. O
+primeiro uso real deve ser supervisionado visualmente.

@@ -8,6 +8,8 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from test_cli import make_config
+
 from ai_presence_monitor.interactive import (
     ENV_FIELDS,
     _prompt_choice,
@@ -24,8 +26,6 @@ from ai_presence_monitor.interactive import (
     configure_env,
     run_interactive,
 )
-
-from test_cli import make_config
 
 
 class InteractiveEnvironmentTests(unittest.TestCase):

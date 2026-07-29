@@ -19,12 +19,13 @@ from .cli import (
 from .codex_hook_installer import (
     default_user_hooks_path,
     install_codex_hook,
-    print_result as print_hook_install_result,
     uninstall_codex_hook,
+)
+from .codex_hook_installer import (
+    print_result as print_hook_install_result,
 )
 from .config import AppConfig, load_config, resolve_env_path
 from .protocols import PROTOCOLS
-
 
 DEFAULT_ENV_FILE = resolve_env_path()
 

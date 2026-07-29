@@ -271,3 +271,26 @@ A Task 007 so sera concluida quando:
 - hooks e copia do banco forem revalidados;
 - a documentacao explicar limites e falsos positivos;
 - o projeto antigo nao for mais necessario para o fluxo validado.
+
+## 11. Resultado
+
+- 74 testes passaram em Python 3.10, 3.11 e 3.12.
+- Cobertura total: 86%, acima do gate de 80%.
+- `ruff`, `mypy`, compilacao, sintaxe Bash e links locais passaram.
+- Wheel e sdist 0.4.0 foram construidos e inspecionados.
+- SHA-256 do wheel:
+  `543477a9218aaff6578aaaade0dd0c5f7b50332633f97a8649719763f4ea9968`.
+- O wheel foi instalado em ambiente limpo fora do checkout.
+- Todos os entrypoints e `continue --dry-run` passaram.
+- Uma copia do banco preservou 1 worker, 17 eventos, 0 alertas, 0 perguntas e
+  0 estados de observer, com `integrity_check=ok`.
+- O ambiente dedicado foi atualizado de 0.3.0 para 0.4.0.
+- Os cinco tipos de evento do hook passaram em dry-run.
+- O hash do banco real permaneceu
+  `54abee65b1af8a076f1929a8b60479ab50c494fff74bc26eb764ddf6eb8e1f94`.
+- Monitor e observer de respostas permaneceram inativos.
+- O `.env` e o arquivo de hooks nao foram modificados.
+
+O teste real de clique, colagem e Enter nao foi repetido nesta fase, pois atua
+na GUI. O caminho foi coberto por testes de subprocesso simulados e o primeiro
+uso real deve permanecer visualmente supervisionado.

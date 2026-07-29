@@ -5,6 +5,8 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+from test_cli import make_config
+
 from ai_presence_monitor.cli import _check_once
 from ai_presence_monitor.continue_task import (
     ContinueTaskError,
@@ -13,8 +15,6 @@ from ai_presence_monitor.continue_task import (
 )
 from ai_presence_monitor.gui_answer import GuiDispatchError, WindowTarget
 from ai_presence_monitor.store import PresenceStore
-
-from test_cli import make_config
 
 
 class FakeDispatcher:

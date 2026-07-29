@@ -5,6 +5,8 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+from test_cli import make_config
+
 from ai_presence_monitor.discord_questions import (
     DiscordQuestionError,
     PostedDiscordQuestion,
@@ -19,8 +21,6 @@ from ai_presence_monitor.remote_questions import (
     validate_remote_question_config,
 )
 from ai_presence_monitor.store import PresenceStore
-
-from test_cli import make_config
 
 
 class FakeDiscordClient:

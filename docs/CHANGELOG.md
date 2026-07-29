@@ -18,6 +18,11 @@
   de qualidade.
 - `.env.example` recebeu os campos `PRESENCE_CONTINUE_*`; o `.env` real nao foi
   alterado.
+- Suite ampliada para 74 testes, aprovada em Python 3.10, 3.11 e 3.12.
+- Cobertura total validada em 86%; lint, tipagem e build aprovados.
+- Wheel 0.4.0 instalado no ambiente dedicado. SHA-256:
+  `543477a9218aaff6578aaaade0dd0c5f7b50332633f97a8649719763f4ea9968`.
+- Copia do banco e banco real preservados; servicos permaneceram inativos.
 
 ## 2026-07-16
 

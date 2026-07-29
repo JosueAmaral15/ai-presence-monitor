@@ -14,6 +14,14 @@ export PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
 "$python_command" -m coverage report --fail-under=80
 "$python_command" -m ruff check src hooks tests main.py
 "$python_command" -m mypy src/ai_presence_monitor
-"$python_command" -m build
+
+build_workspace="$(mktemp -d)"
+trap 'rm -rf "$build_workspace"' EXIT
+(
+    cd "$build_workspace"
+    PYTHONPATH= "$python_command" -m build \
+        "$project_root" \
+        --outdir "$project_root/dist"
+)
 
 git diff --check

@@ -9,7 +9,6 @@ from .discord_questions import DiscordQuestionClient, DiscordQuestionError
 from .gui_answer import GuiDispatchError, WindowTarget, X11GuiAnswerDispatcher
 from .store import PresenceStore, RemoteQuestion
 
-
 CURSOR_KEY_PREFIX = "discord-question-channel:"
 
 

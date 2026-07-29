@@ -12,7 +12,6 @@ from .identity import scoped_worker_id
 from .protocols import get_protocol
 from .store import PresenceStore, WorkerState
 
-
 EVENT_NAME_KEYS = ("hook_event_name", "hookEventName")
 TOOL_NAME_KEYS = ("tool_name", "toolName", "tool", "name")
 SAFE_METADATA_KEYS = (

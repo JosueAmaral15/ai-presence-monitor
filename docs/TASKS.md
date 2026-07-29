@@ -1,11 +1,11 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento
+## Concluidas
 
 ### Task 007 - Unificacao com o comando de continuidade
 
 **Prioridade**: Alta
-**Status**: implementacao e documentacao concluidas; validacao final em andamento
+**Status**: concluida
 **Objetivo**: incorporar ao AI Presence Monitor o envio programado da mensagem
 `continue` para o Codex GUI, eliminar a necessidade de executar o projeto
 `mouse-control-clicker` separadamente e organizar o pacote no layout `src/`.
@@ -29,10 +29,10 @@
 - [x] O menu interativo oferece o mesmo recurso.
 - [x] O pacote usa layout `src/` com importacoes, hooks e scripts corrigidos.
 - [x] O `.env` e o banco existentes permanecem compativeis e intocados.
-- [ ] Testes, cobertura, lint, tipos, wheel e instalacao isolada passam.
-- [ ] A retirada do projeto antigo ocorre somente apos validacao e aprovacao.
-
-## Concluidas
+- [x] Testes, cobertura, lint, tipos, wheel e instalacao isolada passam.
+- [x] O projeto antigo nao e necessario para executar o fluxo integrado.
+- [x] O projeto antigo permanece intacto; retirada ou arquivamento dependem de
+      aprovacao explicita.
 
 ### Task 006 - Respostas remotas Discord para Codex GUI
 

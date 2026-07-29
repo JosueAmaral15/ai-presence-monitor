@@ -10,14 +10,22 @@ from pathlib import Path
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
-    print_result as print_hook_install_result,
     uninstall_codex_hook,
+)
+from .codex_hook_installer import (
+    print_result as print_hook_install_result,
 )
 from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
-from .protocols import PROTOCOLS, choose_threshold, format_duration, get_protocol, should_escalate
+from .protocols import (
+    PROTOCOLS,
+    choose_threshold,
+    format_duration,
+    get_protocol,
+    should_escalate,
+)
 from .remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
@@ -28,12 +36,13 @@ from .store import PresenceStore, WorkerState
 from .systemd_service import (
     install_reply_observer_service,
     install_user_service,
-    print_result as print_systemd_result,
     uninstall_reply_observer_service,
     uninstall_user_service,
 )
+from .systemd_service import (
+    print_result as print_systemd_result,
+)
 from .work_window import get_work_window_status
-
 
 DEFAULT_EVENT_MESSAGES = {
     "start": "tarefa iniciada",

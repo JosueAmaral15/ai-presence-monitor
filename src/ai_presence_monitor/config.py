@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .identity import normalize_scope
 
-
 APP_DIR_NAME = "ai-presence-monitor"
 PROJECT_ENV_NAME = ".ai-presence-monitor.env"
 
