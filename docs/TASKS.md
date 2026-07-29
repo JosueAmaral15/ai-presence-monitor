@@ -16,6 +16,16 @@
 - [ ] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
 - [ ] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
 - [ ] O envio oferece `--dry-run` e preserva o clipboard.
+- [ ] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
+      observacao auditavel de automacao.
+- [ ] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia
+      a contagem de inatividade, evitando alerta falso logo apos `continue`.
+- [ ] Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam
+      `last_activity_at`.
+- [ ] No Protocolo 1, `continue` nao atualiza `last_signal_at` nem substitui o
+      heartbeat publico obrigatorio.
+- [ ] Um hook posterior continua sendo a evidencia de que o Codex retomou
+      atividade depois da entrada automatizada.
 - [ ] O menu interativo oferece o mesmo recurso.
 - [ ] O pacote usa layout `src/` com importacoes, hooks e scripts corrigidos.
 - [ ] O `.env` e o banco existentes permanecem compativeis e intocados.

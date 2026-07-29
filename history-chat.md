@@ -127,3 +127,12 @@ dependencias PyAutoGUI e a selecao ambigua de janela do projeto antigo.
 
 Esta fase nao alterou `.env`, banco, hooks ou servicos. O plano detalhado e a
 implementacao aguardam aprovacao da fase seguinte.
+
+O usuario aprovou prosseguir pelas fases e acrescentou que a execucao integrada
+de `continue` deve sincronizar a atividade monitorada, principalmente para
+evitar alertas falsos no Protocolo 2. O plano da Task 007 definiu que somente a
+emissao GUI bem-sucedida atualiza `last_activity_at` de um worker ja ativo.
+Agendamento, espera, dry-run, falha e worker inativo nao contam como atividade.
+No Protocolo 1, `last_signal_at` permanece inalterado, de modo que `continue`
+nao substitui o heartbeat publico. Um hook posterior continua sendo a evidencia
+de retomada efetiva do Codex.
