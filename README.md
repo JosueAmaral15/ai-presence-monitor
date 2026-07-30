@@ -362,6 +362,15 @@ RED_NOTIFICATION_MODE=alarm
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
+O processo iniciado e registrado para impedir duplicidade. Para interromper um
+alarme, inclusive um `ffplay -loop 0`:
+
+```bash
+ai-presence stop-alarm
+```
+
+O menu interativo oferece a mesma operacao na opcao 19.
+
 Exemplo de telefonia por webhook externo:
 
 ```env

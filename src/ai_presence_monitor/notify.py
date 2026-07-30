@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-import shlex
-import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import asdict
 from datetime import datetime, timezone
 
 from . import __version__
+from .alarm import AlarmControlError, AlarmController
 from .config import AppConfig
 from .protocols import AlertThreshold, ProtocolSpec, format_duration
 from .store import WorkerState
@@ -19,9 +18,15 @@ class NotificationError(RuntimeError):
 
 
 class Notifier:
-    def __init__(self, config: AppConfig, dry_run: bool = False):
+    def __init__(
+        self,
+        config: AppConfig,
+        dry_run: bool = False,
+        alarm_controller: AlarmController | None = None,
+    ):
         self.config = config
         self.dry_run = dry_run
+        self.alarm_controller = alarm_controller or AlarmController()
 
     def send_point(self, event_type: str, worker: WorkerState, message: str | None) -> None:
         event_titles = {
@@ -125,7 +130,7 @@ class Notifier:
                     "Alerta vermelho configurado como alarm, mas RED_ALERT_COMMAND nao foi definido.",
                 )
                 return
-            self._run_command(self.config.red_alert_command)
+            self._start_alarm(self.config.red_alert_command)
             return
 
         if mode == "phone":
@@ -178,11 +183,24 @@ class Notifier:
         except urllib.error.URLError as exc:
             raise NotificationError(f"Falha ao enviar notificacao para {label}: {exc}") from exc
 
-    def _run_command(self, command: str) -> None:
+    def _start_alarm(self, command: str) -> None:
         if self.dry_run:
             print(f"[dry-run:comando] {command}")
             return
-        subprocess.Popen(shlex.split(command))
+        try:
+            result = self.alarm_controller.start(command)
+        except AlarmControlError as exc:
+            raise NotificationError(str(exc)) from exc
+        if result.status == "already_running":
+            self._dry_or_print(
+                "alarme",
+                f"Alarme ja esta ativo no PID {result.pid}.",
+            )
+            return
+        self._dry_or_print(
+            "alarme",
+            f"Alarme iniciado no PID {result.pid}. Interrompa com: ai-presence stop-alarm",
+        )
 
     def _dry_or_print(self, label: str, message: str) -> None:
         prefix = "dry-run" if self.dry_run else "info"

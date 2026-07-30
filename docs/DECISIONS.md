@@ -164,3 +164,21 @@ documentar uma maquina de estados para AI-workers.
 `AGENTS.md` e `docs/AI-WORKER-COMMAND-PROTOCOL.md` definem os comandos. Linux
 usa systemd/X11; Windows pode reutilizar a CLI e o SQLite, mas ainda precisa de
 Task Scheduler e dispatcher GUI nativo para equivalencia operacional.
+
+## 2026-07-30 - Alarme local controlado por PID
+
+**Decisao**: iniciar o alarme em grupo proprio, persistir identidade minima do
+processo e oferecer `stop-alarm`.
+
+**Motivo**:
+
+- comandos como `ffplay -loop 0` nao terminam sozinhos;
+- `Popen` sem `wait()` pode deixar processo zumbi;
+- buscar e matar qualquer `ffplay` pode interromper audio nao relacionado;
+- alertas repetidos nao devem acumular processos de som.
+
+**Consequencia**:
+
+O estado usa permissao `600` e nao guarda o comando em texto. A parada valida
+PID, fingerprint e token de inicio antes de `SIGTERM`; `SIGKILL` e fallback
+configuravel.

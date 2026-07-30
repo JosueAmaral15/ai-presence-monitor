@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
+from .alarm import AlarmControlError, AlarmController
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
@@ -493,6 +494,29 @@ def _show_protocols() -> int:
     return 0
 
 
+def _stop_alarm(args: argparse.Namespace) -> int:
+    try:
+        result = AlarmController().stop(
+            timeout_seconds=args.timeout,
+            force=not args.no_force,
+            dry_run=args.dry_run,
+        )
+    except AlarmControlError as exc:
+        print(f"Falha ao interromper alarme: {exc}", file=sys.stderr)
+        return 2
+
+    if result.status == "would_stop":
+        print(f"[dry-run:alarme] interromperia PID {result.pid}.")
+    elif result.status == "stopped":
+        mode = "forcado" if result.forced else "normal"
+        print(f"alarme interrompido: pid={result.pid} modo={mode}")
+    elif result.status == "stale_state":
+        print(f"alarme ja estava inativo; estado obsoleto removido: pid={result.pid}")
+    else:
+        print("nenhum alarme controlado esta ativo.")
+    return 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -564,6 +588,23 @@ def build_parser() -> argparse.ArgumentParser:
     monitor_parser.add_argument("--once", action="store_true", help="Executa uma verificacao e sai.")
     monitor_parser.add_argument("--interval", type=int, help="Intervalo do loop em segundos.")
     monitor_parser.set_defaults(func=lambda args, config: _run_monitor(args, config))
+
+    stop_alarm_parser = subparsers.add_parser(
+        "stop-alarm",
+        help="Interrompe o processo de alarme local iniciado pelo monitor.",
+    )
+    stop_alarm_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=3.0,
+        help="Segundos para aguardar SIGTERM antes do fallback. Padrao: 3.",
+    )
+    stop_alarm_parser.add_argument(
+        "--no-force",
+        action="store_true",
+        help="Nao envia SIGKILL se o processo ignorar SIGTERM.",
+    )
+    stop_alarm_parser.set_defaults(func=lambda args, config: _stop_alarm(args))
 
     ask_parser = subparsers.add_parser(
         "ask-user",

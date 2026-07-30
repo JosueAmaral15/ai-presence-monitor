@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-30 - v0.4.1
+
+- Adicionado controlador persistente do processo de alarme local.
+- Adicionado comando `ai-presence stop-alarm` e opcao 19 no menu.
+- Alarmes duplicados sao recusados enquanto o processo registrado estiver
+  ativo.
+- Processo filho passa a ser coletado para evitar estado zumbi.
+- Parada valida PID, fingerprint e token de inicio antes de enviar sinal.
+
 ## 2026-07-29 - Operacao por AI-worker
 
 - Adicionados `AGENTS.md` e protocolo de comandos para outra IA.

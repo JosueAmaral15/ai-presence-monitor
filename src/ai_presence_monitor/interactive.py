@@ -15,6 +15,7 @@ from .cli import (
     _show_protocols,
     _show_questions,
     _show_status,
+    _stop_alarm,
 )
 from .codex_hook_installer import (
     default_user_hooks_path,
@@ -840,6 +841,7 @@ def _menu() -> None:
     print("16. Observar respostas continuamente")
     print("17. Listar perguntas e respostas")
     print("18. Agendar e enviar continue ao Codex")
+    print("19. Interromper alarme local")
     print("0. Sair")
 
 
@@ -894,6 +896,13 @@ def run_interactive(env_file: Path, dry_run: bool = False) -> None:
                 _show_questions(args, _load_current_config(env_file))
             elif option == "18":
                 _continue_task_interactive(env_file, dry_run)
+            elif option == "19":
+                args = argparse.Namespace(
+                    timeout=3.0,
+                    no_force=False,
+                    dry_run=dry_run,
+                )
+                _stop_alarm(args)
             elif option == "0":
                 return
             else:

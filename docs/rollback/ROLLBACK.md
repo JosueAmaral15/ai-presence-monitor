@@ -139,6 +139,12 @@ PRESENCE_CONTINUE_SYNC_ACTIVITY=false
 Tambem e possivel usar `--no-sync-activity` em uma unica execucao. Deixar de
 executar `continue` nao afeta monitor, hooks, respostas remotas ou banco.
 
+Antes de voltar a uma versao sem controle de alarme, interrompa qualquer som:
+
+```bash
+ai-presence stop-alarm
+```
+
 Para voltar ao pacote anterior:
 
 ```bash

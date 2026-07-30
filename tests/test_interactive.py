@@ -231,7 +231,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             env_path = root / ".env"
             env_path.touch()
             config = make_config(root)
-            options = [str(number) for number in range(1, 19)] + ["0"]
+            options = [str(number) for number in range(1, 20)] + ["0"]
 
             with patch(
                 "ai_presence_monitor.interactive._prompt_text",
@@ -267,7 +267,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                 "ai_presence_monitor.interactive._show_questions"
             ) as show_questions, patch(
                 "ai_presence_monitor.interactive._continue_task_interactive"
-            ) as continue_task, redirect_stdout(StringIO()):
+            ) as continue_task, patch(
+                "ai_presence_monitor.interactive._stop_alarm"
+            ) as stop_alarm, redirect_stdout(StringIO()):
                 run_interactive(env_path)
 
             configure.assert_called_once()
@@ -284,6 +286,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             reply_loop.assert_called_once()
             show_questions.assert_called_once()
             continue_task.assert_called_once()
+            stop_alarm.assert_called_once()
 
     def test_parser_uses_explicit_environment_file(self) -> None:
         args = build_parser().parse_args(["--env-file", "/tmp/test.env", "--dry-run"])

@@ -182,3 +182,8 @@ incluir um protocolo operacional para AI-workers, um `AGENTS.md`, diferenca
 entre monitor e observer de respostas e limites Linux/Windows. O titulo de uma
 aba GNOME Terminal nao foi tratado como janela X11 independente; a identidade
 operacional usa o caminho do projeto.
+
+Em 2026-07-30, um alarme `ffplay -loop 0` permaneceu tocando sem comando de
+parada. O processo foi interrompido de forma direcionada. A versao 0.4.1 passou
+a registrar a identidade minima do processo, recusar duplicatas, coletar o
+filho e oferecer `ai-presence stop-alarm` com parada normal e fallback forcado.

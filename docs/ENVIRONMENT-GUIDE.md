@@ -407,6 +407,28 @@ RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapse
 
 Use comandos simples e seguros. Evite comandos destrutivos.
 
+O controle seguro do processo requer Linux com `/proc` nesta versao.
+
+O monitor registra PID, fingerprint do comando e identidade do processo em:
+
+```text
+~/.local/state/ai-presence-monitor/red-alarm.json
+```
+
+O arquivo possui permissao `600` e nao contem o comando em texto. Se um alarme
+ja estiver ativo, um novo processo nao e iniciado. Para interromper:
+
+```bash
+ai-presence stop-alarm
+```
+
+O comando envia `SIGTERM`, aguarda tres segundos e usa `SIGKILL` somente se o
+processo continuar ativo. Use `--no-force` para desativar o fallback:
+
+```bash
+ai-presence stop-alarm --no-force
+```
+
 ### `PHONE_WEBHOOK_URL`
 
 Webhook de telefonia quando `RED_NOTIFICATION_MODE=phone`.

@@ -144,9 +144,14 @@ Estes comandos nao controlam a GUI:
 
 ```bash
 ai-presence status
+ai-presence stop-alarm
 systemctl --user status ai-presence-monitor.service
 journalctl --user -u ai-presence-monitor.service -n 100 --no-pager
 ```
+
+Se houver um alarme audivel, a IA pode executar `ai-presence stop-alarm`
+imediatamente. Essa operacao nao exige autorizacao adicional porque apenas
+interrompe um processo de alarme previamente iniciado pelo monitor.
 
 O monitor e o observer de respostas sao componentes diferentes:
 
@@ -200,4 +205,3 @@ ai-presence-monitor. Use ai-presence com --project apontando para a raiz deste
 projeto. Registre start ao iniciar, confie nos hooks durante o trabalho e
 registre finish somente ao concluir. Nao execute automacao GUI sem autorizacao.
 ```
-

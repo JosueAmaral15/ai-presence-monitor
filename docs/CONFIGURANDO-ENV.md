@@ -192,6 +192,12 @@ Por exemplo:
 RED_ALERT_COMMAND=ffplay -nodisp -loop 0 "/caminho/com espacos/alarm.mp3"
 ```
 
+Quando usar `-loop 0`, interrompa o processo controlado com:
+
+```bash
+ai-presence stop-alarm
+```
+
 Modo telefonia externa:
 
 ```env

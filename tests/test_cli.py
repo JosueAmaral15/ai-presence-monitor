@@ -7,8 +7,10 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.cli import (
     _ask_user,
     _continue_task,
@@ -25,6 +27,7 @@ from ai_presence_monitor.cli import (
     _show_protocols,
     _show_questions,
     _show_status,
+    _stop_alarm,
     _timestamp,
     _uninstall_codex_hook,
     _uninstall_reply_observer_service,
@@ -123,6 +126,13 @@ class CliBehaviorTests(unittest.TestCase):
         )
         self.assertEqual(continue_args.command, "continue")
         self.assertFalse(continue_args.sync_activity)
+
+        stop_alarm_args = parser.parse_args(
+            ["--dry-run", "stop-alarm", "--timeout", "1", "--no-force"]
+        )
+        self.assertEqual(stop_alarm_args.command, "stop-alarm")
+        self.assertEqual(stop_alarm_args.timeout, 1)
+        self.assertTrue(stop_alarm_args.no_force)
 
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -319,6 +329,44 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertIn("[dry-run:continue]", output.getvalue())
             self.assertIn("atraso=60s", output.getvalue())
             self.assertFalse(config.db_path.exists())
+
+    def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
+        args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
+        outcomes = (
+            ("stopped", "alarme interrompido"),
+            ("stale_state", "estado obsoleto removido"),
+            ("not_running", "nenhum alarme controlado"),
+        )
+        for status, expected in outcomes:
+            with self.subTest(status=status), patch(
+                "ai_presence_monitor.cli.AlarmController.stop",
+                return_value=SimpleNamespace(
+                    status=status,
+                    pid=123 if status != "not_running" else None,
+                    forced=False,
+                ),
+            ), redirect_stdout(StringIO()) as output:
+                self.assertEqual(_stop_alarm(args), 0)
+                self.assertIn(expected, output.getvalue())
+
+        args.dry_run = True
+        with patch(
+            "ai_presence_monitor.cli.AlarmController.stop",
+            return_value=SimpleNamespace(
+                status="would_stop",
+                pid=123,
+                forced=False,
+            ),
+        ), redirect_stdout(StringIO()) as output:
+            self.assertEqual(_stop_alarm(args), 0)
+        self.assertIn("interromperia PID 123", output.getvalue())
+
+        with patch(
+            "ai_presence_monitor.cli.AlarmController.stop",
+            side_effect=AlarmControlError("falha"),
+        ), redirect_stderr(StringIO()) as error:
+            self.assertEqual(_stop_alarm(args), 2)
+        self.assertIn("falha", error.getvalue())
 
     def test_run_codex_hook_reads_stdin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

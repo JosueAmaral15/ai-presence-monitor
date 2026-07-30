@@ -2,6 +2,22 @@
 
 ## Concluidas
 
+### Task 009 - Interrupcao segura do alarme
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir alarmes locais interminaveis sem controle e processos
+zumbis.
+
+**Criterios de aceite**:
+
+- [x] O processo do alarme e identificado sem armazenar o comando em texto.
+- [x] Um alarme ativo impede o inicio de duplicata.
+- [x] `stop-alarm` oferece parada normal e fallback forcado.
+- [x] PID reutilizado ou estado obsoleto nao sinaliza processo incorreto.
+- [x] O processo filho e coletado com `wait()`.
+- [x] CLI, menu, documentacao e testes cobrem a interrupcao.
+
 ### Task 008 - UX de comandos para AI-workers
 
 **Prioridade**: Alta

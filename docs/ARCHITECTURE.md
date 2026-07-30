@@ -159,3 +159,17 @@ servico e despacho de entrada. A selecao por plataforma pode usar Strategy ou
 Factory quando o segundo adaptador existir. Uma Abstract Factory completa nao
 e introduzida antes disso porque ainda nao ha duas familias concretas de
 objetos com contratos validados.
+
+## Controle do Alarme Local
+
+`alarm.py` inicia o comando vermelho em uma nova sessao de processo e persiste
+somente PID, fingerprint e token de inicio. Antes de iniciar outro alarme, o
+controlador confirma que o processo registrado ainda e o mesmo.
+
+Nesta versao, a verificacao segura de identidade do processo depende do
+`/proc` do Linux. Em outra plataforma, o disparo controlado e recusado antes de
+iniciar o comando.
+
+Uma thread chama `wait()` para coletar corretamente o filho e remover o estado
+quando o som termina. `stop-alarm` revalida PID, fingerprint e token antes de
+sinalizar o grupo, evitando encerrar um processo reutilizado por engano.

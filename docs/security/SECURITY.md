@@ -41,6 +41,8 @@
 - [x] Fora do expediente, `suppress_alerts` evita novos alertas quando a janela esta ativa.
 - [x] Repeticao do vermelho reenviara a mensagem, mas nao dispara novamente `RED_ALERT_COMMAND` ou `PHONE_WEBHOOK_URL`.
 - [x] Comandos locais continuam restritos ao valor explicito de `RED_ALERT_COMMAND` no `.env`.
+- [x] Estado do alarme nao armazena o comando em texto e usa permissao `600`.
+- [x] `stop-alarm` valida PID, fingerprint e inicio antes de sinalizar.
 
 ## Task 004 - Portabilidade
 

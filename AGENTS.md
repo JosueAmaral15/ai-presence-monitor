@@ -26,4 +26,4 @@ Operational rules:
    processed it. A later hook is the confirmation signal.
 8. Check command exit status. Report failures instead of silently retrying GUI
    input.
-
+9. If the local alarm is audible, run `ai-presence stop-alarm` immediately.
