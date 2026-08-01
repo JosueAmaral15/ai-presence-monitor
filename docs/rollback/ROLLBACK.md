@@ -71,6 +71,11 @@ Se quiser manter repeticao, mas cobrar em qualquer horario:
 PRESENCE_WORK_WINDOW_ENABLED=false
 ```
 
+Desde a versao 0.4.2, vermelho e unico por episodio, independentemente do valor
+de `PRESENCE_ALERT_REPEAT_LEVELS`. Para restaurar o comportamento repetitivo
+antigo, e necessario voltar o pacote para 0.4.1; alterar apenas o `.env` nao
+reativa repeticoes vermelhas.
+
 ## Task 004 - Portabilidade e isolamento
 
 Voltar temporariamente ao worker unico:

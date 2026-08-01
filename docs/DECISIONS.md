@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-08-01 - Vermelho unico por episodio de inatividade
+
+**Decisao**: o alerta vermelho nao participa da repeticao periodica. Depois do
+primeiro vermelho, Discord, Telegram e escalada externa permanecem silenciosos
+ate uma atividade valida rearmar o worker.
+
+**Motivo**:
+
+- repeticao a cada cinco minutos gera ruido sem acrescentar informacao;
+- o primeiro vermelho ja comunica a severidade maxima;
+- atividade real separa um episodio antigo de uma nova inatividade.
+
+**Alternativas consideradas**:
+
+- aumentar apenas o intervalo do vermelho: descartado porque ainda repetiria;
+- controlar somente alarme/telefonia: descartado porque Discord e Telegram
+  continuariam ruidosos;
+- adicionar coluna ao SQLite: desnecessario, pois atividade ja limpa
+  `last_alert_level` e `last_alert_at`.
+
+**Consequencia**:
+
+Amarelo e laranja continuam configuraveis. Configuracoes antigas que listem
+`red` permanecem legiveis, mas o motor ignora esse nivel para repeticao.
+
 ## 2026-07-16 - Observer passivo para hooks do Codex
 
 **Decisao**: implementar hooks do Codex como observer passivo que grava atividade no SQLite, sem enviar notificacoes diretamente.

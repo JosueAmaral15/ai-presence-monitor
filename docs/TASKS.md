@@ -2,6 +2,21 @@
 
 ## Concluidas
 
+### Task 010 - Alerta vermelho unico por episodio
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir mensagens vermelhas repetitivas durante o mesmo periodo
+continuo de inatividade e rearma-las somente apos atividade valida.
+
+**Criterios de aceite**:
+
+- [x] Primeiro vermelho e enviado normalmente.
+- [x] Verificacoes seguintes permanecem silenciosas no mesmo episodio.
+- [x] Nova atividade rearma o alerta vermelho.
+- [x] Repeticao configuravel de amarelo e laranja continua funcionando.
+- [x] Documentacao e testes refletem a politica.
+
 ### Task 009 - Interrupcao segura do alarme
 
 **Prioridade**: Critica
@@ -118,13 +133,15 @@ entregar a resposta na janela exata do Codex GUI como fallback opcional.
 
 **Prioridade**: Alta  
 **Status**: concluida  
-**Objetivo**: permitir que o monitor cobre presenca apenas durante um intervalo de expediente e repita alertas enquanto o worker continuar atrasado.
+**Objetivo**: permitir que o monitor cobre presenca apenas durante um intervalo
+de expediente e repita alertas amarelos/laranjas enquanto o worker continuar
+atrasado.
 
 **Criterios de aceite**:
 
 - [x] `.env` aceita janela de expediente com inicio, fim e timezone.
 - [x] Monitor suprime alertas fora do expediente quando configurado.
-- [x] Monitor pode repetir o mesmo nivel de alerta por intervalo configurado.
+- [x] Monitor pode repetir amarelo e laranja por intervalo configurado.
 - [x] SQLite guarda `last_alert_at` para controlar repeticao.
 - [x] Documentacao explica configuracao e comportamento.
 - [x] Testes cobrem janela comum, janela noturna, supressao e repeticao.

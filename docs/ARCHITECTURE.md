@@ -59,7 +59,12 @@ work_window.py -> dentro do expediente?
 protocolos -> thresholds -> repeticao/escalada -> notificadores
 ```
 
-Com `PRESENCE_WORK_WINDOW_ENABLED=true`, o monitor pode suprimir alertas fora do horario configurado. Dentro do expediente, `PRESENCE_ALERT_REPEAT_ENABLED=true` permite reenviar o mesmo nivel de alerta depois de `PRESENCE_ALERT_REPEAT_SECONDS`, enquanto o worker continuar ativo e atrasado.
+Com `PRESENCE_WORK_WINDOW_ENABLED=true`, o monitor pode suprimir alertas fora
+do horario configurado. Dentro do expediente,
+`PRESENCE_ALERT_REPEAT_ENABLED=true` permite reenviar amarelo e laranja depois
+de `PRESENCE_ALERT_REPEAT_SECONDS`, enquanto o worker continuar ativo e
+atrasado. Vermelho e one-shot por episodio de inatividade e so e rearmado por
+atividade valida.
 
 ## CodexHookObserver
 

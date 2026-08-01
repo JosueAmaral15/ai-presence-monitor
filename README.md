@@ -105,7 +105,12 @@ PRESENCE_WORK_WINDOW_END=18:00
 PRESENCE_WORK_WINDOW_TIMEZONE=America/Sao_Paulo
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
+
+Amarelo e laranja podem repetir pelo intervalo configurado. O vermelho e
+enviado somente uma vez por episodio continuo de inatividade e e rearmado por
+uma nova atividade valida da IA.
 
 ## Uso
 
@@ -351,6 +356,10 @@ printf '%s\n' '{"hook_event_name":"PostToolUse","tool_name":"Bash","session_id":
 ## Alerta vermelho com alarme ou telefonema
 
 O Discord e o Telegram enviam mensagens, mas telefonema real exige um provedor externo. O monitor deixa dois caminhos:
+
+O alerta vermelho, incluindo sua mensagem e escalada externa, ocorre uma unica
+vez enquanto a IA permanecer continuamente inativa. `start`, `heartbeat`,
+`touch` ou uma observacao valida do Codex rearma um futuro alerta vermelho.
 
 - `RED_NOTIFICATION_MODE=alarm` executa `RED_ALERT_COMMAND`, por exemplo `paplay` com um som local.
 - `RED_NOTIFICATION_MODE=phone` envia um JSON para `PHONE_WEBHOOK_URL`, que pode apontar para Twilio, Make, Zapier ou n8n.

@@ -187,3 +187,8 @@ Em 2026-07-30, um alarme `ffplay -loop 0` permaneceu tocando sem comando de
 parada. O processo foi interrompido de forma direcionada. A versao 0.4.1 passou
 a registrar a identidade minima do processo, recusar duplicatas, coletar o
 filho e oferecer `ai-presence stop-alarm` com parada normal e fallback forcado.
+
+Em 2026-08-01, a repeticao de alertas foi refinada: amarelo e laranja podem
+continuar periodicos, mas vermelho passou a ser unico por episodio continuo de
+inatividade. `start`, `heartbeat`, `touch` e observacoes validas limpam o estado
+do alerta e rearmam um futuro vermelho.

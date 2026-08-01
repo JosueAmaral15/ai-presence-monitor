@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-01 - v0.4.2
+
+- Alerta vermelho passa a ser enviado uma unica vez por episodio continuo de
+  inatividade.
+- Discord, Telegram, alarme e telefonia deixam de repetir o vermelho.
+- Nova atividade valida rearma um futuro alerta vermelho.
+- Repeticao configuravel permanece disponivel para amarelo e laranja.
+- Configuracoes antigas que listem `red` continuam aceitas, mas o nivel e
+  ignorado para repeticao.
+
 ## 2026-07-30 - v0.4.1
 
 - Adicionado controlador persistente do processo de alarme local.

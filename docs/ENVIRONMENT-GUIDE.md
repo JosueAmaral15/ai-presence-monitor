@@ -227,12 +227,16 @@ Por padrao, o monitor evita repetir o mesmo nivel de alerta indefinidamente. Par
 ```env
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
 
-Com isso, se o worker continuar ativo e atrasado, o mesmo nivel pode ser reenviado a cada 300 segundos. Uma nova atividade (`touch`, `heartbeat`, `start` ou observacao do Codex) limpa o ultimo alerta e reinicia a contagem.
+Com isso, se o worker continuar ativo e atrasado, amarelo e laranja podem ser
+reenviados a cada 300 segundos. Uma nova atividade (`touch`, `heartbeat`,
+`start` ou observacao do Codex) limpa o ultimo alerta e reinicia a contagem.
 
-Para evitar multiplos alarmes locais ou chamadas em cascata, a escalada externa do alerta vermelho (`RED_NOTIFICATION_MODE=alarm` ou `phone`) roda quando o alerta chega ao nivel vermelho. Repeticoes posteriores do vermelho reenviam a mensagem, mas nao disparam novamente o comando local ou webhook de telefonia.
+O vermelho e enviado uma unica vez por episodio continuo de inatividade. Ciclos
+posteriores nao reenviam Discord, Telegram, alarme local nem telefonia. Uma nova
+atividade valida rearma o vermelho para um futuro episodio.
 
 ## Discord
 
@@ -636,7 +640,7 @@ PRESENCE_WORK_WINDOW_TIMEZONE=America/Sao_Paulo
 PRESENCE_OUTSIDE_WORK_WINDOW_BEHAVIOR=suppress_alerts
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 
 DISCORD_POINT_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...

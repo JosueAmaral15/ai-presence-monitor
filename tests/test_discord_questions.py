@@ -51,7 +51,7 @@ class DiscordQuestionClientTests(unittest.TestCase):
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["allowed_mentions"], {"parse": []})
         self.assertIn("@everyone escolha B", payload["content"])
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.4.1")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.4.2")
 
     def test_fetch_messages_uses_bot_authorization_and_orders_snowflakes(self) -> None:
         with patch(

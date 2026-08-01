@@ -379,8 +379,8 @@ def configure_env(env_file: Path) -> None:
         )
     )
     values["PRESENCE_ALERT_REPEAT_LEVELS"] = _prompt_text(
-        "Niveis repetidos separados por virgula",
-        current.get("PRESENCE_ALERT_REPEAT_LEVELS") or "yellow,orange,red",
+        "Niveis repetidos (vermelho nao repete)",
+        current.get("PRESENCE_ALERT_REPEAT_LEVELS") or "yellow,orange",
         required=True,
         allow_clear=False,
     )

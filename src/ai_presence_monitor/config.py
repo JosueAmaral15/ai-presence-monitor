@@ -178,7 +178,7 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         alert_repeat_seconds=_env_int("PRESENCE_ALERT_REPEAT_SECONDS", 300),
         alert_repeat_levels=_env_csv(
             "PRESENCE_ALERT_REPEAT_LEVELS",
-            ("yellow", "orange", "red"),
+            ("yellow", "orange"),
         ),
         discord_point_webhook_url=os.environ.get("DISCORD_POINT_WEBHOOK_URL") or None,
         discord_alert_webhook_url=os.environ.get("DISCORD_ALERT_WEBHOOK_URL") or None,

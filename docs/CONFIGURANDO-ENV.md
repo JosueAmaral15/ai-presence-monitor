@@ -38,7 +38,7 @@ PRESENCE_WORK_WINDOW_TIMEZONE=America/Sao_Paulo
 PRESENCE_OUTSIDE_WORK_WINDOW_BEHAVIOR=suppress_alerts
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 PRESENCE_CODEX_AI_NAME=codex
 PRESENCE_CODEX_PROTOCOL=protocol2
 PRESENCE_CODEX_TASK=
@@ -70,10 +70,13 @@ Para continuar cobrando enquanto o worker estiver atrasado dentro do expediente:
 ```env
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
 
-Isso repete alertas a cada 300 segundos para os niveis configurados, desde que o worker continue ativo e atrasado.
+Isso repete alertas amarelos e laranjas a cada 300 segundos, desde que o worker
+continue ativo e atrasado. O vermelho e sempre unico por episodio continuo de
+inatividade, mesmo se uma configuracao antiga ainda listar `red`. Nova atividade
+valida rearma o vermelho.
 
 Se voce quiser que o monitor alerte em qualquer horario, deixe:
 

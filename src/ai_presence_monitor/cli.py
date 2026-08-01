@@ -70,6 +70,9 @@ def _should_send_alert(worker: WorkerState, threshold_level: str, config: AppCon
     if should_escalate(worker.last_alert_level, threshold_level):
         return True
 
+    if threshold_level == "red" and worker.last_alert_level == "red":
+        return False
+
     if not config.alert_repeat_enabled:
         return False
     if threshold_level not in config.alert_repeat_levels:
