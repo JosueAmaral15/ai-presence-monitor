@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-01 - v0.4.3
+
+- Adicionada duracao maxima obrigatoria para o alarme local.
+- Novo `RED_ALERT_MAX_DURATION_SECONDS`, com padrao de 15 segundos.
+- Comandos em loop sao supervisionados por GNU `timeout` e terminam sozinhos.
+- `stop-alarm`, deduplicacao, identidade do processo e reap permanecem ativos.
+- Duracao invalida ou ausencia de `timeout` falha antes de iniciar o som.
+
 ## 2026-08-01 - v0.4.2
 
 - Alerta vermelho passa a ser enviado uma unica vez por episodio continuo de

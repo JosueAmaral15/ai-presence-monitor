@@ -26,7 +26,13 @@ class Notifier:
     ):
         self.config = config
         self.dry_run = dry_run
-        self.alarm_controller = alarm_controller or AlarmController()
+        self.alarm_controller = alarm_controller or AlarmController(
+            max_duration_seconds=getattr(
+                config,
+                "red_alert_max_duration_seconds",
+                15,
+            )
+        )
 
     def send_point(self, event_type: str, worker: WorkerState, message: str | None) -> None:
         event_titles = {
@@ -199,7 +205,11 @@ class Notifier:
             return
         self._dry_or_print(
             "alarme",
-            f"Alarme iniciado no PID {result.pid}. Interrompa com: ai-presence stop-alarm",
+            (
+                f"Alarme iniciado no PID {result.pid}; encerramento automatico em "
+                f"{getattr(self.alarm_controller, 'max_duration_seconds', 15):g}s. "
+                "Interrompa antes com: ai-presence stop-alarm"
+            ),
         )
 
     def _dry_or_print(self, label: str, message: str) -> None:

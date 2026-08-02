@@ -150,6 +150,10 @@ Antes de voltar a uma versao sem controle de alarme, interrompa qualquer som:
 ai-presence stop-alarm
 ```
 
+Na versao 0.4.3, `RED_ALERT_MAX_DURATION_SECONDS=15` limita automaticamente o
+som. Ao voltar para 0.4.2, esse limite deixa de existir; remova `-loop 0` de
+`RED_ALERT_COMMAND` ou use `stop-alarm` antes do rollback.
+
 Para voltar ao pacote anterior:
 
 ```bash

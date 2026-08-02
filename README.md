@@ -368,11 +368,14 @@ Exemplo de alarme local:
 
 ```env
 RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
-O processo iniciado e registrado para impedir duplicidade. Para interromper um
-alarme, inclusive um `ffplay -loop 0`:
+Cada episodio vermelho inicia o som uma vez, por no maximo 15 segundos. O
+limite e aplicado mesmo a um `ffplay -loop 0`. Ajuste
+`RED_ALERT_MAX_DURATION_SECONDS` para outra duracao positiva. Para interromper
+antes do limite:
 
 ```bash
 ai-presence stop-alarm

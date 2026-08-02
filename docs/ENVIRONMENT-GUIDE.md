@@ -391,6 +391,7 @@ RED_NOTIFICATION_MODE=none
 
 ```env
 RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
@@ -410,6 +411,10 @@ RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapse
 ```
 
 Use comandos simples e seguros. Evite comandos destrutivos.
+
+`RED_ALERT_MAX_DURATION_SECONDS` limita obrigatoriamente a execucao local. O
+padrao e 15 segundos. Mesmo se `RED_ALERT_COMMAND` usar um loop continuo, GNU
+`timeout` encerra o grupo ao atingir esse limite. O valor precisa ser positivo.
 
 O controle seguro do processo requer Linux com `/proc` nesta versao.
 
@@ -650,6 +655,7 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 
 RED_NOTIFICATION_MODE=none
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=
 PHONE_WEBHOOK_URL=
 

@@ -2,6 +2,21 @@
 
 ## Concluidas
 
+### Task 011 - Duracao limitada do alarme vermelho
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: garantir que cada disparo sonoro vermelho termine
+automaticamente, mesmo quando o comando configurado usa loop continuo.
+
+**Criterios de aceite**:
+
+- [x] Existe duracao maxima configuravel com padrao seguro.
+- [x] Comando em loop termina automaticamente.
+- [x] Estado e processo sao limpos depois do limite.
+- [x] Parada manual continua disponivel.
+- [x] Documentacao e testes cobrem o comportamento.
+
 ### Task 010 - Alerta vermelho unico por episodio
 
 **Prioridade**: Critica

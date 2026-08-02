@@ -171,6 +171,10 @@ objetos com contratos validados.
 somente PID, fingerprint e token de inicio. Antes de iniciar outro alarme, o
 controlador confirma que o processo registrado ainda e o mesmo.
 
+O comando e envolvido por GNU `timeout` com duracao configurada por
+`RED_ALERT_MAX_DURATION_SECONDS`. Assim, o limite continua valendo mesmo se o
+monitor for reiniciado enquanto o som esta tocando.
+
 Nesta versao, a verificacao segura de identidade do processo depende do
 `/proc` do Linux. Em outra plataforma, o disparo controlado e recusado antes de
 iniciar o comando.

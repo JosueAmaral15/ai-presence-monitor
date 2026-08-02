@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-08-01 - Duracao maxima obrigatoria do alarme local
+
+**Decisao**: executar `RED_ALERT_COMMAND` sob GNU `timeout`, com limite padrao
+de 15 segundos configurado por `RED_ALERT_MAX_DURATION_SECONDS`.
+
+**Motivo**:
+
+- um alerta vermelho deve produzir um disparo audivel, nao som permanente;
+- comandos existentes podem conter `ffplay -loop 0`;
+- uma thread no monitor perderia o temporizador se o servico reiniciasse;
+- o limite externo sobrevive independentemente do processo pai.
+
+**Consequencia**:
+
+Todo alarme termina automaticamente. `stop-alarm` permanece como interrupcao
+manual antecipada. Sem GNU `timeout` ou com duracao invalida, o sistema falha
+fechado antes de iniciar o som.
+
 ## 2026-08-01 - Vermelho unico por episodio de inatividade
 
 **Decisao**: o alerta vermelho nao participa da repeticao periodica. Depois do

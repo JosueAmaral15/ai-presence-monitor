@@ -176,6 +176,7 @@ Modo simples, apenas Discord/Telegram:
 
 ```env
 RED_NOTIFICATION_MODE=none
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=
 PHONE_WEBHOOK_URL=
 ```
@@ -184,6 +185,7 @@ Modo alarme local:
 
 ```env
 RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 PHONE_WEBHOOK_URL=
 ```
@@ -195,7 +197,9 @@ Por exemplo:
 RED_ALERT_COMMAND=ffplay -nodisp -loop 0 "/caminho/com espacos/alarm.mp3"
 ```
 
-Quando usar `-loop 0`, interrompa o processo controlado com:
+Mesmo com `-loop 0`, o monitor encerra o processo automaticamente depois de
+`RED_ALERT_MAX_DURATION_SECONDS`. O valor deve ser maior que zero. Para
+interromper antes do limite:
 
 ```bash
 ai-presence stop-alarm
@@ -223,6 +227,7 @@ Antes de usar em producao local, confira:
 - `DISCORD_POINT_WEBHOOK_URL` e `DISCORD_ALERT_WEBHOOK_URL` estao preenchidos;
 - Telegram esta com os dois campos preenchidos ou os dois vazios;
 - `RED_NOTIFICATION_MODE` e `none`, `alarm` ou `phone`;
+- `RED_ALERT_MAX_DURATION_SECONDS` e maior que zero;
 - se `RED_NOTIFICATION_MODE=alarm`, `RED_ALERT_COMMAND` esta preenchido;
 - se `RED_NOTIFICATION_MODE=phone`, `PHONE_WEBHOOK_URL` esta preenchido;
 - `PRESENCE_CODEX_AUTO_START=false` se voce quer controle manual por `start` e `finish`;

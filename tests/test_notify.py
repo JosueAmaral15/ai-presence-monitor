@@ -40,7 +40,7 @@ class NotifierTransportTests(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data.decode("utf-8")), {"message": "teste"})
         self.assertEqual(request.headers["Content-type"], "application/json")
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.4.2")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.4.3")
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 15)
 
     def test_post_json_wraps_network_error(self) -> None:
@@ -85,6 +85,7 @@ class NotifierTransportTests(unittest.TestCase):
             notifier._start_alarm("player alarm.wav")
 
         self.assertIn("ai-presence stop-alarm", output.call_args_list[0].args[0])
+        self.assertIn("encerramento automatico em 15s", output.call_args_list[0].args[0])
         self.assertIn("ja esta ativo", output.call_args_list[1].args[0])
         self.assertEqual(controller.start.call_count, 2)
 

@@ -49,6 +49,7 @@ ENV_FIELDS = (
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID",
     "RED_NOTIFICATION_MODE",
+    "RED_ALERT_MAX_DURATION_SECONDS",
     "RED_ALERT_COMMAND",
     "PHONE_WEBHOOK_URL",
     "PRESENCE_CODEX_WORKER_ID",
@@ -139,6 +140,8 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
         "TELEGRAM_CHAT_ID=" + _quote_env(values["TELEGRAM_CHAT_ID"]),
         "",
         "RED_NOTIFICATION_MODE=" + _quote_env(values["RED_NOTIFICATION_MODE"]),
+        "RED_ALERT_MAX_DURATION_SECONDS="
+        + _quote_env(values["RED_ALERT_MAX_DURATION_SECONDS"]),
         "RED_ALERT_COMMAND=" + _quote_env(values["RED_ALERT_COMMAND"]),
         "PHONE_WEBHOOK_URL=" + _quote_env(values["PHONE_WEBHOOK_URL"]),
         "",
@@ -425,6 +428,12 @@ def configure_env(env_file: Path) -> None:
         "Modo do alerta vermelho",
         ["alarm", "phone", "none"],
         current.get("RED_NOTIFICATION_MODE") or "alarm",
+    )
+    values["RED_ALERT_MAX_DURATION_SECONDS"] = str(
+        _prompt_int(
+            "Duracao maxima do alarme em segundos",
+            _coerce_int(current.get("RED_ALERT_MAX_DURATION_SECONDS"), 15),
+        )
     )
     if values["RED_NOTIFICATION_MODE"] == "alarm":
         values["RED_ALERT_COMMAND"] = _prompt_text(

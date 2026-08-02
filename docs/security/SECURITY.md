@@ -44,6 +44,7 @@
 - [x] Comandos locais continuam restritos ao valor explicito de `RED_ALERT_COMMAND` no `.env`.
 - [x] Estado do alarme nao armazena o comando em texto e usa permissao `600`.
 - [x] `stop-alarm` valida PID, fingerprint e inicio antes de sinalizar.
+- [x] GNU `timeout` limita todo alarme local, inclusive comandos em loop.
 
 ## Task 004 - Portabilidade
 

@@ -80,6 +80,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                     "PRESENCE_ALERT_REPEAT_SECONDS": "300",
                     "PRESENCE_ALERT_REPEAT_LEVELS": "yellow,orange,red",
                     "RED_NOTIFICATION_MODE": "none",
+                    "RED_ALERT_MAX_DURATION_SECONDS": "15",
                     "PRESENCE_CODEX_AI_NAME": "codex",
                     "PRESENCE_CODEX_PROTOCOL": "protocol2",
                     "PRESENCE_CODEX_WORKER_SCOPE": "project",
@@ -158,6 +159,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             self.assertEqual(values["PRESENCE_ALERT_REPEAT_ENABLED"], "true")
             self.assertEqual(values["PRESENCE_CODEX_WORKER_SCOPE"], "project")
             self.assertEqual(values["RED_ALERT_COMMAND"], "echo alarm")
+            self.assertEqual(values["RED_ALERT_MAX_DURATION_SECONDS"], "15")
             self.assertEqual(values["PRESENCE_REMOTE_QUESTIONS_ENABLED"], "true")
             self.assertEqual(values["PRESENCE_GUI_ANSWER_ENABLED"], "true")
             self.assertEqual(values["DISCORD_QUESTION_CHANNEL_ID"], "200")

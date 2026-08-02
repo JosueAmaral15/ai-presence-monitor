@@ -192,3 +192,7 @@ Em 2026-08-01, a repeticao de alertas foi refinada: amarelo e laranja podem
 continuar periodicos, mas vermelho passou a ser unico por episodio continuo de
 inatividade. `start`, `heartbeat`, `touch` e observacoes validas limpam o estado
 do alerta e rearmam um futuro vermelho.
+
+Ainda em 2026-08-01, o disparo sonoro recebeu limite automatico padrao de 15
+segundos por GNU `timeout`. Isso garante som finito mesmo com `ffplay -loop 0`,
+sem retirar a parada antecipada por `ai-presence stop-alarm`.

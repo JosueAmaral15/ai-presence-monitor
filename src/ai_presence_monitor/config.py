@@ -154,6 +154,7 @@ class AppConfig:
     continue_message: str = "continue"
     continue_delay_seconds: int = 60
     continue_sync_activity: bool = True
+    red_alert_max_duration_seconds: int = 15
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -187,6 +188,10 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         telegram_chat_id=os.environ.get("TELEGRAM_CHAT_ID") or None,
         red_notification_mode=os.environ.get("RED_NOTIFICATION_MODE", "alarm").lower(),
         red_alert_command=os.environ.get("RED_ALERT_COMMAND") or None,
+        red_alert_max_duration_seconds=_env_int(
+            "RED_ALERT_MAX_DURATION_SECONDS",
+            15,
+        ),
         phone_webhook_url=os.environ.get("PHONE_WEBHOOK_URL") or None,
         codex_worker_id=os.environ.get("PRESENCE_CODEX_WORKER_ID") or None,
         codex_ai_name=_env_str("PRESENCE_CODEX_AI_NAME", "codex"),

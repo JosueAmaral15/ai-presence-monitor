@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import sys
 import tempfile
@@ -64,6 +65,23 @@ class AlarmControllerTests(unittest.TestCase):
             finally:
                 controller.stop(timeout_seconds=0, force=True)
 
+    def test_continuous_command_stops_at_maximum_duration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = Path(tmp) / "alarm.json"
+            controller = AlarmController(
+                state_path,
+                max_duration_seconds=0.2,
+            )
+
+            started = controller.start(self._sleep_command())
+            deadline = time.monotonic() + 3
+            while state_path.exists() and time.monotonic() < deadline:
+                time.sleep(0.02)
+
+            self.assertFalse(state_path.exists())
+            with self.assertRaises(ProcessLookupError):
+                os.kill(started.pid, 0)
+
     def test_stale_and_missing_state_are_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_path = Path(tmp) / "alarm.json"
@@ -104,6 +122,24 @@ class AlarmControllerTests(unittest.TestCase):
 
             with self.assertRaisesRegex(AlarmControlError, "requer Linux"):
                 controller.start(self._sleep_command())
+
+            popen.assert_not_called()
+
+    def test_invalid_duration_or_missing_timeout_refuses_start(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "ai_presence_monitor.alarm.subprocess.Popen"
+        ) as popen:
+            controller = AlarmController(
+                Path(tmp) / "alarm.json",
+                max_duration_seconds=0,
+            )
+            with self.assertRaisesRegex(AlarmControlError, "maior que zero"):
+                controller.start(self._sleep_command())
+
+            controller = AlarmController(Path(tmp) / "other.json")
+            with patch("ai_presence_monitor.alarm.shutil.which", return_value=None):
+                with self.assertRaisesRegex(AlarmControlError, "nao foi encontrado"):
+                    controller.start(self._sleep_command())
 
             popen.assert_not_called()
 

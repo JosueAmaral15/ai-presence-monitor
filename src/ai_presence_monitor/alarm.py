@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shlex
+import shutil
 import signal
 import subprocess
 import threading
@@ -12,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import APP_DIR_NAME
+
+DEFAULT_ALARM_MAX_DURATION_SECONDS = 15.0
 
 
 class AlarmControlError(RuntimeError):
@@ -78,8 +82,13 @@ def _linux_process_snapshot(pid: int) -> tuple[str, str] | None:
 
 
 class AlarmController:
-    def __init__(self, state_path: Path | None = None):
+    def __init__(
+        self,
+        state_path: Path | None = None,
+        max_duration_seconds: float = DEFAULT_ALARM_MAX_DURATION_SECONDS,
+    ):
         self.state_path = (state_path or default_alarm_state_path()).expanduser()
+        self.max_duration_seconds = max_duration_seconds
 
     def start(self, command: str) -> AlarmStartResult:
         argv = shlex.split(command)
@@ -89,6 +98,7 @@ class AlarmController:
             raise AlarmControlError(
                 "O controle de alarme local requer Linux com /proc nesta versao."
             )
+        controlled_argv = self._bounded_argv(argv)
 
         current = self._load_state()
         if current is not None and self._matches(current):
@@ -102,7 +112,7 @@ class AlarmController:
 
         try:
             process = subprocess.Popen(
-                argv,
+                controlled_argv,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -225,6 +235,25 @@ class AlarmController:
             raise AlarmControlError(
                 f"Estado de alarme invalido em {self.state_path}: {exc}"
             ) from exc
+
+    def _bounded_argv(self, argv: list[str]) -> list[str]:
+        duration = self.max_duration_seconds
+        if not math.isfinite(duration) or duration <= 0:
+            raise AlarmControlError(
+                "RED_ALERT_MAX_DURATION_SECONDS precisa ser maior que zero."
+            )
+        timeout_command = shutil.which("timeout")
+        if timeout_command is None:
+            raise AlarmControlError(
+                "GNU timeout nao foi encontrado; o alarme nao sera iniciado sem limite."
+            )
+        return [
+            timeout_command,
+            "--signal=TERM",
+            "--kill-after=1s",
+            f"{duration:g}s",
+            *argv,
+        ]
 
     def _write_state(self, state: AlarmState) -> None:
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
