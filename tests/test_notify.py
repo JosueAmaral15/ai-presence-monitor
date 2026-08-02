@@ -4,8 +4,9 @@ import json
 import unittest
 import urllib.error
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.notify import NotificationError, Notifier
 
 
@@ -39,7 +40,7 @@ class NotifierTransportTests(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data.decode("utf-8")), {"message": "teste"})
         self.assertEqual(request.headers["Content-type"], "application/json")
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.3.0")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.4.3")
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 15)
 
     def test_post_json_wraps_network_error(self) -> None:
@@ -64,6 +65,41 @@ class NotifierTransportTests(unittest.TestCase):
             )
 
         urlopen.assert_not_called()
+
+    def test_alarm_start_reports_control_command_and_deduplicates(self) -> None:
+        controller = SimpleNamespace(
+            start=Mock(
+                side_effect=[
+                    SimpleNamespace(status="started", pid=123),
+                    SimpleNamespace(status="already_running", pid=123),
+                ]
+            )
+        )
+        notifier = Notifier(
+            SimpleNamespace(),  # type: ignore[arg-type]
+            alarm_controller=controller,  # type: ignore[arg-type]
+        )
+
+        with patch("builtins.print") as output:
+            notifier._start_alarm("player alarm.wav")
+            notifier._start_alarm("player alarm.wav")
+
+        self.assertIn("ai-presence stop-alarm", output.call_args_list[0].args[0])
+        self.assertIn("encerramento automatico em 15s", output.call_args_list[0].args[0])
+        self.assertIn("ja esta ativo", output.call_args_list[1].args[0])
+        self.assertEqual(controller.start.call_count, 2)
+
+    def test_alarm_control_error_becomes_notification_error(self) -> None:
+        controller = SimpleNamespace(
+            start=Mock(side_effect=AlarmControlError("controle indisponivel"))
+        )
+        notifier = Notifier(
+            SimpleNamespace(),  # type: ignore[arg-type]
+            alarm_controller=controller,  # type: ignore[arg-type]
+        )
+
+        with self.assertRaisesRegex(NotificationError, "controle indisponivel"):
+            notifier._start_alarm("player alarm.wav")
 
 
 if __name__ == "__main__":

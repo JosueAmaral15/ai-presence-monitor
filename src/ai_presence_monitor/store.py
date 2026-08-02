@@ -278,8 +278,9 @@ class PresenceStore:
         message: str | None = None,
         task: str | None = None,
         auto_start: bool = True,
+        now: float | None = None,
     ) -> WorkerState | None:
-        now = time.time()
+        observed_at = time.time() if now is None else now
         previous = self.get_worker(worker_id)
         if previous is None and not auto_start:
             return None
@@ -298,11 +299,11 @@ class PresenceStore:
             status="active",
             current_task=current_task,
             last_signal_at=previous.last_signal_at if previous is not None else None,
-            last_activity_at=now,
+            last_activity_at=observed_at,
             last_message=message,
             last_alert_level=None,
             last_alert_at=None,
-            updated_at=now,
+            updated_at=observed_at,
         )
 
         with self.connect() as conn:
@@ -346,7 +347,14 @@ class PresenceStore:
                     worker_id, event_type, protocol, occurred_at, message, task
                 ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (worker_id, f"observation:{source}", protocol, now, message, current_task),
+                (
+                    worker_id,
+                    f"observation:{source}",
+                    protocol,
+                    observed_at,
+                    message,
+                    current_task,
+                ),
             )
         return worker
 

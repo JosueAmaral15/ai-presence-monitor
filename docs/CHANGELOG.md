@@ -1,5 +1,70 @@
 # Changelog
 
+## 2026-08-02 - Documentacao internacional
+
+- README raiz internacionalizado em ingles, com a versao portuguesa preservada
+  em `README.pt-BR.md`.
+
+## 2026-08-01 - v0.4.3
+
+- Adicionada duracao maxima obrigatoria para o alarme local.
+- Novo `RED_ALERT_MAX_DURATION_SECONDS`, com padrao de 15 segundos.
+- Comandos em loop sao supervisionados por GNU `timeout` e terminam sozinhos.
+- `stop-alarm`, deduplicacao, identidade do processo e reap permanecem ativos.
+- Duracao invalida ou ausencia de `timeout` falha antes de iniciar o som.
+
+## 2026-08-01 - v0.4.2
+
+- Alerta vermelho passa a ser enviado uma unica vez por episodio continuo de
+  inatividade.
+- Discord, Telegram, alarme e telefonia deixam de repetir o vermelho.
+- Nova atividade valida rearma um futuro alerta vermelho.
+- Repeticao configuravel permanece disponivel para amarelo e laranja.
+- Configuracoes antigas que listem `red` continuam aceitas, mas o nivel e
+  ignorado para repeticao.
+
+## 2026-07-30 - v0.4.1
+
+- Adicionado controlador persistente do processo de alarme local.
+- Adicionado comando `ai-presence stop-alarm` e opcao 19 no menu.
+- Alarmes duplicados sao recusados enquanto o processo registrado estiver
+  ativo.
+- Processo filho passa a ser coletado para evitar estado zumbi.
+- Parada valida PID, fingerprint e token de inicio antes de enviar sinal.
+
+## 2026-07-29 - Operacao por AI-worker
+
+- Adicionados `AGENTS.md` e protocolo de comandos para outra IA.
+- Documentados ciclo `start`/hooks/`touch`/`finish` e codigos de saida.
+- Adicionado instalador Linux para expor `ai-presence` em `~/.local/bin`.
+- Documentados launcher Windows e limites atuais de systemd/X11.
+- Registrada a decisao de adiar Abstract Factory ate existir um segundo
+  adaptador concreto.
+
+## 2026-07-29 - v0.4.0
+
+- Integrado o antigo fluxo de `prosseguir_tarefas.py` ao AI Presence Monitor.
+- Adicionados comandos `continue` e `continue-task`.
+- Mensagem padrao definida como `continue` e delay padrao como 60 segundos.
+- Extraido despacho textual X11 reutilizavel com alvo exato e clipboard
+  restaurado.
+- Emissao bem-sucedida pode registrar
+  `observation:automation:continue` para worker ativo.
+- Protocolo 2 reinicia `last_activity_at`; Protocolo 1 preserva
+  `last_signal_at`.
+- Falha, cancelamento, `dry-run` e worker inativo nao sincronizam atividade.
+- Adicionada opcao 18 ao menu interativo.
+- Pacote migrado para layout `src/`.
+- Adicionados guia de continuidade, indice documental, gate local e workflow
+  de qualidade.
+- `.env.example` recebeu os campos `PRESENCE_CONTINUE_*`; o `.env` real nao foi
+  alterado.
+- Suite ampliada para 74 testes, aprovada em Python 3.10, 3.11 e 3.12.
+- Cobertura total validada em 86%; lint, tipagem e build aprovados.
+- Wheel 0.4.0 instalado no ambiente dedicado. SHA-256:
+  `543477a9218aaff6578aaaade0dd0c5f7b50332633f97a8649719763f4ea9968`.
+- Copia do banco e banco real preservados; servicos permaneceram inativos.
+
 ## 2026-07-16
 
 - Criado planejamento da Task 001 para observer de hooks do Codex.

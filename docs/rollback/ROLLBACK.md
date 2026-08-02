@@ -71,6 +71,11 @@ Se quiser manter repeticao, mas cobrar em qualquer horario:
 PRESENCE_WORK_WINDOW_ENABLED=false
 ```
 
+Desde a versao 0.4.2, vermelho e unico por episodio, independentemente do valor
+de `PRESENCE_ALERT_REPEAT_LEVELS`. Para restaurar o comportamento repetitivo
+antigo, e necessario voltar o pacote para 0.4.1; alterar apenas o `.env` nao
+reativa repeticoes vermelhas.
+
 ## Task 004 - Portabilidade e isolamento
 
 Voltar temporariamente ao worker unico:
@@ -127,3 +132,39 @@ permanecer sem afetar os dados de presenca.
 
 Para rollback de pacote, reinstale o wheel 0.2.0. O esquema novo e aditivo e a
 versao anterior ignora as tabelas desconhecidas.
+
+## Task 007 - Continue integrado e layout `src/`
+
+Desativar somente a sincronizacao:
+
+```env
+PRESENCE_CONTINUE_SYNC_ACTIVITY=false
+```
+
+Tambem e possivel usar `--no-sync-activity` em uma unica execucao. Deixar de
+executar `continue` nao afeta monitor, hooks, respostas remotas ou banco.
+
+Antes de voltar a uma versao sem controle de alarme, interrompa qualquer som:
+
+```bash
+ai-presence stop-alarm
+```
+
+Na versao 0.4.3, `RED_ALERT_MAX_DURATION_SECONDS=15` limita automaticamente o
+som. Ao voltar para 0.4.2, esse limite deixa de existir; remova `-loop 0` de
+`RED_ALERT_COMMAND` ou use `stop-alarm` antes do rollback.
+
+Para voltar ao pacote anterior:
+
+```bash
+"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install \
+  --force-reinstall /caminho/para/ai_presence_monitor-0.3.0-py3-none-any.whl
+"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" \
+  install-codex-hook
+```
+
+O esquema SQLite nao mudou na Task 007. O `.env` anterior continua valido
+porque os novos campos possuem defaults internos.
+
+Para reverter o checkout local, use a baseline ou o commit anterior em uma nova
+branch. Nao apague o `.env` nem o banco durante o rollback.

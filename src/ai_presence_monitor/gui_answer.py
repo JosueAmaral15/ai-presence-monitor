@@ -89,39 +89,62 @@ class X11GuiAnswerDispatcher:
         if not question.target_window_id or not question.target_window_pattern:
             raise GuiDispatchError("A pergunta nao possui uma janela X11 vinculada.")
 
+        self.dispatch_text(
+            target=WindowTarget(
+                window_id=question.target_window_id,
+                title=question.target_window_title or "",
+                pattern=question.target_window_pattern,
+            ),
+            text=question.answer,
+        )
+
+    def dispatch_text(
+        self,
+        *,
+        target: WindowTarget,
+        text: str,
+        allow_title_change: bool = False,
+    ) -> None:
+        if not text:
+            raise GuiDispatchError("O texto para entrega nao pode ficar vazio.")
         self._require_tool("xdotool")
         self._require_tool("xclip")
-        target = self.capture_target(
-            title_pattern=question.target_window_pattern,
-            window_id=question.target_window_id,
+        validated_target = self.capture_target(
+            title_pattern=target.pattern,
+            window_id=target.window_id,
         )
         if (
-            question.target_window_title is not None
-            and target.title != question.target_window_title
+            not allow_title_change
+            and target.title
+            and validated_target.title != target.title
         ):
             raise GuiDispatchError(
                 "O titulo da janela alvo mudou desde a publicacao da pergunta."
             )
-        geometry = self._window_geometry(target.window_id)
+        geometry = self._window_geometry(validated_target.window_id)
         click_x = round(geometry["WIDTH"] * self.x_ratio)
         click_y = round(geometry["HEIGHT"] * self.y_ratio)
 
         previous_clipboard = self._read_clipboard()
         try:
-            self._write_clipboard(question.answer.encode("utf-8"))
-            self._run(["xdotool", "windowactivate", "--sync", target.window_id])
+            self._write_clipboard(text.encode("utf-8"))
+            self._run(
+                ["xdotool", "windowactivate", "--sync", validated_target.window_id]
+            )
             self._run(
                 [
                     "xdotool",
                     "mousemove",
                     "--sync",
                     "--window",
-                    target.window_id,
+                    validated_target.window_id,
                     str(click_x),
                     str(click_y),
                 ]
             )
-            self._run(["xdotool", "click", "--window", target.window_id, "1"])
+            self._run(
+                ["xdotool", "click", "--window", validated_target.window_id, "1"]
+            )
             self._run(["xdotool", "key", "--clearmodifiers", "ctrl+v"])
             self._run(["xdotool", "key", "--clearmodifiers", "Return"])
             time.sleep(0.1)
@@ -159,6 +182,7 @@ class X11GuiAnswerDispatcher:
         self._run(
             ["xclip", "-selection", "clipboard", "-in"],
             input_data=value,
+            discard_output=True,
         )
 
     @staticmethod
@@ -178,18 +202,32 @@ class X11GuiAnswerDispatcher:
         *,
         input_data: bytes | None = None,
         check: bool = True,
+        discard_output: bool = False,
     ) -> subprocess.CompletedProcess[bytes]:
         try:
-            result = subprocess.run(
-                command,
-                input=input_data,
-                capture_output=True,
-                check=False,
-            )
+            if discard_output:
+                result = subprocess.run(
+                    command,
+                    input=input_data,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            else:
+                result = subprocess.run(
+                    command,
+                    input=input_data,
+                    capture_output=True,
+                    check=False,
+                )
         except OSError as exc:
             raise GuiDispatchError(f"Falha ao executar {command[0]}: {exc}.") from exc
         if check and result.returncode != 0:
-            detail = result.stderr.decode("utf-8", errors="replace").strip()
+            detail = (
+                result.stderr.decode("utf-8", errors="replace").strip()
+                if result.stderr
+                else ""
+            )
             suffix = f": {detail}" if detail else ""
             raise GuiDispatchError(
                 f"Comando {command[0]} falhou com codigo {result.returncode}{suffix}."

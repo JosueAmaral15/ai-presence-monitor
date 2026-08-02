@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .cli import (
     _ask_user,
+    _continue_task,
     _init_db,
     _observe_replies_once,
     _record_event,
@@ -14,16 +15,18 @@ from .cli import (
     _show_protocols,
     _show_questions,
     _show_status,
+    _stop_alarm,
 )
 from .codex_hook_installer import (
     default_user_hooks_path,
     install_codex_hook,
-    print_result as print_hook_install_result,
     uninstall_codex_hook,
+)
+from .codex_hook_installer import (
+    print_result as print_hook_install_result,
 )
 from .config import AppConfig, load_config, resolve_env_path
 from .protocols import PROTOCOLS
-
 
 DEFAULT_ENV_FILE = resolve_env_path()
 
@@ -46,6 +49,7 @@ ENV_FIELDS = (
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_CHAT_ID",
     "RED_NOTIFICATION_MODE",
+    "RED_ALERT_MAX_DURATION_SECONDS",
     "RED_ALERT_COMMAND",
     "PHONE_WEBHOOK_URL",
     "PRESENCE_CODEX_WORKER_ID",
@@ -67,6 +71,9 @@ ENV_FIELDS = (
     "PRESENCE_CODEX_GUI_CLICK_X_RATIO",
     "PRESENCE_CODEX_GUI_CLICK_Y_RATIO",
     "PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS",
+    "PRESENCE_CONTINUE_MESSAGE",
+    "PRESENCE_CONTINUE_DELAY_SECONDS",
+    "PRESENCE_CONTINUE_SYNC_ACTIVITY",
 )
 
 
@@ -133,6 +140,8 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
         "TELEGRAM_CHAT_ID=" + _quote_env(values["TELEGRAM_CHAT_ID"]),
         "",
         "RED_NOTIFICATION_MODE=" + _quote_env(values["RED_NOTIFICATION_MODE"]),
+        "RED_ALERT_MAX_DURATION_SECONDS="
+        + _quote_env(values["RED_ALERT_MAX_DURATION_SECONDS"]),
         "RED_ALERT_COMMAND=" + _quote_env(values["RED_ALERT_COMMAND"]),
         "PHONE_WEBHOOK_URL=" + _quote_env(values["PHONE_WEBHOOK_URL"]),
         "",
@@ -170,6 +179,13 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
         + _quote_env(values["PRESENCE_CODEX_GUI_CLICK_Y_RATIO"]),
         "PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS="
         + _quote_env(values["PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS"]),
+        "",
+        "PRESENCE_CONTINUE_MESSAGE="
+        + _quote_env(values["PRESENCE_CONTINUE_MESSAGE"]),
+        "PRESENCE_CONTINUE_DELAY_SECONDS="
+        + _quote_env(values["PRESENCE_CONTINUE_DELAY_SECONDS"]),
+        "PRESENCE_CONTINUE_SYNC_ACTIVITY="
+        + _quote_env(values["PRESENCE_CONTINUE_SYNC_ACTIVITY"]),
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -214,6 +230,20 @@ def _prompt_int(label: str, default: int) -> int:
             continue
         if value <= 0:
             print("Digite um numero maior que zero.")
+            continue
+        return value
+
+
+def _prompt_nonnegative_int(label: str, default: int) -> int:
+    while True:
+        raw = _prompt_text(label, str(default), required=True, allow_clear=False)
+        try:
+            value = int(raw)
+        except ValueError:
+            print("Digite um numero inteiro.")
+            continue
+        if value < 0:
+            print("Digite zero ou um numero maior.")
             continue
         return value
 
@@ -352,8 +382,8 @@ def configure_env(env_file: Path) -> None:
         )
     )
     values["PRESENCE_ALERT_REPEAT_LEVELS"] = _prompt_text(
-        "Niveis repetidos separados por virgula",
-        current.get("PRESENCE_ALERT_REPEAT_LEVELS") or "yellow,orange,red",
+        "Niveis repetidos (vermelho nao repete)",
+        current.get("PRESENCE_ALERT_REPEAT_LEVELS") or "yellow,orange",
         required=True,
         allow_clear=False,
     )
@@ -398,6 +428,12 @@ def configure_env(env_file: Path) -> None:
         "Modo do alerta vermelho",
         ["alarm", "phone", "none"],
         current.get("RED_NOTIFICATION_MODE") or "alarm",
+    )
+    values["RED_ALERT_MAX_DURATION_SECONDS"] = str(
+        _prompt_int(
+            "Duracao maxima do alarme em segundos",
+            _coerce_int(current.get("RED_ALERT_MAX_DURATION_SECONDS"), 15),
+        )
     )
     if values["RED_NOTIFICATION_MODE"] == "alarm":
         values["RED_ALERT_COMMAND"] = _prompt_text(
@@ -535,11 +571,6 @@ def configure_env(env_file: Path) -> None:
     )
     values["PRESENCE_GUI_ANSWER_ENABLED"] = "true" if gui_enabled else "false"
     if gui_enabled:
-        values["PRESENCE_CODEX_GUI_WINDOW_TITLE"] = _prompt_text(
-            "Padrao do titulo da janela do Codex",
-            current.get("PRESENCE_CODEX_GUI_WINDOW_TITLE", ""),
-            required=True,
-        )
         values["PRESENCE_CODEX_GUI_CLICK_X_RATIO"] = str(
             _prompt_ratio(
                 "Posicao horizontal relativa do prompt",
@@ -568,10 +599,43 @@ def configure_env(env_file: Path) -> None:
             )
         )
     else:
-        values["PRESENCE_CODEX_GUI_WINDOW_TITLE"] = ""
-        values["PRESENCE_CODEX_GUI_CLICK_X_RATIO"] = "0.5"
-        values["PRESENCE_CODEX_GUI_CLICK_Y_RATIO"] = "0.9"
-        values["PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS"] = "120"
+        values["PRESENCE_CODEX_GUI_CLICK_X_RATIO"] = (
+            current.get("PRESENCE_CODEX_GUI_CLICK_X_RATIO") or "0.5"
+        )
+        values["PRESENCE_CODEX_GUI_CLICK_Y_RATIO"] = (
+            current.get("PRESENCE_CODEX_GUI_CLICK_Y_RATIO") or "0.9"
+        )
+        values["PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS"] = (
+            current.get("PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS") or "120"
+        )
+
+    print("\nAutomacao local de continuidade")
+    values["PRESENCE_CONTINUE_MESSAGE"] = _prompt_text(
+        "Mensagem padrao de continuidade",
+        current.get("PRESENCE_CONTINUE_MESSAGE") or "continue",
+        required=True,
+        allow_clear=False,
+    )
+    values["PRESENCE_CONTINUE_DELAY_SECONDS"] = str(
+        _prompt_nonnegative_int(
+            "Atraso padrao de continuidade em segundos",
+            _coerce_int(current.get("PRESENCE_CONTINUE_DELAY_SECONDS"), 60),
+        )
+    )
+    values["PRESENCE_CONTINUE_SYNC_ACTIVITY"] = (
+        "true"
+        if _prompt_yes_no(
+            "Sincronizar continue bem-sucedido com worker ativo",
+            current.get("PRESENCE_CONTINUE_SYNC_ACTIVITY", "true").lower()
+            == "true",
+        )
+        else "false"
+    )
+    values["PRESENCE_CODEX_GUI_WINDOW_TITLE"] = _prompt_text(
+        "Padrao do titulo da janela do Codex",
+        current.get("PRESENCE_CODEX_GUI_WINDOW_TITLE", ""),
+        required=gui_enabled,
+    )
 
     _write_env(env_file, values)
     print(f"\nConfiguracao salva em {env_file}")
@@ -683,6 +747,58 @@ def _run_reply_observer_loop(env_file: Path, dry_run: bool) -> None:
         print("\nObserver de respostas interrompido.")
 
 
+def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
+    config = _load_current_config(env_file)
+    ai_name = _prompt_text("Nome da IA/agente", "codex", allow_clear=False)
+    computer = _prompt_text(
+        "Nome do computador",
+        config.computer_name,
+        allow_clear=False,
+    )
+    worker = _prompt_text(
+        "ID exato do worker a sincronizar",
+        config.codex_worker_id or f"{computer}:{ai_name}",
+        allow_clear=False,
+    )
+    message = _prompt_text(
+        "Mensagem de continuidade",
+        config.continue_message,
+        required=True,
+        allow_clear=False,
+    )
+    delay = _prompt_nonnegative_int(
+        "Atraso antes do envio em segundos",
+        config.continue_delay_seconds,
+    )
+    window_title = _prompt_text(
+        "Padrao do titulo da janela do Codex",
+        config.codex_gui_window_title or "",
+        required=True,
+        allow_clear=False,
+    )
+    window_id = _prompt_text("ID X11 exato, opcional", "")
+    sync_activity = _prompt_yes_no(
+        "Sincronizar o envio com a atividade do worker",
+        config.continue_sync_activity,
+    )
+    args = argparse.Namespace(
+        worker=worker,
+        computer=computer,
+        ai=ai_name,
+        protocol=config.default_protocol,
+        scope=None,
+        project=None,
+        session=None,
+        message=message,
+        delay=delay,
+        window_id=window_id or None,
+        window_title=window_title,
+        sync_activity=sync_activity,
+        dry_run=dry_run,
+    )
+    _continue_task(args, config)
+
+
 def _install_codex_hook_interactive(env_file: Path, dry_run: bool) -> None:
     target = Path(
         _prompt_text(
@@ -733,6 +849,8 @@ def _menu() -> None:
     print("15. Observar respostas uma vez")
     print("16. Observar respostas continuamente")
     print("17. Listar perguntas e respostas")
+    print("18. Agendar e enviar continue ao Codex")
+    print("19. Interromper alarme local")
     print("0. Sair")
 
 
@@ -785,6 +903,15 @@ def run_interactive(env_file: Path, dry_run: bool = False) -> None:
             elif option == "17":
                 args = argparse.Namespace(status=None, limit=50)
                 _show_questions(args, _load_current_config(env_file))
+            elif option == "18":
+                _continue_task_interactive(env_file, dry_run)
+            elif option == "19":
+                args = argparse.Namespace(
+                    timeout=3.0,
+                    no_force=False,
+                    dry_run=dry_run,
+                )
+                _stop_alarm(args)
             elif option == "0":
                 return
             else:

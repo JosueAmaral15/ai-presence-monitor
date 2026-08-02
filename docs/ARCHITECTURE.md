@@ -2,9 +2,10 @@
 
 ## Visao Geral
 
-O AI Presence Monitor tem quatro blocos:
+O AI Presence Monitor tem cinco blocos:
 
 - **Producers**: CLI manual, menu interativo e observers.
+- **GUI Automation**: entrada X11 local para respostas e continuidade.
 - **Event Store**: SQLite local via `PresenceStore`.
 - **Rule Engine**: protocolos e limiares em `protocols.py`, janela de expediente em `work_window.py` e avaliacao em `cli._check_once`.
 - **Notifiers**: Discord, Telegram e escalonamento vermelho.
@@ -34,8 +35,15 @@ monitor -> protocolos -> notificadores
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.
 - `touch`: atividade silenciosa manual.
 - `observation`: atividade silenciosa automatica de observer.
+- `observation:automation:continue`: entrada de continuidade emitida com
+  sucesso para um worker ja ativo.
 
 No Protocolo 2, o relogio monitorado e `last_activity_at`. Portanto `touch` e `observation` evitam falsos alertas enquanto houver evidencia recente de atividade.
+
+O evento de continuidade concede uma nova janela normal de inatividade, mas nao
+mantem o worker ativo indefinidamente. Um hook posterior continua sendo a
+evidencia de atividade subsequente do Codex. No Protocolo 1, observacoes
+preservam `last_signal_at` e nao substituem heartbeat.
 
 ## Work Window Policy
 
@@ -51,7 +59,12 @@ work_window.py -> dentro do expediente?
 protocolos -> thresholds -> repeticao/escalada -> notificadores
 ```
 
-Com `PRESENCE_WORK_WINDOW_ENABLED=true`, o monitor pode suprimir alertas fora do horario configurado. Dentro do expediente, `PRESENCE_ALERT_REPEAT_ENABLED=true` permite reenviar o mesmo nivel de alerta depois de `PRESENCE_ALERT_REPEAT_SECONDS`, enquanto o worker continuar ativo e atrasado.
+Com `PRESENCE_WORK_WINDOW_ENABLED=true`, o monitor pode suprimir alertas fora
+do horario configurado. Dentro do expediente,
+`PRESENCE_ALERT_REPEAT_ENABLED=true` permite reenviar amarelo e laranja depois
+de `PRESENCE_ALERT_REPEAT_SECONDS`, enquanto o worker continuar ativo e
+atrasado. Vermelho e one-shot por episodio de inatividade e so e rearmado por
+atividade valida.
 
 ## CodexHookObserver
 
@@ -100,3 +113,72 @@ revalidado.
 
 O polling possui unidade systemd separada. Assim, falha de Discord ou da GUI nao
 interrompe o monitor de atrasos nem o hook passivo.
+
+## Continue Integrado
+
+```text
+CLI/menu -> captura alvo X11 unico -> delay -> revalidacao
+                                           |
+                                           v
+                               clique + clipboard + Enter
+                                           |
+                                           v
+                              input_emitted localmente
+                                           |
+                       worker active? -----+----- nao -> sem sync
+                             |
+                             v
+          observation:automation:continue -> last_activity_at
+                             |
+                             v
+                    hook posterior do Codex
+```
+
+`continue_task.py` coordena o caso de uso. `gui_answer.py` oferece a operacao
+generica de despacho textual, tambem reutilizada por respostas remotas. A
+sincronizacao ocorre depois do despacho; falha ou cancelamento nao alteram o
+SQLite.
+
+## Source Layout
+
+O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam
+`PYTHONPATH=src` ou uma instalacao editavel. `main.py` e o wrapper de hook
+adicionam `src/` explicitamente somente para preservar os entrypoints locais de
+compatibilidade.
+
+## Fronteira de Plataforma
+
+O entrypoint `ai-presence` e gerado pelo empacotamento Python no Linux e no
+Windows. Alias de shell nao faz parte do contrato porque hooks, subprocessos e
+servicos podem executar sem carregar configuracao interativa do shell.
+
+O nucleo de configuracao, identidade, protocolos e SQLite e independente da
+plataforma. As integracoes externas atuais possuem fronteiras concretas:
+
+- `systemd_service.py`: processo continuo em Linux;
+- `gui_answer.py`: entrada grafica X11 com `xdotool` e `xclip`;
+- `notify.py`: transporte HTTP e comando local.
+
+Uma implementacao Windows deve adicionar interfaces estreitas para gerencia de
+servico e despacho de entrada. A selecao por plataforma pode usar Strategy ou
+Factory quando o segundo adaptador existir. Uma Abstract Factory completa nao
+e introduzida antes disso porque ainda nao ha duas familias concretas de
+objetos com contratos validados.
+
+## Controle do Alarme Local
+
+`alarm.py` inicia o comando vermelho em uma nova sessao de processo e persiste
+somente PID, fingerprint e token de inicio. Antes de iniciar outro alarme, o
+controlador confirma que o processo registrado ainda e o mesmo.
+
+O comando e envolvido por GNU `timeout` com duracao configurada por
+`RED_ALERT_MAX_DURATION_SECONDS`. Assim, o limite continua valendo mesmo se o
+monitor for reiniciado enquanto o som esta tocando.
+
+Nesta versao, a verificacao segura de identidade do processo depende do
+`/proc` do Linux. Em outra plataforma, o disparo controlado e recusado antes de
+iniciar o comando.
+
+Uma thread chama `wait()` para coletar corretamente o filho e remover o estado
+quando o som termina. `stop-alarm` revalida PID, fingerprint e token antes de
+sinalizar o grupo, evitando encerrar um processo reutilizado por engano.

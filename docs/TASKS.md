@@ -2,6 +2,101 @@
 
 ## Concluidas
 
+### Task 011 - Duracao limitada do alarme vermelho
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: garantir que cada disparo sonoro vermelho termine
+automaticamente, mesmo quando o comando configurado usa loop continuo.
+
+**Criterios de aceite**:
+
+- [x] Existe duracao maxima configuravel com padrao seguro.
+- [x] Comando em loop termina automaticamente.
+- [x] Estado e processo sao limpos depois do limite.
+- [x] Parada manual continua disponivel.
+- [x] Documentacao e testes cobrem o comportamento.
+
+### Task 010 - Alerta vermelho unico por episodio
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir mensagens vermelhas repetitivas durante o mesmo periodo
+continuo de inatividade e rearma-las somente apos atividade valida.
+
+**Criterios de aceite**:
+
+- [x] Primeiro vermelho e enviado normalmente.
+- [x] Verificacoes seguintes permanecem silenciosas no mesmo episodio.
+- [x] Nova atividade rearma o alerta vermelho.
+- [x] Repeticao configuravel de amarelo e laranja continua funcionando.
+- [x] Documentacao e testes refletem a politica.
+
+### Task 009 - Interrupcao segura do alarme
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir alarmes locais interminaveis sem controle e processos
+zumbis.
+
+**Criterios de aceite**:
+
+- [x] O processo do alarme e identificado sem armazenar o comando em texto.
+- [x] Um alarme ativo impede o inicio de duplicata.
+- [x] `stop-alarm` oferece parada normal e fallback forcado.
+- [x] PID reutilizado ou estado obsoleto nao sinaliza processo incorreto.
+- [x] O processo filho e coletado com `wait()`.
+- [x] CLI, menu, documentacao e testes cobrem a interrupcao.
+
+### Task 008 - UX de comandos para AI-workers
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: permitir que outra IA opere o monitor por um comando de terminal
+estavel, com identidade explicita de projeto e protocolo documentado.
+
+**Criterios de aceite**:
+
+- [x] `ai-presence` pode ser exposto no `PATH` sem alias interativo.
+- [x] `AGENTS.md` define regras operacionais e de seguranca.
+- [x] O protocolo documenta `start`, hooks, `touch`, perguntas e `finish`.
+- [x] Monitor, observer de respostas e dispatcher GUI sao diferenciados.
+- [x] A limitacao de titulos de abas do terminal esta documentada.
+- [x] Linux e Windows possuem limites de portabilidade explicitos.
+- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto.
+
+### Task 007 - Unificacao com o comando de continuidade
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: incorporar ao AI Presence Monitor o envio programado da mensagem
+`continue` para o Codex GUI, eliminar a necessidade de executar o projeto
+`mouse-control-clicker` separadamente e organizar o pacote no layout `src/`.
+
+**Criterios de aceite**:
+
+- [x] Existe um unico pacote e uma unica CLI para monitoramento e continuidade.
+- [x] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
+- [x] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
+- [x] O envio oferece `--dry-run` e preserva o clipboard.
+- [x] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
+      observacao auditavel de automacao.
+- [x] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia
+      a contagem de inatividade, evitando alerta falso logo apos `continue`.
+- [x] Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam
+      `last_activity_at`.
+- [x] No Protocolo 1, `continue` nao atualiza `last_signal_at` nem substitui o
+      heartbeat publico obrigatorio.
+- [x] Um hook posterior continua sendo a evidencia de que o Codex retomou
+      atividade depois da entrada automatizada.
+- [x] O menu interativo oferece o mesmo recurso.
+- [x] O pacote usa layout `src/` com importacoes, hooks e scripts corrigidos.
+- [x] O `.env` e o banco existentes permanecem compativeis e intocados.
+- [x] Testes, cobertura, lint, tipos, wheel e instalacao isolada passam.
+- [x] O projeto antigo nao e necessario para executar o fluxo integrado.
+- [x] O projeto antigo permanece intacto; retirada ou arquivamento dependem de
+      aprovacao explicita.
+
 ### Task 006 - Respostas remotas Discord para Codex GUI
 
 **Prioridade**: Alta
@@ -53,13 +148,15 @@ entregar a resposta na janela exata do Codex GUI como fallback opcional.
 
 **Prioridade**: Alta  
 **Status**: concluida  
-**Objetivo**: permitir que o monitor cobre presenca apenas durante um intervalo de expediente e repita alertas enquanto o worker continuar atrasado.
+**Objetivo**: permitir que o monitor cobre presenca apenas durante um intervalo
+de expediente e repita alertas amarelos/laranjas enquanto o worker continuar
+atrasado.
 
 **Criterios de aceite**:
 
 - [x] `.env` aceita janela de expediente com inicio, fim e timezone.
 - [x] Monitor suprime alertas fora do expediente quando configurado.
-- [x] Monitor pode repetir o mesmo nivel de alerta por intervalo configurado.
+- [x] Monitor pode repetir amarelo e laranja por intervalo configurado.
 - [x] SQLite guarda `last_alert_at` para controlar repeticao.
 - [x] Documentacao explica configuracao e comportamento.
 - [x] Testes cobrem janela comum, janela noturna, supressao e repeticao.

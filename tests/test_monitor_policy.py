@@ -142,7 +142,7 @@ class MonitorPolicyTests(unittest.TestCase):
             self.assertEqual(worker.last_alert_level, "yellow")
             self.assertEqual(worker.last_alert_at, now + 301)
 
-    def test_repeated_red_alert_does_not_repeat_external_escalation(self) -> None:
+    def test_red_alert_is_one_shot_until_activity_rearms_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "presence.db"
             config = make_config(
@@ -163,8 +163,35 @@ class MonitorPolicyTests(unittest.TestCase):
 
             repeat_output = StringIO()
             with redirect_stdout(repeat_output):
-                self.assertEqual(_check_once(config, dry_run=True, now=now + 301), 1)
+                self.assertEqual(_check_once(config, dry_run=True, now=now + 301), 0)
+            self.assertNotIn("[dry-run:discord:alerta:red]", repeat_output.getvalue())
+            self.assertNotIn("[dry-run:telegram:alerta:red]", repeat_output.getvalue())
             self.assertNotIn("[dry-run:comando] echo red-alert", repeat_output.getvalue())
+
+            activity_at = now + 302
+            worker = store.record_observation(
+                worker_id="test-computer:codex",
+                computer="test-computer",
+                ia_name="codex",
+                protocol="protocol2",
+                source="test",
+                message="atividade retomada",
+                auto_start=False,
+                now=activity_at,
+            )
+            self.assertIsNotNone(worker)
+            assert worker is not None
+            self.assertIsNone(worker.last_alert_level)
+
+            rearmed_output = StringIO()
+            with redirect_stdout(rearmed_output):
+                self.assertEqual(
+                    _check_once(config, dry_run=True, now=activity_at + 16 * 60),
+                    1,
+                )
+            self.assertIn("[dry-run:discord:alerta:red]", rearmed_output.getvalue())
+            self.assertIn("[dry-run:telegram:alerta:red]", rearmed_output.getvalue())
+            self.assertIn("[dry-run:comando] echo red-alert", rearmed_output.getvalue())
 
 
 if __name__ == "__main__":

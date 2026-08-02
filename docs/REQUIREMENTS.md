@@ -36,3 +36,17 @@
 - Falha ou resultado incerto nao deve causar reenvio automatico.
 - Hook posterior do mesmo worker deve confirmar a atividade depois da entrega.
 - O observer continuo deve ter unidade systemd separada e opcional.
+
+## Continue Integrado
+
+- Monitoramento e continuidade devem pertencer ao mesmo pacote e a mesma CLI.
+- A mensagem padrao deve ser `continue`.
+- O delay padrao deve ser 60 segundos.
+- O alvo deve ser uma unica janela X11, capturada e revalidada.
+- `--dry-run` nao deve esperar, controlar GUI ou gravar banco.
+- Somente emissao bem-sucedida pode sincronizar atividade.
+- Sincronizacao deve exigir worker existente e ativo.
+- No Protocolo 2, a sincronizacao deve atualizar `last_activity_at`.
+- No Protocolo 1, a sincronizacao deve preservar `last_signal_at`.
+- Ausencia de atividade posterior deve voltar a gerar alertas normais.
+- O projeto deve usar layout `src/` e produzir wheel independente do checkout.

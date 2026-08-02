@@ -7,16 +7,26 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
+from .alarm import AlarmControlError, AlarmController
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
-    print_result as print_hook_install_result,
     uninstall_codex_hook,
 )
+from .codex_hook_installer import (
+    print_result as print_hook_install_result,
+)
 from .config import AppConfig, load_config
+from .continue_task import ContinueTaskError, execute_continue_task
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
-from .protocols import PROTOCOLS, choose_threshold, format_duration, get_protocol, should_escalate
+from .protocols import (
+    PROTOCOLS,
+    choose_threshold,
+    format_duration,
+    get_protocol,
+    should_escalate,
+)
 from .remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
@@ -27,12 +37,13 @@ from .store import PresenceStore, WorkerState
 from .systemd_service import (
     install_reply_observer_service,
     install_user_service,
-    print_result as print_systemd_result,
     uninstall_reply_observer_service,
     uninstall_user_service,
 )
+from .systemd_service import (
+    print_result as print_systemd_result,
+)
 from .work_window import get_work_window_status
-
 
 DEFAULT_EVENT_MESSAGES = {
     "start": "tarefa iniciada",
@@ -58,6 +69,9 @@ def _clock_value(worker: WorkerState) -> tuple[str, float | None]:
 def _should_send_alert(worker: WorkerState, threshold_level: str, config: AppConfig, now: float) -> bool:
     if should_escalate(worker.last_alert_level, threshold_level):
         return True
+
+    if threshold_level == "red" and worker.last_alert_level == "red":
+        return False
 
     if not config.alert_repeat_enabled:
         return False
@@ -311,6 +325,62 @@ def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    try:
+        result = execute_continue_task(
+            config=config,
+            worker_id=worker_id,
+            message=args.message,
+            delay_seconds=args.delay,
+            window_id=args.window_id,
+            title_pattern=args.window_title,
+            allow_title_change=args.allow_title_change,
+            sync_activity=args.sync_activity,
+            dry_run=args.dry_run,
+        )
+    except ContinueTaskError as exc:
+        print(f"Falha ao executar continue: {exc}", file=sys.stderr)
+        return 2
+
+    if args.dry_run:
+        sync = (
+            config.continue_sync_activity
+            if args.sync_activity is None
+            else args.sync_activity
+        )
+        print(
+            f"[dry-run:continue] worker={worker_id} "
+            f"atraso={result.delay_seconds}s mensagem={result.message!r} "
+            f"permitir_mudanca_titulo={str(args.allow_title_change).lower()} "
+            f"sincronizar_atividade={str(sync).lower()}; "
+            "espera, GUI e banco nao foram acessados."
+        )
+        return 0
+
+    assert result.target is not None
+    print(
+        f"continue: input_emitted janela={result.target.window_id} "
+        f"worker={worker_id}"
+    )
+    if result.activity_synced:
+        print(
+            "continue: atividade sincronizada "
+            f"worker={worker_id} origem=automation:continue"
+        )
+        return 0
+    if result.sync_reason == "disabled":
+        print("continue: sincronizacao de atividade desativada.")
+        return 0
+
+    print(
+        "continue: entrada emitida, mas a atividade nao foi sincronizada; "
+        f"motivo={result.sync_reason}.",
+        file=sys.stderr,
+    )
+    return 2
+
+
 def _install_codex_hook(args: argparse.Namespace, config: AppConfig) -> int:
     result = install_codex_hook(
         target_path=args.target,
@@ -429,7 +499,34 @@ def _show_protocols() -> int:
     return 0
 
 
-def _add_identity_args(parser: argparse.ArgumentParser) -> None:
+def _stop_alarm(args: argparse.Namespace) -> int:
+    try:
+        result = AlarmController().stop(
+            timeout_seconds=args.timeout,
+            force=not args.no_force,
+            dry_run=args.dry_run,
+        )
+    except AlarmControlError as exc:
+        print(f"Falha ao interromper alarme: {exc}", file=sys.stderr)
+        return 2
+
+    if result.status == "would_stop":
+        print(f"[dry-run:alarme] interromperia PID {result.pid}.")
+    elif result.status == "stopped":
+        mode = "forcado" if result.forced else "normal"
+        print(f"alarme interrompido: pid={result.pid} modo={mode}")
+    elif result.status == "stale_state":
+        print(f"alarme ja estava inativo; estado obsoleto removido: pid={result.pid}")
+    else:
+        print("nenhum alarme controlado esta ativo.")
+    return 0
+
+
+def _add_identity_args(
+    parser: argparse.ArgumentParser,
+    *,
+    include_task_message: bool = True,
+) -> None:
     parser.add_argument(
         "--worker",
         help="ID exato do worker; quando informado, ignora a derivacao por escopo.",
@@ -448,8 +545,9 @@ def _add_identity_args(parser: argparse.ArgumentParser) -> None:
         help="Diretorio do projeto usado na identidade. Padrao: diretorio atual.",
     )
     parser.add_argument("--session", help="ID de sessao para escopos que usam sessao.")
-    parser.add_argument("--task", help="Nome ou ID da tarefa/algoritmo atual.")
-    parser.add_argument("--message", help="Mensagem descritiva para o registro.")
+    if include_task_message:
+        parser.add_argument("--task", help="Nome ou ID da tarefa/algoritmo atual.")
+        parser.add_argument("--message", help="Mensagem descritiva para o registro.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -496,6 +594,23 @@ def build_parser() -> argparse.ArgumentParser:
     monitor_parser.add_argument("--interval", type=int, help="Intervalo do loop em segundos.")
     monitor_parser.set_defaults(func=lambda args, config: _run_monitor(args, config))
 
+    stop_alarm_parser = subparsers.add_parser(
+        "stop-alarm",
+        help="Interrompe o processo de alarme local iniciado pelo monitor.",
+    )
+    stop_alarm_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=3.0,
+        help="Segundos para aguardar SIGTERM antes do fallback. Padrao: 3.",
+    )
+    stop_alarm_parser.add_argument(
+        "--no-force",
+        action="store_true",
+        help="Nao envia SIGKILL se o processo ignorar SIGTERM.",
+    )
+    stop_alarm_parser.set_defaults(func=lambda args, config: _stop_alarm(args))
+
     ask_parser = subparsers.add_parser(
         "ask-user",
         help="Publica uma pergunta no Discord e aguarda resposta correlacionada.",
@@ -535,6 +650,50 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dispatch_parser.add_argument("question_id", help="ID local da pergunta.")
     dispatch_parser.set_defaults(func=lambda args, config: _dispatch_answer(args, config))
+
+    continue_parser = subparsers.add_parser(
+        "continue-task",
+        aliases=["continue"],
+        help="Agenda e envia uma mensagem de continuidade ao Codex GUI.",
+    )
+    _add_identity_args(continue_parser, include_task_message=False)
+    continue_parser.add_argument(
+        "--message",
+        help="Texto enviado. Padrao: PRESENCE_CONTINUE_MESSAGE ou 'continue'.",
+    )
+    continue_parser.add_argument(
+        "--delay",
+        type=int,
+        help="Atraso em segundos. Padrao: PRESENCE_CONTINUE_DELAY_SECONDS ou 60.",
+    )
+    continue_parser.add_argument(
+        "--window-id",
+        help="ID X11 exato. Se omitido, exige um unico titulo correspondente.",
+    )
+    continue_parser.add_argument(
+        "--window-title",
+        help="Padrao de titulo; sobrescreve PRESENCE_CODEX_GUI_WINDOW_TITLE.",
+    )
+    continue_parser.add_argument(
+        "--allow-title-change",
+        action="store_true",
+        help=(
+            "Aceita mudanca do titulo completo durante a espera, mantendo "
+            "a revalidacao do ID explicito e do padrao de titulo."
+        ),
+    )
+    continue_parser.add_argument(
+        "--sync-activity",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Sincroniza a emissao bem-sucedida com um worker ativo. "
+            "Padrao: PRESENCE_CONTINUE_SYNC_ACTIVITY."
+        ),
+    )
+    continue_parser.set_defaults(
+        func=lambda args, config: _continue_task(args, config)
+    )
 
     hook_parser = subparsers.add_parser(
         "codex-hook",

@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-08-01 - Duracao maxima obrigatoria do alarme local
+
+**Decisao**: executar `RED_ALERT_COMMAND` sob GNU `timeout`, com limite padrao
+de 15 segundos configurado por `RED_ALERT_MAX_DURATION_SECONDS`.
+
+**Motivo**:
+
+- um alerta vermelho deve produzir um disparo audivel, nao som permanente;
+- comandos existentes podem conter `ffplay -loop 0`;
+- uma thread no monitor perderia o temporizador se o servico reiniciasse;
+- o limite externo sobrevive independentemente do processo pai.
+
+**Consequencia**:
+
+Todo alarme termina automaticamente. `stop-alarm` permanece como interrupcao
+manual antecipada. Sem GNU `timeout` ou com duracao invalida, o sistema falha
+fechado antes de iniciar o som.
+
+## 2026-08-01 - Vermelho unico por episodio de inatividade
+
+**Decisao**: o alerta vermelho nao participa da repeticao periodica. Depois do
+primeiro vermelho, Discord, Telegram e escalada externa permanecem silenciosos
+ate uma atividade valida rearmar o worker.
+
+**Motivo**:
+
+- repeticao a cada cinco minutos gera ruido sem acrescentar informacao;
+- o primeiro vermelho ja comunica a severidade maxima;
+- atividade real separa um episodio antigo de uma nova inatividade.
+
+**Alternativas consideradas**:
+
+- aumentar apenas o intervalo do vermelho: descartado porque ainda repetiria;
+- controlar somente alarme/telefonia: descartado porque Discord e Telegram
+  continuariam ruidosos;
+- adicionar coluna ao SQLite: desnecessario, pois atividade ja limpa
+  `last_alert_level` e `last_alert_at`.
+
+**Consequencia**:
+
+Amarelo e laranja continuam configuraveis. Configuracoes antigas que listem
+`red` permanecem legiveis, mas o motor ignora esse nivel para repeticao.
+
 ## 2026-07-16 - Observer passivo para hooks do Codex
 
 **Decisao**: implementar hooks do Codex como observer passivo que grava atividade no SQLite, sem enviar notificacoes diretamente.
@@ -88,3 +131,97 @@ opcional, em processo separado.
 O recurso exige bot, `MESSAGE_CONTENT`, allowlist e canal dedicado. A entrega
 GUI permanece desativada por padrao e o proximo hook do worker confirma a
 atividade posterior.
+
+## 2026-07-29 - Continue integrado com sincronizacao limitada
+
+**Decisao**: integrar o envio de `continue` ao monitor e registrar uma
+observacao somente depois de uma emissao GUI bem-sucedida para um worker ja
+ativo.
+
+**Motivo**:
+
+- executar a automacao sem atualizar o Protocolo 2 pode gerar alerta de
+  inatividade enquanto o Codex recebe a nova entrada;
+- atualizar no agendamento ou antes do Enter registraria atividade que ainda nao
+  ocorreu;
+- auto-start esconderia erro de identidade ou ciclo de tarefa;
+- o Protocolo 1 exige sinal publico e nao pode aceitar a automacao como
+  heartbeat.
+
+**Alternativas consideradas**:
+
+- atualizar `last_activity_at` ao iniciar o delay: descartado por evidenciar uma
+  acao ainda nao emitida;
+- aguardar somente hook posterior: mantido como confirmacao, mas insuficiente
+  para evitar alerta durante o processamento inicial;
+- criar tabela nova: descartado porque `events` e `record_observation` atendem
+  ao requisito sem migracao;
+- incorporar PyAutoGUI: descartado pela arvore de dependencias e pelo fallback
+  global de coordenadas;
+- escolher a primeira janela encontrada: descartado por ambiguidade.
+
+**Consequencia**:
+
+`observation:automation:continue` atualiza `last_activity_at`, preserva
+`last_signal_at` e fica auditavel. Se nenhum hook ou outra atividade ocorrer, o
+Protocolo 2 volta a alertar depois dos limites normais.
+
+## 2026-07-29 - Layout `src/`
+
+**Decisao**: mover o pacote instalavel para `src/ai_presence_monitor`.
+
+**Motivo**:
+
+- separar fonte importavel de artefatos na raiz;
+- testar o pacote em condicoes mais proximas da instalacao;
+- impedir que um diretorio antigo masque falhas de empacotamento.
+
+**Consequencia**:
+
+Comandos de desenvolvimento usam instalacao editavel ou `PYTHONPATH=src`.
+Wrappers locais explicitam `src/`, e o wheel continua expondo o mesmo namespace
+e os mesmos entrypoints.
+
+## 2026-07-29 - Comando estavel para AI-workers
+
+**Decisao**: usar o console script `ai-presence` como contrato de automacao e
+documentar uma maquina de estados para AI-workers.
+
+**Motivo**:
+
+- aliases dependem de configuracao de shell interativo;
+- hooks, CI, subprocessos e servicos precisam de um caminho executavel estavel;
+- `pip` gera launchers adequados para Linux e Windows;
+- a identidade por projeto e mais confiavel que o titulo visual de uma aba.
+
+**Alternativas consideradas**:
+
+- alias Bash: descartado como contrato principal por nao ser portatil nem
+  carregado de forma consistente;
+- controlar uma aba por seu rotulo: descartado porque uma aba do terminal pode
+  nao ser uma janela X11;
+- Abstract Factory imediata: adiada ate existir um adaptador Windows concreto.
+
+**Consequencia**:
+
+`AGENTS.md` e `docs/AI-WORKER-COMMAND-PROTOCOL.md` definem os comandos. Linux
+usa systemd/X11; Windows pode reutilizar a CLI e o SQLite, mas ainda precisa de
+Task Scheduler e dispatcher GUI nativo para equivalencia operacional.
+
+## 2026-07-30 - Alarme local controlado por PID
+
+**Decisao**: iniciar o alarme em grupo proprio, persistir identidade minima do
+processo e oferecer `stop-alarm`.
+
+**Motivo**:
+
+- comandos como `ffplay -loop 0` nao terminam sozinhos;
+- `Popen` sem `wait()` pode deixar processo zumbi;
+- buscar e matar qualquer `ffplay` pode interromper audio nao relacionado;
+- alertas repetidos nao devem acumular processos de som.
+
+**Consequencia**:
+
+O estado usa permissao `600` e nao guarda o comando em texto. A parada valida
+PID, fingerprint e token de inicio antes de `SIGTERM`; `SIGKILL` e fallback
+configuravel.

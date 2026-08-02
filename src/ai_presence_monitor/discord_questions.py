@@ -9,7 +9,6 @@ from typing import Any
 
 from . import __version__
 
-
 DISCORD_API_BASE = "https://discord.com/api/v10"
 
 

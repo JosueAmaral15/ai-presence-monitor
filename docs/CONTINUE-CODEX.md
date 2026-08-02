@@ -1,0 +1,243 @@
+# Continue Integrado para o Codex
+
+## Objetivo
+
+O AI Presence Monitor pode aguardar um intervalo, localizar uma unica janela
+X11 do Codex, clicar no prompt, colar uma mensagem e pressionar Enter. A
+mensagem padrao e `continue` e o atraso padrao e 60 segundos.
+
+Esse recurso substitui o uso separado de `prosseguir_tarefas.py` no fluxo
+monitorado.
+
+## Requisitos
+
+- Linux em sessao X11;
+- `xdotool`;
+- `xclip`;
+- pacote AI Presence Monitor instalado;
+- titulo que identifique exatamente uma janela visivel do Codex.
+
+Verifique:
+
+```bash
+command -v xdotool
+command -v xclip
+printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
+```
+
+Wayland, Windows e macOS nao possuem adaptador nesta versao.
+
+## Configuracao
+
+Os defaults sao:
+
+```env
+PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
+PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
+PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+```
+
+`PRESENCE_CODEX_GUI_WINDOW_TITLE` e uma expressao regular. Ela precisa
+corresponder a uma unica janela. Use um titulo mais especifico quando houver
+mais de uma janela do Codex aberta.
+
+O clique usa coordenadas relativas a janela:
+
+- `0.50`: centro horizontal;
+- `0.90`: 90% da altura, proximo a parte inferior.
+
+## Primeiro teste
+
+O teste seco valida argumentos e mostra o que seria feito. Ele nao espera, nao
+acessa a GUI e nao grava o banco:
+
+```bash
+ai-presence --dry-run continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title 'Codex'
+```
+
+Saida esperada:
+
+```text
+[dry-run:continue] worker=... atraso=60s mensagem='continue' ...
+```
+
+## Uso real
+
+Antes de usar sincronizacao no Protocolo 2, marque a tarefa como ativa:
+
+```bash
+ai-presence start \
+  --worker ID_EXATO_DO_WORKER \
+  --protocol protocol2 \
+  --task "nome-da-tarefa"
+```
+
+Agende o envio:
+
+```bash
+ai-presence continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title 'Codex'
+```
+
+Valores temporarios podem sobrescrever o `.env`:
+
+```bash
+ai-presence continue \
+  --worker ID_EXATO_DO_WORKER \
+  --message "continue" \
+  --delay 30 \
+  --window-title 'Codex - projeto'
+```
+
+Para envio imediato:
+
+```bash
+ai-presence continue --delay 0 --window-title 'Codex'
+```
+
+O alias `continue-task` executa o mesmo comando.
+
+## Execucao em segundo plano
+
+Para encerrar o terminal atual sem cancelar a espera:
+
+```bash
+mkdir -p "$HOME/.local/state"
+setsid nohup ai-presence continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title 'Codex' \
+  > "$HOME/.local/state/ai-presence-continue.log" 2>&1 < /dev/null &
+```
+
+O processo captura a janela antes da espera e revalida o mesmo ID e titulo no
+momento do envio. Fechar a janela ou mudar seu titulo causa falha fechada.
+
+Terminais que alteram o titulo enquanto o Codex trabalha podem usar o modo
+opt-in abaixo. Ele exige o ID X11 explicito e continua revalidando tanto esse ID
+quanto o padrao de titulo; somente a igualdade do titulo completo e relaxada:
+
+```bash
+ai-presence continue \
+  --window-id ID_X11_EXATO \
+  --window-title 'trecho estavel do projeto' \
+  --allow-title-change
+```
+
+Nao use essa opcao sem um padrao estavel e especifico para o projeto.
+
+O mantenedor da selecao iniciado por `xclip` tem sua saida isolada dos pipes do
+comando. Isso permite que a automacao prossiga para o clique e o Enter sem ficar
+bloqueada enquanto o conteudo permanece disponivel na area de transferencia.
+
+## Sincronizacao com o Protocolo 2
+
+Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, o fluxo e:
+
+1. a janela exata e capturada;
+2. o programa aguarda o delay;
+3. o mesmo alvo e revalidado;
+4. texto e Enter sao emitidos;
+5. um worker existente e `active` recebe
+   `observation:automation:continue`;
+6. `last_activity_at` e atualizado;
+7. um hook posterior registra a atividade seguinte do Codex.
+
+A observacao de automacao reinicia a contagem 5/10/15 minutos do Protocolo 2.
+Isso evita um alerta de inatividade imediatamente depois do envio. Se o Codex
+nao produzir hook, `touch` ou outra atividade depois, os alertas retornam
+normalmente a partir do novo horario.
+
+O sistema nao trata a automacao como prova de qualidade ou conclusao do
+trabalho. O evento informa que a entrada foi emitida; o hook posterior informa
+que houve atividade subsequente.
+
+## Comportamento no Protocolo 1
+
+O evento de automacao preserva `last_signal_at`. Assim, executar `continue` nao
+substitui o heartbeat publico esperado pelo Protocolo 1.
+
+## Situacoes que nao atualizam atividade
+
+- iniciar ou agendar o comando;
+- executar `--dry-run`;
+- cancelar durante a espera;
+- nao encontrar a janela;
+- encontrar mais de uma janela;
+- detectar mudanca do ID ou titulo;
+- falhar ao acessar clipboard, mouse ou teclado;
+- indicar worker inexistente;
+- indicar worker `idle`;
+- passar `--no-sync-activity`.
+
+Se a entrada for emitida, mas o worker nao puder ser sincronizado, a CLI informa
+`input_emitted`, escreve o motivo no erro padrao e retorna codigo diferente de
+zero. O texto nao e reenviado automaticamente.
+
+## Descobrir o worker
+
+Liste os workers:
+
+```bash
+ai-presence status
+```
+
+Use o ID completo mostrado na primeira coluna. Isso e especialmente importante
+com escopo `project`, `session` ou `project-session`.
+
+Tambem e possivel omitir `--worker` e deixar a CLI derivar a identidade. Nesse
+caso, execute `start` e `continue` no mesmo diretorio de projeto e com os mesmos
+argumentos de escopo.
+
+## Desativar sincronizacao
+
+Para uma execucao:
+
+```bash
+ai-presence continue --no-sync-activity --window-title 'Codex'
+```
+
+Como default:
+
+```env
+PRESENCE_CONTINUE_SYNC_ACTIVITY=false
+```
+
+Nesse modo, o envio ocorre, mas nenhum relogio do monitor e atualizado.
+
+## Menu interativo
+
+Execute:
+
+```bash
+ai-presence-interactive
+```
+
+Escolha `18. Agendar e enviar continue ao Codex`. O menu solicita worker,
+mensagem, atraso, titulo, ID opcional e sincronizacao.
+
+## Seguranca
+
+- O programa nunca escolhe a primeira janela de uma lista ambigua.
+- O texto e enviado pelo clipboard e nao passa por shell.
+- O clipboard anterior e restaurado.
+- O alvo e revalidado depois do delay.
+- Nao existe retry automatico depois de resultado incerto.
+- Revise visualmente o primeiro teste real.
+
+## Rollback
+
+Desative apenas a sincronizacao:
+
+```env
+PRESENCE_CONTINUE_SYNC_ACTIVITY=false
+```
+
+Ou deixe de executar `continue`. O monitor, os hooks, o banco e os protocolos
+continuam funcionando sem esse comando. Para rollback completo de pacote,
+consulte [rollback/ROLLBACK.md](rollback/ROLLBACK.md).

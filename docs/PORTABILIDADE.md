@@ -22,6 +22,16 @@ Os comandos ficam em:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence-interactive"
 ```
 
+Para expor o comando principal no `PATH` do usuario Linux:
+
+```bash
+./scripts/install-user-command.sh
+command -v ai-presence
+```
+
+O script cria um link em `~/.local/bin`. Ele e preferivel a um alias porque
+tambem funciona em shells nao interativos e para AI-workers.
+
 Atualizacao:
 
 ```bash
@@ -36,6 +46,21 @@ Rollback do pacote:
 
 Guarde o wheel anterior antes de atualizar quando o monitor estiver em uso
 continuo.
+
+### Windows
+
+O mesmo `pyproject.toml` gera um launcher `ai-presence.exe` no ambiente virtual:
+
+```powershell
+py -3 -m venv "$env:LOCALAPPDATA\ai-presence-monitor\venv"
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\python.exe" `
+  -m pip install C:\caminho\para\ai-presence-monitor
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
+```
+
+CLI, configuracao e SQLite sao portateis. O gerador systemd e o dispatcher X11
+continuam especificos do Linux; Task Scheduler e automacao GUI nativa do
+Windows exigem adaptadores futuros.
 
 ## Onde Fica o `.env`
 
@@ -190,6 +215,8 @@ O desinstalador cria um backup antes de remover o arquivo `.service`.
 - O monitor precisa estar em execucao para avaliar atrasos e enviar alertas.
 - Discord, Telegram e telefonia continuam dependendo de conectividade e
   credenciais externas.
+- O nome de uma aba de terminal pode nao ser o titulo da janela X11. Identidade
+  de worker deve usar projeto ou sessao, nao texto visual da aba.
 
 ## Observer de Respostas
 
@@ -212,6 +239,19 @@ Nao habilite a unidade antes de concluir os testes do guia
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`. O adaptador GUI desta versao nao e
 portatil para Wayland, Windows ou macOS.
 
+## Continue Integrado
+
+O comando faz parte do mesmo wheel:
+
+```bash
+ai-presence --dry-run continue --window-title Codex
+ai-presence continue --window-title Codex
+```
+
+Ele depende de `xdotool`, `xclip` e X11 no computador que executa a CLI. O
+pacote Python continua sem dependencia externa de runtime. A sincronizacao usa
+o mesmo SQLite e o mesmo escopo de worker do monitor.
+
 ## Verificacao de Release
 
 Quando as versoes estiverem instaladas na maquina:
@@ -227,6 +267,14 @@ O projeto tambem possui gate de cobertura total em 80%:
 
 ```bash
 COVERAGE_CORE=pytrace python3.12 -m coverage erase
-COVERAGE_CORE=pytrace python3.12 -m coverage run -m unittest discover -s tests
+PYTHONPATH=src COVERAGE_CORE=pytrace python3.12 -m coverage run \
+  -m unittest discover -s tests
 COVERAGE_CORE=pytrace python3.12 -m coverage report
+```
+
+O gate completo local e:
+
+```bash
+python3 -m pip install -e '.[dev]'
+./scripts/quality-check.sh
 ```

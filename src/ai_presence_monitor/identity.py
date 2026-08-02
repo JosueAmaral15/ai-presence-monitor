@@ -4,7 +4,6 @@ import hashlib
 import re
 from pathlib import Path
 
-
 WORKER_SCOPES = ("global", "project", "session", "project-session")
 _SAFE_COMPONENT = re.compile(r"[^A-Za-z0-9._-]+")
 

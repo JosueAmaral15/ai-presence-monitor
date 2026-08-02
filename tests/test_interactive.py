@@ -8,11 +8,14 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from test_cli import make_config
+
 from ai_presence_monitor.interactive import (
     ENV_FIELDS,
     _prompt_choice,
     _prompt_event_args,
     _prompt_int,
+    _prompt_nonnegative_int,
     _prompt_text,
     _prompt_yes_no,
     _read_env,
@@ -23,8 +26,6 @@ from ai_presence_monitor.interactive import (
     configure_env,
     run_interactive,
 )
-
-from test_cli import make_config
 
 
 class InteractiveEnvironmentTests(unittest.TestCase):
@@ -45,6 +46,10 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             StringIO()
         ):
             self.assertEqual(_prompt_int("Numero", 1), 7)
+        with patch("builtins.input", side_effect=["-1", "0"]), redirect_stdout(
+            StringIO()
+        ):
+            self.assertEqual(_prompt_nonnegative_int("Numero", 1), 0)
         with patch("builtins.input", side_effect=["invalid", "b"]), redirect_stdout(
             StringIO()
         ):
@@ -75,6 +80,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                     "PRESENCE_ALERT_REPEAT_SECONDS": "300",
                     "PRESENCE_ALERT_REPEAT_LEVELS": "yellow,orange,red",
                     "RED_NOTIFICATION_MODE": "none",
+                    "RED_ALERT_MAX_DURATION_SECONDS": "15",
                     "PRESENCE_CODEX_AI_NAME": "codex",
                     "PRESENCE_CODEX_PROTOCOL": "protocol2",
                     "PRESENCE_CODEX_WORKER_SCOPE": "project",
@@ -142,6 +148,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             ), patch(
                 "ai_presence_monitor.interactive._prompt_int",
                 side_effect=lambda _label, default: default,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_nonnegative_int",
+                side_effect=lambda _label, default: default,
             ), redirect_stdout(StringIO()):
                 configure_env(env_path)
 
@@ -150,6 +159,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             self.assertEqual(values["PRESENCE_ALERT_REPEAT_ENABLED"], "true")
             self.assertEqual(values["PRESENCE_CODEX_WORKER_SCOPE"], "project")
             self.assertEqual(values["RED_ALERT_COMMAND"], "echo alarm")
+            self.assertEqual(values["RED_ALERT_MAX_DURATION_SECONDS"], "15")
             self.assertEqual(values["PRESENCE_REMOTE_QUESTIONS_ENABLED"], "true")
             self.assertEqual(values["PRESENCE_GUI_ANSWER_ENABLED"], "true")
             self.assertEqual(values["DISCORD_QUESTION_CHANNEL_ID"], "200")
@@ -175,6 +185,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                 side_effect=second_choice,
             ), patch(
                 "ai_presence_monitor.interactive._prompt_int",
+                side_effect=lambda _label, default: default,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_nonnegative_int",
                 side_effect=lambda _label, default: default,
             ), redirect_stdout(StringIO()):
                 configure_env(env_path)
@@ -220,7 +233,7 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             env_path = root / ".env"
             env_path.touch()
             config = make_config(root)
-            options = [str(number) for number in range(1, 18)] + ["0"]
+            options = [str(number) for number in range(1, 20)] + ["0"]
 
             with patch(
                 "ai_presence_monitor.interactive._prompt_text",
@@ -254,7 +267,11 @@ class InteractiveEnvironmentTests(unittest.TestCase):
                 "ai_presence_monitor.interactive._run_reply_observer_loop"
             ) as reply_loop, patch(
                 "ai_presence_monitor.interactive._show_questions"
-            ) as show_questions, redirect_stdout(StringIO()):
+            ) as show_questions, patch(
+                "ai_presence_monitor.interactive._continue_task_interactive"
+            ) as continue_task, patch(
+                "ai_presence_monitor.interactive._stop_alarm"
+            ) as stop_alarm, redirect_stdout(StringIO()):
                 run_interactive(env_path)
 
             configure.assert_called_once()
@@ -270,6 +287,8 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             observe_replies.assert_called_once()
             reply_loop.assert_called_once()
             show_questions.assert_called_once()
+            continue_task.assert_called_once()
+            stop_alarm.assert_called_once()
 
     def test_parser_uses_explicit_environment_file(self) -> None:
         args = build_parser().parse_args(["--env-file", "/tmp/test.env", "--dry-run"])

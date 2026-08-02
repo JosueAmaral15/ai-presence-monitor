@@ -39,8 +39,12 @@
 
 - [x] Repeticao de alerta usa intervalo minimo configurado por `PRESENCE_ALERT_REPEAT_SECONDS`.
 - [x] Fora do expediente, `suppress_alerts` evita novos alertas quando a janela esta ativa.
-- [x] Repeticao do vermelho reenviara a mensagem, mas nao dispara novamente `RED_ALERT_COMMAND` ou `PHONE_WEBHOOK_URL`.
+- [x] Vermelho nao repete mensagem nem escalada externa no mesmo episodio de inatividade.
+- [x] Somente nova atividade valida rearma um futuro alerta vermelho.
 - [x] Comandos locais continuam restritos ao valor explicito de `RED_ALERT_COMMAND` no `.env`.
+- [x] Estado do alarme nao armazena o comando em texto e usa permissao `600`.
+- [x] `stop-alarm` valida PID, fingerprint e inicio antes de sinalizar.
+- [x] GNU `timeout` limita todo alarme local, inclusive comandos em loop.
 
 ## Task 004 - Portabilidade
 
@@ -72,3 +76,24 @@ Um usuario autorizado controla texto que sera enviado ao Codex. Conta Discord
 comprometida ou allowlist incorreta pode alterar o trabalho da IA. O mecanismo
 nao substitui revisao de permissoes, isolamento do canal e validacao humana para
 acoes destrutivas.
+
+## Task 007 - Continue integrado
+
+- [x] Texto e enviado por argumento de subprocesso/clipboard, sem shell.
+- [x] Uma unica janela deve corresponder ao titulo.
+- [x] ID e titulo sao revalidados depois do delay.
+- [x] Clipboard anterior e restaurado.
+- [x] `--dry-run` nao espera, nao acessa GUI e nao grava banco.
+- [x] Falha GUI nao atualiza atividade.
+- [x] Sincronizacao exige worker existente e ativo.
+- [x] Sincronizacao preserva `last_signal_at` do Protocolo 1.
+- [x] Evento diferencia automacao de hook posterior.
+- [x] Nao existe retry automatico.
+- [x] Configuracao real e segredos nao foram modificados.
+
+### Risco residual
+
+Uma emissao bem-sucedida prova que o sistema operacional aceitou os eventos de
+entrada, nao que o Codex interpretou ou executou a mensagem. Por isso a
+observacao reinicia apenas a janela normal do Protocolo 2; ausencia posterior de
+hooks volta a produzir alerta.

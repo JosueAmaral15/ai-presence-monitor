@@ -38,7 +38,7 @@ PRESENCE_WORK_WINDOW_TIMEZONE=America/Sao_Paulo
 PRESENCE_OUTSIDE_WORK_WINDOW_BEHAVIOR=suppress_alerts
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 PRESENCE_CODEX_AI_NAME=codex
 PRESENCE_CODEX_PROTOCOL=protocol2
 PRESENCE_CODEX_TASK=
@@ -70,10 +70,13 @@ Para continuar cobrando enquanto o worker estiver atrasado dentro do expediente:
 ```env
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
 
-Isso repete alertas a cada 300 segundos para os niveis configurados, desde que o worker continue ativo e atrasado.
+Isso repete alertas amarelos e laranjas a cada 300 segundos, desde que o worker
+continue ativo e atrasado. O vermelho e sempre unico por episodio continuo de
+inatividade, mesmo se uma configuracao antiga ainda listar `red`. Nova atividade
+valida rearma o vermelho.
 
 Se voce quiser que o monitor alerte em qualquer horario, deixe:
 
@@ -149,12 +152,31 @@ passo, os testes em duas fases e o rollback estao em
 Ative `PRESENCE_GUI_ANSWER_ENABLED=true` somente depois de confirmar que uma
 resposta autorizada chega ao estado `answered` sem controlar mouse ou teclado.
 
+## Continue Integrado
+
+O envio local de continuidade reutiliza o mesmo titulo e as mesmas proporcoes
+da GUI:
+
+```env
+PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
+PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
+PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+```
+
+Com sincronizacao ativa, somente clique, colagem e Enter bem-sucedidos
+atualizam `last_activity_at` de um worker ja ativo. O Protocolo 1 preserva
+`last_signal_at`. Consulte `docs/CONTINUE-CODEX.md`.
+
 ## Alerta Vermelho
 
 Modo simples, apenas Discord/Telegram:
 
 ```env
 RED_NOTIFICATION_MODE=none
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=
 PHONE_WEBHOOK_URL=
 ```
@@ -163,8 +185,24 @@ Modo alarme local:
 
 ```env
 RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 PHONE_WEBHOOK_URL=
+```
+
+Se o caminho do audio contiver espacos, coloque somente o caminho entre aspas.
+Por exemplo:
+
+```env
+RED_ALERT_COMMAND=ffplay -nodisp -loop 0 "/caminho/com espacos/alarm.mp3"
+```
+
+Mesmo com `-loop 0`, o monitor encerra o processo automaticamente depois de
+`RED_ALERT_MAX_DURATION_SECONDS`. O valor deve ser maior que zero. Para
+interromper antes do limite:
+
+```bash
+ai-presence stop-alarm
 ```
 
 Modo telefonia externa:
@@ -189,6 +227,7 @@ Antes de usar em producao local, confira:
 - `DISCORD_POINT_WEBHOOK_URL` e `DISCORD_ALERT_WEBHOOK_URL` estao preenchidos;
 - Telegram esta com os dois campos preenchidos ou os dois vazios;
 - `RED_NOTIFICATION_MODE` e `none`, `alarm` ou `phone`;
+- `RED_ALERT_MAX_DURATION_SECONDS` e maior que zero;
 - se `RED_NOTIFICATION_MODE=alarm`, `RED_ALERT_COMMAND` esta preenchido;
 - se `RED_NOTIFICATION_MODE=phone`, `PHONE_WEBHOOK_URL` esta preenchido;
 - `PRESENCE_CODEX_AUTO_START=false` se voce quer controle manual por `start` e `finish`;
@@ -200,6 +239,10 @@ Antes de usar em producao local, confira:
 - o bot possui leitura de historico e Message Content Intent;
 - `PRESENCE_GUI_ANSWER_ENABLED=false` durante o primeiro teste;
 - o titulo configurado encontra exatamente uma janela do Codex.
+- `PRESENCE_CONTINUE_MESSAGE` nao esta vazio;
+- `PRESENCE_CONTINUE_DELAY_SECONDS` e zero ou maior;
+- o worker informado ao comando `continue` ja esta ativo, caso a sincronizacao
+  esteja ligada.
 
 ## Comandos de Teste
 
@@ -234,6 +277,14 @@ python3 -m ai_presence_monitor --dry-run ask-user \
   --worker teste:codex \
   --question "Pergunta de teste"
 python3 -m ai_presence_monitor --dry-run observe-replies --once
+```
+
+Testar o fluxo integrado sem espera, GUI ou banco:
+
+```bash
+ai-presence --dry-run continue \
+  --worker ID_EXATO_DO_WORKER \
+  --window-title Codex
 ```
 
 ## Cuidados

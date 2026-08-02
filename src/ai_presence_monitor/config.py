@@ -7,7 +7,6 @@ from pathlib import Path
 
 from .identity import normalize_scope
 
-
 APP_DIR_NAME = "ai-presence-monitor"
 PROJECT_ENV_NAME = ".ai-presence-monitor.env"
 
@@ -33,7 +32,10 @@ def resolve_env_path(env_file: str | Path | None = None, cwd: Path | None = None
     if (
         legacy_env.exists()
         and (current_dir / "pyproject.toml").exists()
-        and (current_dir / "ai_presence_monitor").is_dir()
+        and (
+            (current_dir / "src" / "ai_presence_monitor").is_dir()
+            or (current_dir / "ai_presence_monitor").is_dir()
+        )
     ):
         return legacy_env.resolve()
     return (user_config_dir() / ".env").resolve()
@@ -149,6 +151,10 @@ class AppConfig:
     codex_gui_click_x_ratio: float = 0.5
     codex_gui_click_y_ratio: float = 0.9
     gui_confirmation_timeout_seconds: int = 120
+    continue_message: str = "continue"
+    continue_delay_seconds: int = 60
+    continue_sync_activity: bool = True
+    red_alert_max_duration_seconds: int = 15
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -173,7 +179,7 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         alert_repeat_seconds=_env_int("PRESENCE_ALERT_REPEAT_SECONDS", 300),
         alert_repeat_levels=_env_csv(
             "PRESENCE_ALERT_REPEAT_LEVELS",
-            ("yellow", "orange", "red"),
+            ("yellow", "orange"),
         ),
         discord_point_webhook_url=os.environ.get("DISCORD_POINT_WEBHOOK_URL") or None,
         discord_alert_webhook_url=os.environ.get("DISCORD_ALERT_WEBHOOK_URL") or None,
@@ -182,6 +188,10 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         telegram_chat_id=os.environ.get("TELEGRAM_CHAT_ID") or None,
         red_notification_mode=os.environ.get("RED_NOTIFICATION_MODE", "alarm").lower(),
         red_alert_command=os.environ.get("RED_ALERT_COMMAND") or None,
+        red_alert_max_duration_seconds=_env_int(
+            "RED_ALERT_MAX_DURATION_SECONDS",
+            15,
+        ),
         phone_webhook_url=os.environ.get("PHONE_WEBHOOK_URL") or None,
         codex_worker_id=os.environ.get("PRESENCE_CODEX_WORKER_ID") or None,
         codex_ai_name=_env_str("PRESENCE_CODEX_AI_NAME", "codex"),
@@ -227,5 +237,11 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         gui_confirmation_timeout_seconds=_env_int(
             "PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS",
             120,
+        ),
+        continue_message=_env_str("PRESENCE_CONTINUE_MESSAGE", "continue"),
+        continue_delay_seconds=_env_int("PRESENCE_CONTINUE_DELAY_SECONDS", 60),
+        continue_sync_activity=_env_bool(
+            "PRESENCE_CONTINUE_SYNC_ACTIVITY",
+            True,
         ),
     )

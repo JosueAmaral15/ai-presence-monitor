@@ -27,7 +27,7 @@ class HookInstallResult:
 
 
 def project_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def default_user_hooks_path() -> Path:

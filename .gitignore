@@ -1,5 +1,10 @@
 __pycache__/
 *.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
 .env
 .ai-presence-monitor.env
 presence.db
@@ -9,3 +14,5 @@ build/
 dist/
 *.egg-info/
 .coverage
+.coverage.*
+htmlcov/

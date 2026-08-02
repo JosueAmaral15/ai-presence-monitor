@@ -227,12 +227,16 @@ Por padrao, o monitor evita repetir o mesmo nivel de alerta indefinidamente. Par
 ```env
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
 
-Com isso, se o worker continuar ativo e atrasado, o mesmo nivel pode ser reenviado a cada 300 segundos. Uma nova atividade (`touch`, `heartbeat`, `start` ou observacao do Codex) limpa o ultimo alerta e reinicia a contagem.
+Com isso, se o worker continuar ativo e atrasado, amarelo e laranja podem ser
+reenviados a cada 300 segundos. Uma nova atividade (`touch`, `heartbeat`,
+`start` ou observacao do Codex) limpa o ultimo alerta e reinicia a contagem.
 
-Para evitar multiplos alarmes locais ou chamadas em cascata, a escalada externa do alerta vermelho (`RED_NOTIFICATION_MODE=alarm` ou `phone`) roda quando o alerta chega ao nivel vermelho. Repeticoes posteriores do vermelho reenviam a mensagem, mas nao disparam novamente o comando local ou webhook de telefonia.
+O vermelho e enviado uma unica vez por episodio continuo de inatividade. Ciclos
+posteriores nao reenviam Discord, Telegram, alarme local nem telefonia. Uma nova
+atividade valida rearma o vermelho para um futuro episodio.
 
 ## Discord
 
@@ -347,6 +351,26 @@ python3 -m ai_presence_monitor observe-replies
 Consulte o procedimento completo em
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`.
 
+## Automacao Local de Continue
+
+```env
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+```
+
+`PRESENCE_CONTINUE_MESSAGE` define o texto usado quando `--message` nao e
+informado. `PRESENCE_CONTINUE_DELAY_SECONDS` define a espera antes da emissao.
+
+Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, uma emissao GUI bem-sucedida
+registra `observation:automation:continue` para um worker existente e ativo. No
+Protocolo 2, isso atualiza `last_activity_at` e reinicia os limites 5/10/15
+minutos. Sem atividade posterior, os alertas retornam normalmente. No Protocolo
+1, `last_signal_at` nao muda.
+
+Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam o monitor. O
+guia completo esta em `docs/CONTINUE-CODEX.md`.
+
 ## Alerta Vermelho
 
 O alerta vermelho pode apenas mandar mensagem ou escalar para alarme/telefonema.
@@ -367,6 +391,7 @@ RED_NOTIFICATION_MODE=none
 
 ```env
 RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
@@ -386,6 +411,32 @@ RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapse
 ```
 
 Use comandos simples e seguros. Evite comandos destrutivos.
+
+`RED_ALERT_MAX_DURATION_SECONDS` limita obrigatoriamente a execucao local. O
+padrao e 15 segundos. Mesmo se `RED_ALERT_COMMAND` usar um loop continuo, GNU
+`timeout` encerra o grupo ao atingir esse limite. O valor precisa ser positivo.
+
+O controle seguro do processo requer Linux com `/proc` nesta versao.
+
+O monitor registra PID, fingerprint do comando e identidade do processo em:
+
+```text
+~/.local/state/ai-presence-monitor/red-alarm.json
+```
+
+O arquivo possui permissao `600` e nao contem o comando em texto. Se um alarme
+ja estiver ativo, um novo processo nao e iniciado. Para interromper:
+
+```bash
+ai-presence stop-alarm
+```
+
+O comando envia `SIGTERM`, aguarda tres segundos e usa `SIGKILL` somente se o
+processo continuar ativo. Use `--no-force` para desativar o fallback:
+
+```bash
+ai-presence stop-alarm --no-force
+```
 
 ### `PHONE_WEBHOOK_URL`
 
@@ -594,7 +645,7 @@ PRESENCE_WORK_WINDOW_TIMEZONE=America/Sao_Paulo
 PRESENCE_OUTSIDE_WORK_WINDOW_BEHAVIOR=suppress_alerts
 PRESENCE_ALERT_REPEAT_ENABLED=true
 PRESENCE_ALERT_REPEAT_SECONDS=300
-PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange,red
+PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 
 DISCORD_POINT_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
@@ -604,6 +655,7 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 
 RED_NOTIFICATION_MODE=none
+RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=
 PHONE_WEBHOOK_URL=
 
@@ -627,6 +679,9 @@ PRESENCE_CODEX_GUI_WINDOW_TITLE=
 PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
 PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
 PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS=120
+PRESENCE_CONTINUE_MESSAGE=continue
+PRESENCE_CONTINUE_DELAY_SECONDS=60
+PRESENCE_CONTINUE_SYNC_ACTIVITY=true
 ```
 
 ## O Que o Usuario Pode Fazer
@@ -648,6 +703,8 @@ O usuario pode:
 - restringir respostas por ID de usuario e referencia;
 - manter respostas apenas no SQLite ou entrega-las ao Codex GUI;
 - executar o observer de respostas em terminal ou systemd separado.
+- agendar `continue` na mesma CLI e sincronizar uma emissao bem-sucedida com o
+  relogio de atividade do Protocolo 2.
 
 ## Cuidados
 

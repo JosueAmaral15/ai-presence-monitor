@@ -112,3 +112,87 @@ O `.env` real continua sem as credenciais novas, os dois recursos continuam
 desativados e a unidade de respostas nao foi instalada. O teste externo real
 depende de criar o bot/canal, preencher a allowlist e autorizar o movimento de
 mouse e o Enter.
+
+O usuario solicitou aplicar integralmente o Protocolo Simplicidade 3, organizar
+o projeto em layout `src/` e unificar o antigo `mouse-control-clicker` com o AI
+Presence Monitor. Foi criada a baseline Git `4f0b71b` e a branch
+`COM-e776b5f7-30fd-43cb-9d44-cd2f6c1cf7d0`.
+
+A auditoria da Task 007 leu a documentacao, o codigo e os testes dos dois
+projetos. O monitor permaneceu com 62 testes aprovados, 86% de cobertura,
+`ruff`, `mypy`, compilacao, `pip check` e integridade SQLite aprovados. Nenhum
+ciclo de importacao foi encontrado. O componente X11 existente foi escolhido
+como base para o comando programado `continue`, evitando incorporar a arvore de
+dependencias PyAutoGUI e a selecao ambigua de janela do projeto antigo.
+
+Esta fase nao alterou `.env`, banco, hooks ou servicos. O plano detalhado e a
+implementacao aguardam aprovacao da fase seguinte.
+
+O usuario aprovou prosseguir pelas fases e acrescentou que a execucao integrada
+de `continue` deve sincronizar a atividade monitorada, principalmente para
+evitar alertas falsos no Protocolo 2. O plano da Task 007 definiu que somente a
+emissao GUI bem-sucedida atualiza `last_activity_at` de um worker ja ativo.
+Agendamento, espera, dry-run, falha e worker inativo nao contam como atividade.
+No Protocolo 1, `last_signal_at` permanece inalterado, de modo que `continue`
+nao substitui o heartbeat publico. Um hook posterior continua sendo a evidencia
+de retomada efetiva do Codex.
+
+A implementacao da Task 007 foi isolada no commit `f8bd9fb`. O pacote foi
+migrado para `src/ai_presence_monitor`, e a CLI passou a oferecer `continue` e
+`continue-task`, tambem disponiveis como opcao 18 do menu. O despacho X11
+captura uma unica janela, aguarda 60 segundos por padrao, revalida o alvo,
+preserva o clipboard e so entao sincroniza um worker ativo.
+
+Um teste comportamental confirmou que, no Protocolo 2, nao ha alerta quatro
+minutos apos a observacao de continuidade, mas o amarelo retorna aos seis
+minutos se nenhum hook ou outra atividade ocorrer. No Protocolo 1,
+`last_signal_at` permanece intacto.
+
+A documentacao foi organizada com indice, guia dedicado de continuidade,
+diretorios de seguranca e rollback, requisitos, arquitetura, decisoes e
+changelog. Foram adicionados gate local e workflow de qualidade. O `.env` real,
+o SQLite, os hooks e os servicos nao foram alterados nesta fase.
+
+Resultado final da Task 007: 74 testes passaram em Python 3.10, 3.11 e 3.12,
+com 86% de cobertura total. Ruff, mypy, compilacao, scripts, links locais,
+wheel, sdist, instalacao limpa e todos os entrypoints passaram. O wheel 0.4.0
+tem SHA-256
+`543477a9218aaff6578aaaade0dd0c5f7b50332633f97a8649719763f4ea9968`.
+
+A copia do SQLite preservou 1 worker, 17 eventos, 0 alertas e as tabelas de
+perguntas vazias, com integridade `ok`. O hash do banco real permaneceu
+`54abee65b1af8a076f1929a8b60479ab50c494fff74bc26eb764ddf6eb8e1f94`.
+O ambiente dedicado foi atualizado para 0.4.0, e os cinco eventos de hook
+passaram em dry-run. `.env`, hooks e servicos nao foram modificados; monitor e
+observer continuaram inativos.
+
+O teste real de clique e Enter nao foi repetido por atuar na GUI. O fluxo foi
+coberto com dispatcher simulado, incluindo preservacao do clipboard,
+revalidacao de alvo, falha sem sincronizacao e regras dos dois protocolos. O
+primeiro uso real deve ser supervisionado visualmente.
+
+Em 2026-07-29, o worker do projeto AmaralAgenda foi iniciado como
+`notebook-josue:codex:project=AmaralAgenda-23813ab6` no Protocolo 2. O servico
+`ai-presence-monitor.service` foi habilitado e iniciado. Um `touch` silencioso
+confirmou a atualizacao do worker sem alerta; como o teste ocorreu depois das
+18:00, o journal confirmou a supressao prevista fora do expediente.
+
+O comando foi exposto em `~/.local/bin/ai-presence`. A documentacao passou a
+incluir um protocolo operacional para AI-workers, um `AGENTS.md`, diferenca
+entre monitor e observer de respostas e limites Linux/Windows. O titulo de uma
+aba GNOME Terminal nao foi tratado como janela X11 independente; a identidade
+operacional usa o caminho do projeto.
+
+Em 2026-07-30, um alarme `ffplay -loop 0` permaneceu tocando sem comando de
+parada. O processo foi interrompido de forma direcionada. A versao 0.4.1 passou
+a registrar a identidade minima do processo, recusar duplicatas, coletar o
+filho e oferecer `ai-presence stop-alarm` com parada normal e fallback forcado.
+
+Em 2026-08-01, a repeticao de alertas foi refinada: amarelo e laranja podem
+continuar periodicos, mas vermelho passou a ser unico por episodio continuo de
+inatividade. `start`, `heartbeat`, `touch` e observacoes validas limpam o estado
+do alerta e rearmam um futuro vermelho.
+
+Ainda em 2026-08-01, o disparo sonoro recebeu limite automatico padrao de 15
+segundos por GNU `timeout`. Isso garante som finito mesmo com `ffplay -loop 0`,
+sem retirar a parada antecipada por `ai-presence stop-alarm`.
