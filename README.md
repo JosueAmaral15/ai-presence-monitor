@@ -1,102 +1,135 @@
 # AI Presence Monitor
 
-Monitor local para presencas artificiais de trabalho. Ele registra atividade de uma IA/agente, mantém estado em SQLite e envia notificacoes automáticas por Discord e, opcionalmente, Telegram.
+[Portuguese documentation](README.pt-BR.md)
 
-## Protocolos
+AI Presence Monitor is a local worker-presence monitor for AI coding agents.
+It records lifecycle and activity evidence in SQLite, evaluates configurable
+inactivity protocols, and sends alerts through Discord and optionally Telegram.
 
-### Protocolo 1
+The project also provides:
 
-A IA deve sinalizar publicamente a cada 5 minutos que continua trabalhando. O canal de ponto recebe as batidas de atividade.
+- passive Codex activity observation through hooks;
+- per-project and per-session worker identities;
+- work-hour alert policies;
+- remote Discord questions with an optional guarded GUI fallback;
+- scheduled `continue` input for the Codex GUI;
+- one-shot red alerts with a bounded local alarm.
 
-Alertas:
+## Presence Protocols
 
-- amarelo: 7 minutos sem nova sinalizacao;
-- laranja: 15 minutos sem nova sinalizacao;
-- vermelho: 30 minutos sem nova sinalizacao.
+### Protocol 1: periodic public check-in
 
-### Protocolo 2
+The AI worker must publicly signal that it is still working every five minutes.
+The point channel receives these heartbeat messages.
 
-A IA sinaliza publicamente somente quando inicia e termina. Durante a tarefa, chamadas silenciosas de `touch` podem registrar atividade interna sem postar no canal de ponto.
+Alert thresholds:
 
-Alertas:
+- yellow: 7 minutes without a new signal;
+- orange: 15 minutes without a new signal;
+- red: 30 minutes without a new signal.
 
-- amarelo: 5 minutos sem atividade;
-- laranja: 10 minutos sem atividade;
-- vermelho: 15 minutos sem atividade.
+### Protocol 2: lifecycle plus observed activity
 
-## Configuracao
+The AI worker publicly signals only when work starts and finishes. During the
+task, silent `touch` events or Codex hooks update the local activity clock
+without posting to the point channel.
 
-Guia detalhado do `.env` e dos dados necessarios:
+Alert thresholds:
 
-- [docs/INDEX.md](docs/INDEX.md)
-- [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
-- [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
-- [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
-- [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md)
-- [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
-- [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
+- yellow: 5 minutes without activity;
+- orange: 10 minutes without activity;
+- red: 15 minutes without activity.
 
-Instalacao portatil recomendada:
+Yellow and orange alerts may repeat at a configured interval. A red alert is
+sent only once per continuous inactivity episode. A valid `start`, `heartbeat`,
+`touch`, or Codex observation rearms red alerts for a future episode.
+
+## Documentation
+
+Detailed operational documentation is currently available in Portuguese:
+
+- [Documentation index](docs/INDEX.md)
+- [Environment setup](docs/CONFIGURANDO-ENV.md)
+- [Environment and architecture guide](docs/ENVIRONMENT-GUIDE.md)
+- [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
+- [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md)
+- [Portability](docs/PORTABILIDADE.md)
+- [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
+- [Security checklist](docs/security/SECURITY.md)
+- [Rollback procedures](docs/rollback/ROLLBACK.md)
+
+The Portuguese version of this README is preserved in
+[README.pt-BR.md](README.pt-BR.md).
+
+## Requirements
+
+- Python 3.10, 3.11, or 3.12;
+- Linux with `/proc` for safe local alarm process identity;
+- GNU `timeout` for mandatory alarm duration limits;
+- `systemd --user` for the optional Linux service;
+- X11, `xdotool`, and `xclip` only for optional GUI automation.
+
+The core package has no third-party runtime Python dependencies.
+
+## Installation
+
+Recommended isolated installation:
 
 ```bash
 python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /caminho/para/ai-presence-monitor
+"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /path/to/ai-presence-monitor
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
 ```
 
-Durante o desenvolvimento no proprio checkout:
-
-```bash
-cd /caminho/para/ai-presence-monitor
-python3 main.py
-```
-
-O menu pergunta os dados no terminal e pode criar o `.env`, inicializar o banco, registrar ponto, registrar inicio/fim de tarefa e rodar o monitor.
-
-Atalho equivalente no Linux:
-
-```bash
-./run_interactive.sh
-```
-
-Se quiser testar sem enviar mensagens reais:
-
-```bash
-python3 main.py --dry-run
-```
-
-## Operacao por AI-worker
-
-O pacote fornece o comando de terminal instalavel `ai-presence`. Para
-disponibiliza-lo no `PATH` do usuario Linux:
+To expose the installed command in the current user's `PATH`:
 
 ```bash
 ./scripts/install-user-command.sh
 ai-presence --help
 ```
 
-Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md) e
-[docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md).
-O protocolo define inicio, atividade observada, perguntas, continuidade,
-encerramento, codigos de saida e limites da automacao GUI.
-
-Configuracao manual:
+For development directly from the checkout:
 
 ```bash
-cd /caminho/para/ai-presence-monitor
+cd /path/to/ai-presence-monitor
+python3 main.py
+```
+
+The interactive menu can create the environment file, initialize the database,
+record worker events, run the monitor, configure integrations, and stop a local
+alarm. The equivalent Linux shortcut is:
+
+```bash
+./run_interactive.sh
+```
+
+Use dry-run mode to inspect behavior without sending real notifications:
+
+```bash
+python3 main.py --dry-run
+```
+
+## Configuration
+
+Create the local environment file:
+
+```bash
 cp .env.example .env
 ```
 
-Edite `.env` e preencha pelo menos:
+Never commit the real `.env`. At minimum, configure separate Discord webhooks
+for point messages and alerts:
 
 ```env
 DISCORD_POINT_WEBHOOK_URL=https://discord.com/api/webhooks/...
 DISCORD_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-No Discord, crie um webhook em cada canal desejado. Um webhook pertence a um canal; por isso o canal de ponto e o canal de alertas precisam de URLs diferentes.
+A Discord webhook belongs to one channel, so the point and alert channels need
+different URLs.
 
-Para cobrar alertas somente durante um expediente e repetir avisos enquanto o worker continuar atrasado, configure:
+To restrict alerts to work hours and repeat yellow/orange notices while a worker
+remains overdue:
 
 ```env
 PRESENCE_WORK_WINDOW_ENABLED=true
@@ -108,177 +141,145 @@ PRESENCE_ALERT_REPEAT_SECONDS=300
 PRESENCE_ALERT_REPEAT_LEVELS=yellow,orange
 ```
 
-Amarelo e laranja podem repetir pelo intervalo configurado. O vermelho e
-enviado somente uma vez por episodio continuo de inatividade e e rearmado por
-uma nova atividade valida da IA.
+The red level never repeats during the same inactivity episode, even if an old
+configuration still lists `red` in `PRESENCE_ALERT_REPEAT_LEVELS`.
 
-## Uso
+## Basic Usage
 
-Inicializar o banco:
+Initialize the database:
 
 ```bash
-python3 -m ai_presence_monitor init
+ai-presence init
 ```
 
-Listar protocolos:
+List available protocols:
 
 ```bash
-python3 -m ai_presence_monitor protocols
+ai-presence protocols
 ```
 
-Rodar o monitor uma vez:
+Run one monitoring cycle:
 
 ```bash
-python3 -m ai_presence_monitor monitor --once
+ai-presence monitor --once
 ```
 
-Rodar o monitor continuamente:
+Run continuously:
 
 ```bash
-python3 -m ai_presence_monitor monitor
+ai-presence monitor
 ```
 
-Ver estado atual:
+Inspect worker state:
 
 ```bash
-python3 -m ai_presence_monitor status
+ai-presence status
 ```
 
-## Perguntas e Respostas Remotas
+## AI Worker Operation
 
-A versao 0.3.0 pode publicar uma pergunta em um canal dedicado do Discord,
-aceitar somente resposta direta de usuario autorizado e, opcionalmente, colar a
-resposta na janela exata do Codex GUI.
+An AI responsible for operating this project must read [AGENTS.md](AGENTS.md)
+and the [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md).
+Those documents define lifecycle commands, observed activity, remote questions,
+GUI safety boundaries, exit codes, and completion requirements.
 
-O recurso e desativado por padrao. Configure e teste primeiro com a entrega GUI
-desativada, seguindo
-[docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
-
-```bash
-ai-presence --dry-run ask-user --worker worker-id --question "Posso prosseguir?"
-ai-presence ask-user --worker worker-id --question "Posso prosseguir?"
-ai-presence observe-replies --once
-ai-presence observe-replies
-ai-presence questions
-```
-
-Para o daemon separado:
+Use an explicit absolute project path for project-scoped workers:
 
 ```bash
-ai-presence --dry-run install-reply-observer-service
-ai-presence install-reply-observer-service
-```
-
-O instalador nao habilita nem inicia a unidade automaticamente.
-
-## Continue Integrado
-
-A versao 0.4.0 incorpora o envio programado de `continue` ao mesmo pacote:
-
-```bash
-ai-presence --dry-run continue \
-  --worker ID_EXATO_DO_WORKER \
-  --window-title 'Codex'
-
-ai-presence continue \
-  --worker ID_EXATO_DO_WORKER \
-  --window-title 'Codex'
-```
-
-O atraso padrao e 60 segundos. O alvo deve ser uma unica janela X11 e e
-revalidado depois da espera.
-
-Se o terminal muda dinamicamente o titulo, `--allow-title-change` pode ser
-combinado com `--window-id` explicito. Nesse modo, o mesmo ID e o padrao de
-titulo ainda sao revalidados; apenas a igualdade do titulo completo e relaxada.
-
-Quando a emissao termina com sucesso e o worker indicado esta `active`, o
-comando registra `observation:automation:continue`. No Protocolo 2 isso atualiza
-`last_activity_at` e reinicia a contagem de inatividade. Se nenhuma atividade
-posterior ocorrer, os alertas de 5/10/15 minutos retornam normalmente.
-
-No Protocolo 1, `last_signal_at` nao e alterado; o heartbeat publico continua
-obrigatorio. Agendamento, `dry-run`, falha GUI e worker inativo nao contam como
-atividade.
-
-Consulte [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) para configuracao,
-execucao em segundo plano, sincronizacao e rollback.
-
-## Protocolo 1: exemplo
-
-Quando a IA começar a trabalhar:
-
-```bash
-python3 -m ai_presence_monitor start \
-  --ai codex \
-  --protocol protocol1 \
-  --task "refatoracao-x" \
-  --message "iniciando a tarefa"
-```
-
-Enquanto estiver trabalhando, enviar batida de ponto a cada 5 minutos:
-
-```bash
-python3 -m ai_presence_monitor heartbeat \
-  --ai codex \
-  --protocol protocol1 \
-  --task "refatoracao-x" \
-  --message "continuo trabalhando na tarefa"
-```
-
-Ao terminar:
-
-```bash
-python3 -m ai_presence_monitor finish \
-  --ai codex \
-  --protocol protocol1 \
-  --message "tarefa concluida"
-```
-
-## Protocolo 2: exemplo
-
-Inicio:
-
-```bash
-python3 -m ai_presence_monitor start \
+ai-presence start \
   --ai codex \
   --protocol protocol2 \
-  --task "algoritmo-y" \
-  --message "execucao iniciada"
+  --project /absolute/path/to/project \
+  --task "Implement feature X"
 ```
 
-Atividade silenciosa, sem postar no Discord:
+Finish only when the task is actually complete:
 
 ```bash
-python3 -m ai_presence_monitor touch \
+ai-presence finish \
   --ai codex \
   --protocol protocol2 \
-  --task "algoritmo-y" \
-  --message "passo interno executado"
+  --project /absolute/path/to/project \
+  --message "Task completed"
 ```
 
-Fim:
+## Protocol 1 Example
+
+Start work:
 
 ```bash
-python3 -m ai_presence_monitor finish \
+ai-presence start \
   --ai codex \
-  --protocol protocol2 \
-  --message "execucao finalizada"
+  --protocol protocol1 \
+  --task "refactor-x" \
+  --message "Starting the task"
 ```
 
-## Observer do Codex
+Send a public heartbeat every five minutes:
 
-Para o Codex, o caminho recomendado e usar hooks como observer passivo. O hook recebe eventos do Codex por JSON, registra atividade local no SQLite e sai rapidamente. Ele nao envia Discord/Telegram diretamente; os alertas continuam sendo enviados pelo monitor.
+```bash
+ai-presence heartbeat \
+  --ai codex \
+  --protocol protocol1 \
+  --task "refactor-x" \
+  --message "Still working on the task"
+```
 
-Isso melhora o Protocolo 2: tarefas longas nao precisam depender apenas de `touch` manual, desde que o Codex gere eventos de prompt, ferramenta ou turno.
+Finish work:
 
-### Configurar `.env`
+```bash
+ai-presence finish \
+  --ai codex \
+  --protocol protocol1 \
+  --message "Task completed"
+```
 
-Exemplo para Protocolo 2:
+## Protocol 2 Example
+
+Start work:
+
+```bash
+ai-presence start \
+  --ai codex \
+  --protocol protocol2 \
+  --task "algorithm-y" \
+  --message "Execution started"
+```
+
+Record silent internal activity without posting to Discord:
+
+```bash
+ai-presence touch \
+  --ai codex \
+  --protocol protocol2 \
+  --task "algorithm-y" \
+  --message "Internal step completed"
+```
+
+Finish work:
+
+```bash
+ai-presence finish \
+  --ai codex \
+  --protocol protocol2 \
+  --message "Execution finished"
+```
+
+## Codex Observer
+
+The recommended Codex integration uses hooks as passive observers. A hook
+receives Codex JSON events, records local activity in SQLite, and exits quickly.
+It does not send Discord or Telegram messages directly; the monitor remains the
+single alert policy engine.
+
+This avoids false Protocol 2 alerts during long tasks when Codex continues to
+produce prompt, tool, or turn events.
+
+Example configuration:
 
 ```env
 PRESENCE_DEFAULT_PROTOCOL=protocol2
-PRESENCE_CODEX_WORKER_ID=seu-computador:codex
+PRESENCE_CODEX_WORKER_ID=your-computer:codex
 PRESENCE_CODEX_AI_NAME=codex
 PRESENCE_CODEX_PROTOCOL=protocol2
 PRESENCE_CODEX_TASK=
@@ -287,55 +288,47 @@ PRESENCE_CODEX_AUTO_START=false
 PRESENCE_CODEX_HOOK_FAIL_CLOSED=false
 ```
 
-Por padrao, `PRESENCE_CODEX_AUTO_START=false`. Isso significa que o hook so registra atividade quando o worker ja esta ativo. Use `start` e `finish` como marcos publicos:
+With `PRESENCE_CODEX_AUTO_START=false`, hooks record activity only for an
+already active worker. Use `start` and `finish` as explicit public lifecycle
+boundaries.
+
+With `PRESENCE_CODEX_WORKER_SCOPE=project`, run lifecycle commands from the
+project root or pass `--project`. Other scopes are `global`, `session`, and
+`project-session`.
+
+### Install Codex hooks
+
+Use [examples/codex/hooks.json](examples/codex/hooks.json) as a reference, or
+run the idempotent installer with backup support:
 
 ```bash
-python3 -m ai_presence_monitor start --ai codex --protocol protocol2 --task "tarefa-longa"
-# o hook registra atividade silenciosa enquanto o Codex trabalha
-python3 -m ai_presence_monitor finish --ai codex --protocol protocol2 --task "tarefa-longa"
+ai-presence --dry-run install-codex-hook
+ai-presence install-codex-hook
 ```
 
-Se quiser que qualquer evento do Codex crie/reative o worker automaticamente:
-
-```env
-PRESENCE_CODEX_AUTO_START=true
-```
-
-Com `PRESENCE_CODEX_WORKER_SCOPE=project`, execute `start` e `finish` dentro da
-raiz do projeto. O hook usa o `cwd` recebido do Codex para chegar ao mesmo worker.
-Os outros escopos sao `global`, `session` e `project-session`.
-
-### Instalar hook no Codex
-
-Use [examples/codex/hooks.json](examples/codex/hooks.json) como base. Copie as entradas para `~/.codex/hooks.json` ou para o `.codex/hooks.json` do projeto que o Codex esta usando.
-
-Depois, no Codex, use `/hooks` para revisar e confiar no hook. Hooks nao gerenciados precisam ser revisados/confiados quando sao novos ou mudam.
-
-Instalacao automatica com backup/idempotencia:
+Remove only AI Presence Monitor hooks:
 
 ```bash
-python3 -m ai_presence_monitor install-codex-hook
+ai-presence uninstall-codex-hook
 ```
 
-Teste sem escrever:
+Manual hook smoke test:
 
 ```bash
-python3 -m ai_presence_monitor --dry-run install-codex-hook
+printf '%s\n' '{"hook_event_name":"PostToolUse","tool_name":"Bash","session_id":"test","cwd":"/tmp/project"}' \
+  | ai-presence codex-hook --verbose
 ```
 
-Remover o hook:
+Observer limitations:
 
-```bash
-python3 -m ai_presence_monitor uninstall-codex-hook
-```
+- hook events prove activity signals, not work quality;
+- a long command may emit `PreToolUse` at the start and `PostToolUse` only at
+  the end;
+- additional process, workspace, or log observers may still be useful.
 
-O instalador preserva hooks de terceiros e remove/substitui tanto hooks antigos
-que apontam para `codex_presence_hook.py` quanto hooks novos baseados no modulo
-instalado.
+## User Service
 
-### Monitor continuo
-
-Depois de instalar o pacote, gere um servico systemd de usuario:
+Generate and enable the user-level systemd service after installing the package:
 
 ```bash
 ai-presence --dry-run install-systemd-service
@@ -344,31 +337,89 @@ systemctl --user daemon-reload
 systemctl --user enable --now ai-presence-monitor.service
 ```
 
-### Testar hook manualmente
+Inspect service health:
 
 ```bash
-printf '%s\n' '{"hook_event_name":"PostToolUse","tool_name":"Bash","session_id":"teste","cwd":"/tmp/projeto"}' \
-  | python3 -m ai_presence_monitor codex-hook --verbose
+systemctl --user status ai-presence-monitor.service
+journalctl --user -u ai-presence-monitor.service -n 100 --no-pager
 ```
 
-### Limites
+## Remote Questions and Answers
 
-- O hook prova eventos do Codex, nao qualidade do trabalho.
-- Se o Codex ficar muito tempo sem gerar eventos, o monitor ainda pode alertar.
-- Um comando muito longo pode gerar `PreToolUse` no inicio e `PostToolUse` so no fim; nesse intervalo, o sistema ainda pode interpretar ausencia de eventos como risco. Observers adicionais de processo/workspace podem ser adicionados depois.
+Remote questions are disabled by default. The monitor can publish a correlated
+question in a dedicated Discord channel, accept only a direct reply from an
+allowlisted user, and optionally deliver the answer to the exact Codex GUI
+window.
 
-## Alerta vermelho com alarme ou telefonema
+Keep GUI delivery disabled until the Discord correlation flow has been tested.
+See the [remote response guide](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
 
-O Discord e o Telegram enviam mensagens, mas telefonema real exige um provedor externo. O monitor deixa dois caminhos:
+```bash
+ai-presence --dry-run ask-user --worker worker-id --question "May I proceed?"
+ai-presence ask-user --worker worker-id --question "May I proceed?"
+ai-presence observe-replies --once
+ai-presence observe-replies
+ai-presence questions
+```
 
-O alerta vermelho, incluindo sua mensagem e escalada externa, ocorre uma unica
-vez enquanto a IA permanecer continuamente inativa. `start`, `heartbeat`,
-`touch` ou uma observacao valida do Codex rearma um futuro alerta vermelho.
+Install the separate reply observer service:
 
-- `RED_NOTIFICATION_MODE=alarm` executa `RED_ALERT_COMMAND`, por exemplo `paplay` com um som local.
-- `RED_NOTIFICATION_MODE=phone` envia um JSON para `PHONE_WEBHOOK_URL`, que pode apontar para Twilio, Make, Zapier ou n8n.
+```bash
+ai-presence --dry-run install-reply-observer-service
+ai-presence install-reply-observer-service
+```
 
-Exemplo de alarme local:
+The installer does not automatically enable or start that unit.
+
+## Integrated Codex Continue Command
+
+The package can schedule the default `continue` message for the Codex GUI:
+
+```bash
+ai-presence --dry-run continue \
+  --worker EXACT_WORKER_ID \
+  --window-title 'Codex'
+
+ai-presence continue \
+  --worker EXACT_WORKER_ID \
+  --window-title 'Codex'
+```
+
+The default delay is 60 seconds. The target must resolve to exactly one X11
+window and is validated again after the wait.
+
+For terminals that dynamically change the full title, combine an explicit
+window ID with a stable project title pattern:
+
+```bash
+ai-presence continue \
+  --window-id EXACT_X11_WINDOW_ID \
+  --window-title 'stable project name' \
+  --allow-title-change
+```
+
+This mode still validates the same window ID and title pattern. It relaxes only
+full-title equality.
+
+After successful input emission, an already active Protocol 2 worker may record
+`observation:automation:continue`, updating `last_activity_at`. A later Codex
+hook remains the confirmation that the session actually resumed.
+
+Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
+GUI failure, and inactive workers do not count as activity.
+
+See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) for background execution,
+synchronization, safety checks, and rollback.
+
+## Red Alert Escalation
+
+Discord and Telegram carry alert messages. A red alert may additionally run a
+local alarm or call an external telephony webhook.
+
+The red message and its external escalation happen once per continuous
+inactivity episode. Valid worker activity rearms a future red alert.
+
+Local alarm example:
 
 ```env
 RED_NOTIFICATION_MODE=alarm
@@ -376,40 +427,53 @@ RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
-Cada episodio vermelho inicia o som uma vez, por no maximo 15 segundos. O
-limite e aplicado mesmo a um `ffplay -loop 0`. Ajuste
-`RED_ALERT_MAX_DURATION_SECONDS` para outra duracao positiva. Para interromper
-antes do limite:
+Every red episode starts the local command once. GNU `timeout` limits it to 15
+seconds by default, including commands such as `ffplay -loop 0`. Set
+`RED_ALERT_MAX_DURATION_SECONDS` to another positive duration when needed.
+
+Stop the current alarm before the limit:
 
 ```bash
 ai-presence stop-alarm
 ```
 
-O menu interativo oferece a mesma operacao na opcao 19.
-
-Exemplo de telefonia por webhook externo:
+External phone escalation example:
 
 ```env
 RED_NOTIFICATION_MODE=phone
-PHONE_WEBHOOK_URL=https://seu-servico-de-telefonia.example/webhook
+PHONE_WEBHOOK_URL=https://your-telephony-service.example/webhook
 ```
 
-## Teste sem enviar mensagens
+The monitor sends JSON to the configured service; it does not place calls by
+itself.
 
-Use `--dry-run` para ver os payloads sem chamar Discord/Telegram:
+## Dry-Run Examples
+
+Use `--dry-run` to inspect payloads and decisions without calling external
+services or controlling the GUI:
 
 ```bash
-ai-presence --dry-run heartbeat --ai codex --message "teste"
+ai-presence --dry-run heartbeat --ai codex --message "test"
 ai-presence --dry-run monitor --once
 ai-presence --dry-run continue --worker worker-id --window-title 'Codex'
 ```
 
-## Desenvolvimento
+## Development
 
-O codigo do pacote fica em `src/ai_presence_monitor`. Para executar o gate
-local:
+The package source lives in `src/ai_presence_monitor`.
+
+Install development tools and run the full local quality gate:
 
 ```bash
 python3 -m pip install -e '.[dev]'
 ./scripts/quality-check.sh
 ```
+
+The gate runs compilation, unit tests, coverage, Ruff, mypy, package build, and
+`git diff --check`. The release matrix covers Python 3.10, 3.11, and 3.12:
+
+```bash
+./scripts/test-python-matrix.sh
+```
+
+Current automated coverage is maintained above the configured 80% threshold.

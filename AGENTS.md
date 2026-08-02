@@ -13,6 +13,8 @@ Use the installed `ai-presence` command. If it is not in `PATH`, use:
 
 Operational rules:
 
+0. Keep the root `README.md` in English. Put Portuguese content in
+   `README.pt-BR.md` or under `docs/`.
 1. Never print, copy, source, or commit the monitor `.env`.
 2. Use an explicit absolute `--project` path for project-scoped workers.
 3. Run `start` once when accepted work begins and `finish` once when it ends.

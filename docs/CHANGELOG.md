@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-08-02 - Documentacao internacional
+
+- README raiz internacionalizado em ingles, com a versao portuguesa preservada
+  em `README.pt-BR.md`.
+
 ## 2026-08-01 - v0.4.3
 
 - Adicionada duracao maxima obrigatoria para o alarme local.
