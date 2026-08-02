@@ -121,10 +121,12 @@ class CliBehaviorTests(unittest.TestCase):
                 "60",
                 "--window-title",
                 "Codex",
+                "--allow-title-change",
                 "--no-sync-activity",
             ]
         )
         self.assertEqual(continue_args.command, "continue")
+        self.assertTrue(continue_args.allow_title_change)
         self.assertFalse(continue_args.sync_activity)
 
         stop_alarm_args = parser.parse_args(
@@ -320,6 +322,7 @@ class CliBehaviorTests(unittest.TestCase):
                 delay=None,
                 window_id=None,
                 window_title="Codex",
+                allow_title_change=False,
                 sync_activity=None,
             )
 

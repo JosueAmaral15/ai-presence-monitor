@@ -46,6 +46,7 @@ def execute_continue_task(
     delay_seconds: int | None = None,
     window_id: str | None = None,
     title_pattern: str | None = None,
+    allow_title_change: bool = False,
     sync_activity: bool | None = None,
     dry_run: bool = False,
     store: PresenceStore | None = None,
@@ -65,6 +66,10 @@ def execute_continue_task(
     if not pattern:
         raise ContinueTaskError(
             "Informe --window-title ou PRESENCE_CODEX_GUI_WINDOW_TITLE."
+        )
+    if allow_title_change and not window_id:
+        raise ContinueTaskError(
+            "--allow-title-change exige um --window-id explicito."
         )
 
     should_sync = (
@@ -94,7 +99,11 @@ def execute_continue_task(
             window_id=window_id,
         )
         wait(delay)
-        actor.dispatch_text(target=target, text=text)
+        actor.dispatch_text(
+            target=target,
+            text=text,
+            allow_title_change=allow_title_change,
+        )
     except GuiDispatchError as exc:
         raise ContinueTaskError(str(exc)) from exc
 

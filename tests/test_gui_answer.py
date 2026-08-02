@@ -127,6 +127,36 @@ class X11GuiAnswerDispatcherTests(unittest.TestCase):
                 commands,
             )
 
+    def test_dispatch_can_allow_dynamic_title_with_same_id_and_pattern(self) -> None:
+        dispatcher = X11GuiAnswerDispatcher(x_ratio=0.5, y_ratio=0.9)
+        titles = iter((b"Codex - working\n", b"Codex - ready\n"))
+
+        def run(command: list[str], **_: object):
+            if command[:2] == ["xdotool", "search"]:
+                return completed(command, stdout=b"10\n")
+            if command[:2] == ["xdotool", "getwindowname"]:
+                return completed(command, stdout=next(titles))
+            if command[:2] == ["xdotool", "getwindowgeometry"]:
+                return completed(command, stdout=b"WIDTH=1000\nHEIGHT=800\n")
+            return completed(command)
+
+        with patch(
+            "ai_presence_monitor.gui_answer.shutil.which",
+            return_value="/bin/tool",
+        ), patch(
+            "ai_presence_monitor.gui_answer.subprocess.run",
+            side_effect=run,
+        ), patch("ai_presence_monitor.gui_answer.time.sleep"):
+            target = dispatcher.capture_target(
+                title_pattern="Codex",
+                window_id="10",
+            )
+            dispatcher.dispatch_text(
+                target=target,
+                text="continue",
+                allow_title_change=True,
+            )
+
     def test_invalid_ratio_missing_tool_and_command_failure_fail_closed(self) -> None:
         with self.assertRaisesRegex(GuiDispatchError, "horizontal"):
             X11GuiAnswerDispatcher(x_ratio=2, y_ratio=0.9)
@@ -142,6 +172,20 @@ class X11GuiAnswerDispatcherTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(GuiDispatchError, "codigo 1"):
                 dispatcher._run(["xdotool", "getwindowname", "10"])
+
+    def test_clipboard_writer_does_not_capture_xclip_daemon_pipes(self) -> None:
+        dispatcher = X11GuiAnswerDispatcher(x_ratio=0.5, y_ratio=0.9)
+
+        with patch(
+            "ai_presence_monitor.gui_answer.subprocess.run",
+            return_value=completed(["xclip"]),
+        ) as run:
+            dispatcher._write_clipboard(b"continue")
+
+        _, kwargs = run.call_args
+        self.assertEqual(kwargs["stdout"], subprocess.DEVNULL)
+        self.assertEqual(kwargs["stderr"], subprocess.DEVNULL)
+        self.assertNotIn("capture_output", kwargs)
 
 
 if __name__ == "__main__":

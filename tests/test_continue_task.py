@@ -21,7 +21,7 @@ class FakeDispatcher:
     def __init__(self, *, fail_dispatch: bool = False):
         self.fail_dispatch = fail_dispatch
         self.captured: list[tuple[str, str | None]] = []
-        self.dispatched: list[tuple[WindowTarget, str]] = []
+        self.dispatched: list[tuple[WindowTarget, str, bool]] = []
 
     def capture_target(
         self,
@@ -36,10 +36,16 @@ class FakeDispatcher:
             pattern=title_pattern,
         )
 
-    def dispatch_text(self, *, target: WindowTarget, text: str) -> None:
+    def dispatch_text(
+        self,
+        *,
+        target: WindowTarget,
+        text: str,
+        allow_title_change: bool = False,
+    ) -> None:
         if self.fail_dispatch:
             raise GuiDispatchError("falha na emissao")
-        self.dispatched.append((target, text))
+        self.dispatched.append((target, text, allow_title_change))
 
 
 def continue_config(root: Path):
@@ -310,6 +316,29 @@ class ContinueTaskTests(unittest.TestCase):
                     worker_id="worker",
                     dry_run=True,
                 )
+            with self.assertRaisesRegex(ContinueTaskError, "window-id"):
+                execute_continue_task(
+                    config=config,
+                    worker_id="worker",
+                    allow_title_change=True,
+                    dry_run=True,
+                )
+
+    def test_dynamic_title_requires_explicit_window_and_is_forwarded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dispatcher = FakeDispatcher()
+
+            execute_continue_task(
+                config=continue_config(Path(tmp)),
+                worker_id="missing-worker",
+                window_id="900",
+                allow_title_change=True,
+                sync_activity=False,
+                dispatcher=dispatcher,  # type: ignore[arg-type]
+                wait=lambda _: None,
+            )
+
+            self.assertTrue(dispatcher.dispatched[0][2])
 
     def test_countdown_reports_each_second(self) -> None:
         messages: list[str] = []

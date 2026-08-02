@@ -335,6 +335,7 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
             delay_seconds=args.delay,
             window_id=args.window_id,
             title_pattern=args.window_title,
+            allow_title_change=args.allow_title_change,
             sync_activity=args.sync_activity,
             dry_run=args.dry_run,
         )
@@ -351,6 +352,7 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
         print(
             f"[dry-run:continue] worker={worker_id} "
             f"atraso={result.delay_seconds}s mensagem={result.message!r} "
+            f"permitir_mudanca_titulo={str(args.allow_title_change).lower()} "
             f"sincronizar_atividade={str(sync).lower()}; "
             "espera, GUI e banco nao foram acessados."
         )
@@ -671,6 +673,14 @@ def build_parser() -> argparse.ArgumentParser:
     continue_parser.add_argument(
         "--window-title",
         help="Padrao de titulo; sobrescreve PRESENCE_CODEX_GUI_WINDOW_TITLE.",
+    )
+    continue_parser.add_argument(
+        "--allow-title-change",
+        action="store_true",
+        help=(
+            "Aceita mudanca do titulo completo durante a espera, mantendo "
+            "a revalidacao do ID explicito e do padrao de titulo."
+        ),
     )
     continue_parser.add_argument(
         "--sync-activity",

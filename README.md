@@ -188,6 +188,10 @@ ai-presence continue \
 O atraso padrao e 60 segundos. O alvo deve ser uma unica janela X11 e e
 revalidado depois da espera.
 
+Se o terminal muda dinamicamente o titulo, `--allow-title-change` pode ser
+combinado com `--window-id` explicito. Nesse modo, o mesmo ID e o padrao de
+titulo ainda sao revalidados; apenas a igualdade do titulo completo e relaxada.
+
 Quando a emissao termina com sucesso e o worker indicado esta `active`, o
 comando registra `observation:automation:continue`. No Protocolo 2 isso atualiza
 `last_activity_at` e reinicia a contagem de inatividade. Se nenhuma atividade

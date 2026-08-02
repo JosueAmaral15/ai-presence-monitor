@@ -118,6 +118,23 @@ setsid nohup ai-presence continue \
 O processo captura a janela antes da espera e revalida o mesmo ID e titulo no
 momento do envio. Fechar a janela ou mudar seu titulo causa falha fechada.
 
+Terminais que alteram o titulo enquanto o Codex trabalha podem usar o modo
+opt-in abaixo. Ele exige o ID X11 explicito e continua revalidando tanto esse ID
+quanto o padrao de titulo; somente a igualdade do titulo completo e relaxada:
+
+```bash
+ai-presence continue \
+  --window-id ID_X11_EXATO \
+  --window-title 'trecho estavel do projeto' \
+  --allow-title-change
+```
+
+Nao use essa opcao sem um padrao estavel e especifico para o projeto.
+
+O mantenedor da selecao iniciado por `xclip` tem sua saida isolada dos pipes do
+comando. Isso permite que a automacao prossiga para o clique e o Enter sem ficar
+bloqueada enquanto o conteudo permanece disponivel na area de transferencia.
+
 ## Sincronizacao com o Protocolo 2
 
 Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, o fluxo e:

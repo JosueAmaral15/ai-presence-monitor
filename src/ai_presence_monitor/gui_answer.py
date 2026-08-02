@@ -98,7 +98,13 @@ class X11GuiAnswerDispatcher:
             text=question.answer,
         )
 
-    def dispatch_text(self, *, target: WindowTarget, text: str) -> None:
+    def dispatch_text(
+        self,
+        *,
+        target: WindowTarget,
+        text: str,
+        allow_title_change: bool = False,
+    ) -> None:
         if not text:
             raise GuiDispatchError("O texto para entrega nao pode ficar vazio.")
         self._require_tool("xdotool")
@@ -107,7 +113,11 @@ class X11GuiAnswerDispatcher:
             title_pattern=target.pattern,
             window_id=target.window_id,
         )
-        if target.title and validated_target.title != target.title:
+        if (
+            not allow_title_change
+            and target.title
+            and validated_target.title != target.title
+        ):
             raise GuiDispatchError(
                 "O titulo da janela alvo mudou desde a publicacao da pergunta."
             )
@@ -172,6 +182,7 @@ class X11GuiAnswerDispatcher:
         self._run(
             ["xclip", "-selection", "clipboard", "-in"],
             input_data=value,
+            discard_output=True,
         )
 
     @staticmethod
@@ -191,18 +202,32 @@ class X11GuiAnswerDispatcher:
         *,
         input_data: bytes | None = None,
         check: bool = True,
+        discard_output: bool = False,
     ) -> subprocess.CompletedProcess[bytes]:
         try:
-            result = subprocess.run(
-                command,
-                input=input_data,
-                capture_output=True,
-                check=False,
-            )
+            if discard_output:
+                result = subprocess.run(
+                    command,
+                    input=input_data,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            else:
+                result = subprocess.run(
+                    command,
+                    input=input_data,
+                    capture_output=True,
+                    check=False,
+                )
         except OSError as exc:
             raise GuiDispatchError(f"Falha ao executar {command[0]}: {exc}.") from exc
         if check and result.returncode != 0:
-            detail = result.stderr.decode("utf-8", errors="replace").strip()
+            detail = (
+                result.stderr.decode("utf-8", errors="replace").strip()
+                if result.stderr
+                else ""
+            )
             suffix = f": {detail}" if detail else ""
             raise GuiDispatchError(
                 f"Comando {command[0]} falhou com codigo {result.returncode}{suffix}."
