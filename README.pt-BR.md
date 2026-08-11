@@ -46,6 +46,14 @@ python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
 ```
 
+No Windows PowerShell, sem privilegios administrativos:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+& .\scripts\install-user-command.ps1
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
+```
+
 Durante o desenvolvimento no proprio checkout:
 
 ```bash
@@ -59,6 +67,12 @@ Atalho equivalente no Linux:
 
 ```bash
 ./run_interactive.sh
+```
+
+Atalho no Windows:
+
+```powershell
+.\run_interactive.bat
 ```
 
 Se quiser testar sem enviar mensagens reais:
@@ -164,18 +178,19 @@ ai-presence observe-replies
 ai-presence questions
 ```
 
-Para o daemon separado:
+Para a execucao continua separada em qualquer plataforma:
 
 ```bash
-ai-presence --dry-run install-reply-observer-service
-ai-presence install-reply-observer-service
+ai-presence --dry-run install-background-service --component reply-observer
+ai-presence install-background-service --component reply-observer
 ```
 
-O instalador nao habilita nem inicia a unidade automaticamente.
+No Linux, execute os comandos `systemctl` impressos. No Windows, execute o
+comando `schtasks.exe /Run` impresso para iniciar a tarefa imediatamente.
 
 ## Continue Integrado
 
-A versao 0.4.0 incorpora o envio programado de `continue` ao mesmo pacote:
+O pacote incorpora o envio programado de `continue` ao mesmo monitor:
 
 ```bash
 ai-presence --dry-run continue \
@@ -187,8 +202,9 @@ ai-presence continue \
   --window-title 'Codex'
 ```
 
-O atraso padrao e 60 segundos. O alvo deve ser uma unica janela X11 e e
-revalidado depois da espera.
+O atraso padrao e 60 segundos. O alvo deve ser uma unica janela visivel e e
+revalidado depois da espera. Linux usa X11; Windows usa a API Win32 nativa e
+digita Unicode sem substituir o clipboard.
 
 Se o terminal muda dinamicamente o titulo, `--allow-title-change` pode ser
 combinado com `--window-id` explicito. Nesse modo, o mesmo ID e o padrao de
@@ -337,7 +353,28 @@ instalado.
 
 ### Monitor continuo
 
-Depois de instalar o pacote, gere um servico systemd de usuario:
+O comando portatil escolhe systemd no Linux e Task Scheduler no Windows:
+
+```bash
+ai-presence --dry-run install-background-service --component monitor
+ai-presence install-background-service --component monitor
+```
+
+No Windows, a tarefa `AI Presence Monitor` e registrada para o usuario atual no
+logon. Para iniciar imediatamente:
+
+```powershell
+schtasks.exe /Run /TN "AI Presence Monitor"
+```
+
+Para remover em qualquer plataforma:
+
+```bash
+ai-presence uninstall-background-service --component monitor
+```
+
+Comandos legados especificos do Linux continuam disponiveis. Depois de instalar
+o pacote, gere um servico systemd de usuario:
 
 ```bash
 ai-presence --dry-run install-systemd-service
@@ -378,8 +415,15 @@ RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
-Cada episodio vermelho inicia o som uma vez, por no maximo 15 segundos. O
-limite e aplicado mesmo a um `ffplay -loop 0`. Ajuste
+Exemplo Windows:
+
+```env
+RED_ALERT_COMMAND=ffplay.exe -nodisp -loop 0 "C:\Sounds\alarm.mp3"
+```
+
+Cada episodio vermelho inicia o som uma vez, por no maximo 15 segundos. Linux
+usa GNU `timeout`; Windows usa um runner Python e encerra a arvore controlada
+com `taskkill`. O limite e aplicado mesmo a um `ffplay -loop 0`. Ajuste
 `RED_ALERT_MAX_DURATION_SECONDS` para outra duracao positiva. Para interromper
 antes do limite:
 

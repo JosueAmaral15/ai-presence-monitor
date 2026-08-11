@@ -196,3 +196,21 @@ do alerta e rearmam um futuro vermelho.
 Ainda em 2026-08-01, o disparo sonoro recebeu limite automatico padrao de 15
 segundos por GNU `timeout`. Isso garante som finito mesmo com `ffplay -loop 0`,
 sem retirar a parada antecipada por `ai-presence stop-alarm`.
+
+Em 2026-08-11, a Task 012 adicionou uma familia operacional Windows por
+Abstract Factory. Os casos de uso continuam compartilhados, enquanto GUI,
+processo de alarme e execucao continua selecionam adaptadores Linux ou Windows.
+O Windows passou a usar Win32/`SendInput`, runner de alarme com identidade de
+processo e `taskkill /T /F`, e tarefas de logon do usuario no Task Scheduler.
+
+Foram preservados os comandos systemd existentes e adicionados os comandos
+portateis `install-background-service` e `uninstall-background-service`. A
+configuracao global do Windows usa `%APPDATA%`; definicoes e estado usam
+`%LOCALAPPDATA%`. Nenhum segredo, `.env`, banco, hook ou servico ativo foi
+alterado durante a implementacao.
+
+O gate local aprovou 114 testes, cobertura de 86%, Ruff, mypy, build 0.5.0,
+`git diff --check`, matriz Python 3.10/3.11/3.12 e instalacao isolada do wheel.
+O teste nativo de desktop e o registro real no Task Scheduler nao podem ser
+executados nesta maquina Linux; a CI `windows-latest` permanece como proximo
+checkpoint antes de concluir a tarefa.

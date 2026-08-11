@@ -67,7 +67,7 @@ isolados e so sao inicializados nessa plataforma.
 - aplica o padrao de titulo como expressao regular;
 - exige exatamente uma correspondencia, ou um identificador explicito valido;
 - revalida identificador e titulo imediatamente antes do envio;
-- restaura/minimiza corretamente a janela, tenta trazê-la ao primeiro plano;
+- restaura uma janela minimizada e tenta traze-la ao primeiro plano;
 - calcula o clique dentro do retangulo da janela;
 - digita Unicode com `SendInput` e pressiona Enter, sem executar o texto como
   comando e sem substituir o clipboard do usuario.
@@ -142,8 +142,8 @@ nome do player.
 
 - [x] Auditoria do acoplamento Linux concluida.
 - [x] Escopo e rollback documentados.
-- [ ] Contratos e factories implementados.
-- [ ] Adaptadores Windows implementados.
-- [ ] CLI e menu integrados.
+- [x] Contratos e factories implementados.
+- [x] Adaptadores Windows implementados.
+- [x] CLI e menu integrados.
 - [ ] Testes e CI multiplataforma aprovados.
-- [ ] Documentacao final atualizada.
+- [x] Documentacao final atualizada.

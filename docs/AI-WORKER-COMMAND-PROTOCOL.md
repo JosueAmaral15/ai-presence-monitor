@@ -33,8 +33,9 @@ Fallback Linux quando o comando nao estiver no `PATH`:
 ```
 
 No Windows, a instalacao Python cria `ai-presence.exe` dentro de
-`venv\Scripts`. Um alias de shell nao e o mecanismo principal porque aliases
-geralmente nao sao carregados por subprocessos, hooks, CI ou servicos.
+`%LOCALAPPDATA%\ai-presence-monitor\venv\Scripts`. Um alias de shell nao e o
+mecanismo principal porque aliases geralmente nao sao carregados por
+subprocessos, hooks, CI ou servicos.
 
 ## Variaveis do Turno
 
@@ -123,6 +124,10 @@ Uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para
 `xdotool`.
 
+No Windows, o alvo e uma janela superior Win32 e `--window-id` recebe o
+`MainWindowHandle`, nao o PID. Em ambas as plataformas, prefira um padrao de
+titulo unico e estavel.
+
 ### 5. Encerramento
 
 Execute uma vez quando o trabalho solicitado terminar:
@@ -162,9 +167,9 @@ O monitor e o observer de respostas sao componentes diferentes:
 | observer de respostas | consulta o Discord e processa respostas |
 | dispatcher GUI | fallback opcional de mouse e teclado |
 
-`observer nao instalado` significa que o arquivo
-`~/.config/systemd/user/ai-presence-reply-observer.service` ainda nao existe.
-Isso nao impede o monitor de alertas nem os hooks de funcionar.
+`observer nao instalado` significa que a unidade systemd do Linux ou a tarefa
+`AI Presence Reply Observer` do Windows ainda nao foi instalada. Isso nao
+impede o monitor de alertas nem os hooks de funcionar.
 
 ## Codigos de Saida
 
@@ -182,18 +187,19 @@ para cada sistema:
 - Linux: `venv/bin/ai-presence`;
 - Windows: `venv\Scripts\ai-presence.exe`.
 
-Os adaptadores operacionais atuais nao sao equivalentes:
+Uma Abstract Factory seleciona os adaptadores operacionais sem alterar os casos
+de uso:
 
 | Capacidade | Linux atual | Windows |
 |---|---|---|
-| processo continuo | systemd de usuario | Task Scheduler pendente |
-| controle GUI | X11, `xdotool`, `xclip` | adaptador nativo pendente |
-| CLI e banco | suportado | portavel pelo pacote Python |
+| processo continuo | systemd de usuario | Task Scheduler do usuario |
+| controle GUI | X11, `xdotool`, `xclip` | API Win32 e `SendInput` |
+| alarme limitado | GNU `timeout` e `/proc` | runner e `taskkill /T /F` |
+| CLI e banco | suportado | suportado |
 
-Uma Abstract Factory nao e necessaria para criar o comando. Quando houver uma
-segunda implementacao real, interfaces estreitas para `ServiceManager` e
-`InputDispatcher` devem selecionar o adaptador da plataforma. Isso evita criar
-uma hierarquia abstrata antes de conhecer o contrato do Windows.
+Use os comandos portateis `install-background-service` e
+`uninstall-background-service`; a factory escolhe systemd ou Task Scheduler. A
+logica dos Protocolos 1 e 2 permanece compartilhada.
 
 ## Instrucao para Outro Codex
 

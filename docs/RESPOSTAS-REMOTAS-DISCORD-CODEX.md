@@ -34,7 +34,7 @@ Observer local -> allowlist + referencia + SQLite
     |
     | resposta aceita
     v
-xdotool + xclip -> janela X11 exata -> texto -> Enter
+adaptador GUI da plataforma -> janela exata -> texto -> Enter
     |
     | proximo evento do hook do mesmo worker
     v
@@ -46,12 +46,11 @@ HTTP na Internet.
 
 ## Pre-requisitos
 
-- Linux com sessao X11;
-- `xdotool`;
-- `xclip`;
 - bot e webhook do Discord;
 - hook do Codex instalado para confirmar a entrega;
 - observer `observe-replies` em execucao.
+
+No Linux, use uma sessao X11 com `xdotool` e `xclip`:
 
 Verifique:
 
@@ -61,7 +60,9 @@ command -v xclip
 printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 ```
 
-O adaptador desta versao e X11. Wayland nao esta implementado.
+No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. A
+automacao usa a API Win32 nativa, sem dependencia GUI externa. Wayland e macOS
+nao estao implementados.
 
 ## Criar o Bot no Discord
 
@@ -171,7 +172,7 @@ ai-presence questions
 O estado esperado e `answered`. Nesta fase nenhum mouse, teclado ou Enter e
 executado.
 
-## Identificar a Janela do Codex
+## Identificar a Janela do Codex no Linux
 
 Liste janelas candidatas sem mover o mouse:
 
@@ -203,6 +204,15 @@ ai-presence ask-user \
 
 Mesmo com ID explicito, o titulo precisa corresponder ao padrao.
 
+No Windows PowerShell, liste os titulos e identificadores de janelas principais:
+
+```powershell
+Get-Process | Where-Object MainWindowTitle | Select-Object Id, MainWindowHandle, MainWindowTitle
+```
+
+Use `MainWindowHandle` como `--window-id`. O identificador e o titulo sao
+revalidados antes da entrega em ambas as plataformas.
+
 ## Teste 2: Entrega na GUI
 
 Ative somente depois do Teste 1:
@@ -219,15 +229,13 @@ possui alvo e nao deve ser usada para esse teste.
 
 Quando a resposta autorizada chegar, o programa:
 
-1. revalida o mesmo ID X11;
+1. revalida o mesmo ID de janela;
 2. exige o mesmo titulo capturado;
 3. ativa a janela;
 4. clica em 50% da largura e 90% da altura;
-5. salva a area de transferencia atual;
-6. coloca a resposta no clipboard;
-7. cola com `Ctrl+V`;
-8. pressiona Enter;
-9. restaura o clipboard anterior.
+5. no Linux, salva o clipboard, cola a resposta e restaura o conteudo;
+6. no Windows, digita texto Unicode por `SendInput`, sem usar o clipboard;
+7. pressiona Enter.
 
 O observer de respostas nao aplica o delay de continuidade. Sua latencia normal
 e o intervalo de polling, por padrao ate 5 segundos, mais rede e tempo da GUI.
@@ -242,34 +250,33 @@ Em terminal:
 ai-presence observe-replies
 ```
 
-Para gerar uma unidade systemd sem instalar:
+Para inspecionar a definicao da plataforma sem instalar:
 
 ```bash
-ai-presence --dry-run install-reply-observer-service
+ai-presence --dry-run install-background-service --component reply-observer
 ```
 
-Instalar o arquivo:
+No Linux, instale a unidade e depois habilite-a:
 
 ```bash
-ai-presence install-reply-observer-service
+ai-presence install-background-service --component reply-observer
 systemctl --user daemon-reload
-```
-
-Antes de iniciar com entrega GUI, importe a sessao grafica:
-
-```bash
 systemctl --user import-environment DISPLAY XAUTHORITY XDG_RUNTIME_DIR
-```
-
-Somente depois da configuracao e dos testes:
-
-```bash
 systemctl --user enable --now ai-presence-reply-observer.service
 systemctl --user status ai-presence-reply-observer.service
 journalctl --user -u ai-presence-reply-observer.service -n 100
 ```
 
-O instalador gera o arquivo, mas nao habilita nem inicia o servico.
+No Windows PowerShell, registre e inicie a tarefa do usuario:
+
+```powershell
+ai-presence.exe install-background-service --component reply-observer
+schtasks.exe /Run /TN "AI Presence Reply Observer"
+schtasks.exe /Query /TN "AI Presence Reply Observer" /V /FO LIST
+```
+
+O Linux gera a unidade sem habilita-la. O Windows registra a tarefa para cada
+logon interativo, mas o primeiro inicio imediato ainda e explicito.
 
 ## Uso pelo AI-worker
 
@@ -302,7 +309,7 @@ ai-presence ask-user \
 | `pending` | Pergunta publicada e dentro do prazo. |
 | `publish_failed` | Publicacao falhou. |
 | `answered` | Resposta autorizada persistida. |
-| `input_emitted` | Clipboard, clique e Enter foram executados. |
+| `input_emitted` | Texto, clique e Enter foram emitidos pela GUI. |
 | `delivery_confirmed` | Hook posterior do mesmo worker registrou atividade. |
 | `dispatch_failed` | A entrega GUI falhou ou ficou incerta. |
 | `expired` | O prazo terminou antes de uma resposta valida. |
@@ -335,7 +342,7 @@ ai-presence dispatch-answer ID_DA_PERGUNTA
 - Mais de 1000 mensagens novas entre ciclos causam falha fechada e exigem
   intervencao manual; use um canal dedicado e restrito.
 - A confirmacao por hook prova atividade posterior, nao interpretacao correta.
-- Alteracao de titulo, fechamento da janela ou ausencia de X11 causa
+- Alteracao de titulo, fechamento da janela ou ausencia de desktop compativel causa
   `dispatch_failed`.
 - O programa nao le a resposta diretamente na memoria interna desta conversa;
   ele usa o prompt visivel como fallback.
@@ -349,12 +356,18 @@ PRESENCE_REMOTE_QUESTIONS_ENABLED=false
 PRESENCE_GUI_ANSWER_ENABLED=false
 ```
 
-Depois:
+Depois, no Linux:
 
 ```bash
 systemctl --user disable --now ai-presence-reply-observer.service
-ai-presence uninstall-reply-observer-service
+ai-presence uninstall-background-service --component reply-observer
 systemctl --user daemon-reload
+```
+
+No Windows PowerShell:
+
+```powershell
+ai-presence.exe uninstall-background-service --component reply-observer
 ```
 
 Remova o token e o webhook do `.env` se nao forem mais usados. As tabelas novas

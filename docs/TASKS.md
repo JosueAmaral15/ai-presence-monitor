@@ -92,7 +92,8 @@ estavel, com identidade explicita de projeto e protocolo documentado.
 - [x] Monitor, observer de respostas e dispatcher GUI sao diferenciados.
 - [x] A limitacao de titulos de abas do terminal esta documentada.
 - [x] Linux e Windows possuem limites de portabilidade explicitos.
-- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto.
+- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto;
+      a Task 012 implementa essa segunda familia.
 
 ### Task 007 - Unificacao com o comando de continuidade
 
@@ -106,8 +107,9 @@ estavel, com identidade explicita de projeto e protocolo documentado.
 
 - [x] Existe um unico pacote e uma unica CLI para monitoramento e continuidade.
 - [x] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
-- [x] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
-- [x] O envio oferece `--dry-run` e preserva o clipboard.
+- [x] O alvo GUI e validado sem selecionar silenciosamente uma janela ambigua.
+- [x] O envio oferece `--dry-run`; Linux preserva o clipboard e Windows nao o
+      altera.
 - [x] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
       observacao auditavel de automacao.
 - [x] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia

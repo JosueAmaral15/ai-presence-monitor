@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-11 - v0.5.0
+
+- Adicionada Abstract Factory para familias operacionais Linux e Windows.
+- Adicionado dispatcher Win32 com captura/revalidacao de `HWND`, clique,
+  Unicode `SendInput` e falha fechada quando foreground e negado.
+- Adicionado alarme Windows com runner limitado, identidade nativa e parada de
+  arvore por `taskkill`.
+- Adicionados Task Scheduler e comandos `install-background-service` e
+  `uninstall-background-service` para monitor e observer de respostas.
+- Configuracao Windows passa a usar `%APPDATA%`; estado usa `%LOCALAPPDATA%`.
+- Adicionados instalador PowerShell, gate de qualidade Python portatil e CI em
+  Ubuntu/Windows para Python 3.10, 3.11 e 3.12.
+- Suite ampliada de 88 para 114 testes, mantendo 86% de cobertura local.
+
 ## 2026-08-02 - Documentacao internacional
 
 - README raiz internacionalizado em ingles, com a versao portuguesa preservada

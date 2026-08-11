@@ -58,9 +58,23 @@ py -3 -m venv "$env:LOCALAPPDATA\ai-presence-monitor\venv"
 & "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
 ```
 
-CLI, configuracao e SQLite sao portateis. O gerador systemd e o dispatcher X11
-continuam especificos do Linux; Task Scheduler e automacao GUI nativa do
-Windows exigem adaptadores futuros.
+Instalacao automatizada sem privilegio administrativo:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+& .\scripts\install-user-command.ps1
+```
+
+Desde a versao 0.5.0, Windows possui familia operacional completa:
+
+- dispatcher Win32 por `ctypes` e `SendInput`;
+- backend de alarme com identidade por horario de criacao do processo;
+- runner de duracao limitada e parada da arvore por `taskkill`;
+- Task Scheduler para monitor e observer de respostas;
+- configuracao global em `%APPDATA%\ai-presence-monitor\.env`;
+- estado e definicoes em `%LOCALAPPDATA%\ai-presence-monitor`.
+
+Consulte [WINDOWS.md](WINDOWS.md) para o passo a passo.
 
 ## Onde Fica o `.env`
 
@@ -206,6 +220,28 @@ systemctl --user daemon-reload
 
 O desinstalador cria um backup antes de remover o arquivo `.service`.
 
+## Execucao Continua Portatil
+
+O comando abaixo seleciona systemd no Linux e Task Scheduler no Windows:
+
+```bash
+ai-presence --dry-run install-background-service --component monitor
+ai-presence install-background-service --component monitor
+```
+
+Para o observer:
+
+```bash
+ai-presence install-background-service --component reply-observer
+```
+
+Rollback:
+
+```bash
+ai-presence uninstall-background-service --component reply-observer
+ai-presence uninstall-background-service --component monitor
+```
+
 ## Limites
 
 - Um worker `global` ainda representa apenas uma atividade por computador/IA.
@@ -235,9 +271,9 @@ sessao grafica:
 systemctl --user import-environment DISPLAY XAUTHORITY XDG_RUNTIME_DIR
 ```
 
-Nao habilite a unidade antes de concluir os testes do guia
-`docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`. O adaptador GUI desta versao nao e
-portatil para Wayland, Windows ou macOS.
+Nao habilite a unidade ou tarefa antes de concluir os testes do guia
+`docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`. Linux usa X11; Windows usa Win32.
+Wayland e macOS continuam sem adaptador GUI.
 
 ## Continue Integrado
 
@@ -248,9 +284,9 @@ ai-presence --dry-run continue --window-title Codex
 ai-presence continue --window-title Codex
 ```
 
-Ele depende de `xdotool`, `xclip` e X11 no computador que executa a CLI. O
-pacote Python continua sem dependencia externa de runtime. A sincronizacao usa
-o mesmo SQLite e o mesmo escopo de worker do monitor.
+No Linux, ele depende de `xdotool`, `xclip` e X11. No Windows, usa somente APIs
+Win32 da biblioteca padrao e nao substitui o clipboard. A sincronizacao usa o
+mesmo SQLite e o mesmo escopo de worker do monitor.
 
 ## Verificacao de Release
 

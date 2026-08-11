@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import os
-import shlex
-import shutil
-import signal
 import subprocess
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .alarm_process import AlarmProcessBackend, AlarmProcessError, ProcessSnapshot
 from .config import APP_DIR_NAME
 
 DEFAULT_ALARM_MAX_DURATION_SECONDS = 15.0
@@ -46,39 +43,13 @@ class AlarmStopResult:
 
 
 def default_alarm_state_path() -> Path:
+    if os.name == "nt":
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        base = Path(local_app_data) if local_app_data else Path.home() / "AppData" / "Local"
+        return base / APP_DIR_NAME / "state" / "red-alarm.json"
     xdg_state_home = os.environ.get("XDG_STATE_HOME")
     base = Path(xdg_state_home).expanduser() if xdg_state_home else Path.home() / ".local" / "state"
     return base / APP_DIR_NAME / "red-alarm.json"
-
-
-def _command_fingerprint(argv: list[str] | tuple[str, ...]) -> str:
-    digest = hashlib.sha256()
-    for item in argv:
-        digest.update(item.encode("utf-8"))
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
-def _supports_process_identity() -> bool:
-    return Path("/proc/self/stat").is_file()
-
-
-def _linux_process_snapshot(pid: int) -> tuple[str, str] | None:
-    stat_path = Path("/proc") / str(pid) / "stat"
-    cmdline_path = Path("/proc") / str(pid) / "cmdline"
-    try:
-        stat_text = stat_path.read_text(encoding="utf-8")
-        _, fields_text = stat_text.rsplit(")", 1)
-        fields = fields_text.split()
-        process_state = fields[0]
-        start_token = fields[19]
-        cmdline = cmdline_path.read_bytes()
-    except (FileNotFoundError, IndexError, OSError, ValueError):
-        return None
-    if process_state == "Z" or not cmdline:
-        return None
-    argv = [item.decode("utf-8", errors="surrogateescape") for item in cmdline.split(b"\0") if item]
-    return start_token, _command_fingerprint(argv)
 
 
 class AlarmController:
@@ -86,19 +57,28 @@ class AlarmController:
         self,
         state_path: Path | None = None,
         max_duration_seconds: float = DEFAULT_ALARM_MAX_DURATION_SECONDS,
+        backend: AlarmProcessBackend | None = None,
     ):
         self.state_path = (state_path or default_alarm_state_path()).expanduser()
         self.max_duration_seconds = max_duration_seconds
+        if backend is None:
+            from .platform_integration import get_platform_factory
+
+            backend = get_platform_factory().create_alarm_process_backend()
+        self.backend = backend
 
     def start(self, command: str) -> AlarmStartResult:
-        argv = shlex.split(command)
+        try:
+            argv = self.backend.parse_command(command)
+        except AlarmProcessError as exc:
+            raise AlarmControlError(str(exc)) from exc
         if not argv:
             raise AlarmControlError("RED_ALERT_COMMAND nao pode estar vazio.")
-        if not _supports_process_identity():
+        duration = self.max_duration_seconds
+        if not math.isfinite(duration) or duration <= 0:
             raise AlarmControlError(
-                "O controle de alarme local requer Linux com /proc nesta versao."
+                "RED_ALERT_MAX_DURATION_SECONDS precisa ser maior que zero."
             )
-        controlled_argv = self._bounded_argv(argv)
 
         current = self._load_state()
         if current is not None and self._matches(current):
@@ -111,36 +91,32 @@ class AlarmController:
             self._remove_state(current)
 
         try:
-            process = subprocess.Popen(
-                controlled_argv,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=os.name == "posix",
+            process = self.backend.spawn(
+                argv,
+                max_duration_seconds=duration,
             )
-        except OSError as exc:
-            raise AlarmControlError(f"Falha ao iniciar alarme: {exc}") from exc
+        except AlarmProcessError as exc:
+            raise AlarmControlError(str(exc)) from exc
 
         snapshot = self._wait_for_snapshot(process.pid)
         if snapshot is None:
             return_code = process.poll()
             if return_code is None:
-                self._signal(process.pid, signal.SIGTERM)
+                self._terminate(process.pid, force=False)
                 try:
                     return_code = process.wait(timeout=0.5)
                 except subprocess.TimeoutExpired:
-                    self._signal(process.pid, signal.SIGKILL)
+                    self._terminate(process.pid, force=True)
                     return_code = process.wait(timeout=1.0)
             raise AlarmControlError(
                 "O comando de alarme terminou antes de poder ser monitorado"
                 + (f" (codigo {return_code})." if return_code is not None else ".")
             )
 
-        start_token, fingerprint = snapshot
         state = AlarmState(
             pid=process.pid,
-            command_fingerprint=fingerprint,
-            process_start_token=start_token,
+            command_fingerprint=snapshot.command_fingerprint,
+            process_start_token=snapshot.start_token,
             started_at=time.time(),
         )
         self._write_state(state)
@@ -174,10 +150,6 @@ class AlarmController:
                 forced=False,
                 state_path=self.state_path,
             )
-        if not _supports_process_identity():
-            raise AlarmControlError(
-                "O controle de alarme local requer Linux com /proc nesta versao."
-            )
         if not self._matches(state):
             self._remove_state(state)
             return AlarmStopResult(
@@ -194,7 +166,7 @@ class AlarmController:
                 state_path=self.state_path,
             )
 
-        self._signal(state.pid, signal.SIGTERM)
+        self._terminate(state.pid, force=False)
         if self._wait_until_stopped(state, timeout_seconds):
             self._remove_state(state)
             return AlarmStopResult(
@@ -209,7 +181,7 @@ class AlarmController:
                 f"O alarme PID {state.pid} nao encerrou em {timeout_seconds:g}s."
             )
 
-        self._signal(state.pid, signal.SIGKILL)
+        self._terminate(state.pid, force=True)
         if not self._wait_until_stopped(state, 1.0):
             raise AlarmControlError(f"Nao foi possivel interromper o alarme PID {state.pid}.")
         self._remove_state(state)
@@ -235,25 +207,6 @@ class AlarmController:
             raise AlarmControlError(
                 f"Estado de alarme invalido em {self.state_path}: {exc}"
             ) from exc
-
-    def _bounded_argv(self, argv: list[str]) -> list[str]:
-        duration = self.max_duration_seconds
-        if not math.isfinite(duration) or duration <= 0:
-            raise AlarmControlError(
-                "RED_ALERT_MAX_DURATION_SECONDS precisa ser maior que zero."
-            )
-        timeout_command = shutil.which("timeout")
-        if timeout_command is None:
-            raise AlarmControlError(
-                "GNU timeout nao foi encontrado; o alarme nao sera iniciado sem limite."
-            )
-        return [
-            timeout_command,
-            "--signal=TERM",
-            "--kill-after=1s",
-            f"{duration:g}s",
-            *argv,
-        ]
 
     def _write_state(self, state: AlarmState) -> None:
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -285,18 +238,17 @@ class AlarmController:
         self.state_path.unlink(missing_ok=True)
 
     def _matches(self, state: AlarmState) -> bool:
-        snapshot = _linux_process_snapshot(state.pid)
+        snapshot = self.backend.snapshot(state.pid)
         if snapshot is None:
             return False
-        start_token, fingerprint = snapshot
         return (
-            start_token == state.process_start_token
-            and fingerprint == state.command_fingerprint
+            snapshot.start_token == state.process_start_token
+            and snapshot.command_fingerprint == state.command_fingerprint
         )
 
-    def _wait_for_snapshot(self, pid: int) -> tuple[str, str] | None:
+    def _wait_for_snapshot(self, pid: int) -> ProcessSnapshot | None:
         for _ in range(20):
-            snapshot = _linux_process_snapshot(pid)
+            snapshot = self.backend.snapshot(pid)
             if snapshot is not None:
                 return snapshot
             time.sleep(0.01)
@@ -310,16 +262,11 @@ class AlarmController:
             time.sleep(0.05)
         return True
 
-    def _signal(self, pid: int, signum: int) -> None:
+    def _terminate(self, pid: int, *, force: bool) -> None:
         try:
-            if os.name == "posix" and os.getpgid(pid) == pid:
-                os.killpg(pid, signum)
-            else:
-                os.kill(pid, signum)
-        except ProcessLookupError:
-            return
-        except OSError as exc:
-            raise AlarmControlError(f"Falha ao sinalizar alarme PID {pid}: {exc}") from exc
+            self.backend.terminate(pid, force=force)
+        except AlarmProcessError as exc:
+            raise AlarmControlError(str(exc)) from exc
 
     def _reap(self, process: subprocess.Popen[bytes], state: AlarmState) -> None:
         process.wait()

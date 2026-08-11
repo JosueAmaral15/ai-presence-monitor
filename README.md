@@ -13,7 +13,8 @@ The project also provides:
 - work-hour alert policies;
 - remote Discord questions with an optional guarded GUI fallback;
 - scheduled `continue` input for the Codex GUI;
-- one-shot red alerts with a bounded local alarm.
+- one-shot red alerts with a bounded local alarm;
+- native operational adapters for Linux and Windows.
 
 ## Presence Protocols
 
@@ -64,10 +65,10 @@ The Portuguese version of this README is preserved in
 ## Requirements
 
 - Python 3.10, 3.11, or 3.12;
-- Linux with `/proc` for safe local alarm process identity;
-- GNU `timeout` for mandatory alarm duration limits;
-- `systemd --user` for the optional Linux service;
-- X11, `xdotool`, and `xclip` only for optional GUI automation.
+- Linux or Windows for the complete local integration family;
+- on Linux: `/proc`, GNU `timeout`, and optionally systemd/X11/`xdotool`/`xclip`;
+- on Windows: an interactive unlocked desktop for GUI input and Task Scheduler
+  for optional continuous execution.
 
 The core package has no third-party runtime Python dependencies.
 
@@ -88,6 +89,14 @@ To expose the installed command in the current user's `PATH`:
 ai-presence --help
 ```
 
+Windows PowerShell installation, without administrator privileges:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+& .\scripts\install-user-command.ps1
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
+```
+
 For development directly from the checkout:
 
 ```bash
@@ -97,10 +106,14 @@ python3 main.py
 
 The interactive menu can create the environment file, initialize the database,
 record worker events, run the monitor, configure integrations, and stop a local
-alarm. The equivalent Linux shortcut is:
+alarm. Use `run_interactive.sh` on Linux or `run_interactive.bat` on Windows:
 
 ```bash
 ./run_interactive.sh
+```
+
+```powershell
+.\run_interactive.bat
 ```
 
 Use dry-run mode to inspect behavior without sending real notifications:
@@ -326,7 +339,30 @@ Observer limitations:
   the end;
 - additional process, workspace, or log observers may still be useful.
 
-## User Service
+## Continuous Background Execution
+
+The portable command selects systemd on Linux and Task Scheduler on Windows:
+
+```bash
+ai-presence --dry-run install-background-service --component monitor
+ai-presence install-background-service --component monitor
+```
+
+On Windows, the second command registers `AI Presence Monitor` for the current
+user at logon. Start or inspect it with:
+
+```powershell
+schtasks.exe /Run /TN "AI Presence Monitor"
+schtasks.exe /Query /TN "AI Presence Monitor" /V /FO LIST
+```
+
+Remove the platform-managed definition:
+
+```bash
+ai-presence uninstall-background-service --component monitor
+```
+
+### Linux systemd compatibility commands
 
 Generate and enable the user-level systemd service after installing the package:
 
@@ -365,11 +401,12 @@ ai-presence questions
 Install the separate reply observer service:
 
 ```bash
-ai-presence --dry-run install-reply-observer-service
-ai-presence install-reply-observer-service
+ai-presence --dry-run install-background-service --component reply-observer
+ai-presence install-background-service --component reply-observer
 ```
 
-The installer does not automatically enable or start that unit.
+On Linux, run the printed `systemctl` commands. On Windows, the task is
+registered at logon and the printed `schtasks.exe /Run` command starts it now.
 
 ## Integrated Codex Continue Command
 
@@ -385,15 +422,16 @@ ai-presence continue \
   --window-title 'Codex'
 ```
 
-The default delay is 60 seconds. The target must resolve to exactly one X11
-window and is validated again after the wait.
+The default delay is 60 seconds. The target must resolve to exactly one visible
+window and is validated again after the wait. Linux uses X11; Windows uses the
+native Win32 window API and Unicode `SendInput` without replacing the clipboard.
 
 For terminals that dynamically change the full title, combine an explicit
 window ID with a stable project title pattern:
 
 ```bash
 ai-presence continue \
-  --window-id EXACT_X11_WINDOW_ID \
+  --window-id EXACT_WINDOW_ID \
   --window-title 'stable project name' \
   --allow-title-change
 ```
@@ -419,7 +457,7 @@ local alarm or call an external telephony webhook.
 The red message and its external escalation happen once per continuous
 inactivity episode. Valid worker activity rearms a future red alert.
 
-Local alarm example:
+Linux local alarm example:
 
 ```env
 RED_NOTIFICATION_MODE=alarm
@@ -427,9 +465,18 @@ RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
 ```
 
-Every red episode starts the local command once. GNU `timeout` limits it to 15
-seconds by default, including commands such as `ffplay -loop 0`. Set
-`RED_ALERT_MAX_DURATION_SECONDS` to another positive duration when needed.
+Windows local alarm example:
+
+```env
+RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
+RED_ALERT_COMMAND=ffplay.exe -nodisp -loop 0 "C:\Sounds\alarm.mp3"
+```
+
+Every red episode starts the local command once. Linux uses GNU `timeout`;
+Windows uses a dedicated Python runner and terminates its process tree with
+`taskkill`. Both enforce the configured maximum duration and validate process
+identity before manual interruption.
 
 Stop the current alarm before the limit:
 

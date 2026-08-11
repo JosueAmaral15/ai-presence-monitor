@@ -45,6 +45,8 @@
 - [x] Estado do alarme nao armazena o comando em texto e usa permissao `600`.
 - [x] `stop-alarm` valida PID, fingerprint e inicio antes de sinalizar.
 - [x] GNU `timeout` limita todo alarme local, inclusive comandos em loop.
+- [x] Windows limita o alarme em runner dedicado e encerra somente sua arvore.
+- [x] Windows revalida PID, horario nativo de criacao e executavel antes da parada.
 
 ## Task 004 - Portabilidade
 
@@ -64,8 +66,8 @@
 - [x] Mensagens de bot, respostas vazias e canal diferente sao ignorados.
 - [x] `allowed_mentions` impede mencoes disparadas pela pergunta.
 - [x] Texto da resposta nao e executado por shell.
-- [x] X11 exige ID e titulo capturados, revalidados antes da entrega.
-- [x] Clipboard anterior e restaurado.
+- [x] X11 e Win32 exigem ID e titulo capturados, revalidados antes da entrega.
+- [x] No Linux, o clipboard anterior e restaurado; no Windows, ele nao e usado.
 - [x] Falha GUI nao causa retry automatico.
 - [x] Estados e erro ficam auditaveis no SQLite.
 - [x] `--dry-run` nao acessa rede, banco nem GUI nos comandos de resposta.
@@ -79,10 +81,10 @@ acoes destrutivas.
 
 ## Task 007 - Continue integrado
 
-- [x] Texto e enviado por argumento de subprocesso/clipboard, sem shell.
+- [x] Texto e enviado por clipboard no Linux ou `SendInput` no Windows, sem shell.
 - [x] Uma unica janela deve corresponder ao titulo.
 - [x] ID e titulo sao revalidados depois do delay.
-- [x] Clipboard anterior e restaurado.
+- [x] No Linux, o clipboard anterior e restaurado; no Windows, ele nao e usado.
 - [x] `--dry-run` nao espera, nao acessa GUI e nao grava banco.
 - [x] Falha GUI nao atualiza atividade.
 - [x] Sincronizacao exige worker existente e ativo.
@@ -97,3 +99,20 @@ Uma emissao bem-sucedida prova que o sistema operacional aceitou os eventos de
 entrada, nao que o Codex interpretou ou executou a mensagem. Por isso a
 observacao reinicia apenas a janela normal do Protocolo 2; ausencia posterior de
 hooks volta a produzir alerta.
+
+## Task 012 - Windows
+
+- [x] Win32 e acessado por argumentos tipados de `ctypes`, sem shell.
+- [x] Texto remoto e enviado como Unicode por `SendInput`, nao como comando.
+- [x] Falha de foreground impede clique e digitacao.
+- [x] Tarefas usam `InteractiveToken` e `LeastPrivilege`, nao `SYSTEM`.
+- [x] XML do Task Scheduler guarda caminhos, nao valores secretos do `.env`.
+- [x] Desinstalacao remove somente os dois nomes de tarefa administrados.
+- [x] `--dry-run` nao registra tarefa, nao escreve definicao e nao usa GUI.
+
+### Risco residual Windows
+
+Qualquer automacao de teclado pode influenciar a aplicacao alvo. A revalidacao
+reduz selecao incorreta, mas nao substitui sessao desbloqueada, titulo especifico
+e revisao humana antes de comandos destrutivos. O Windows tambem pode negar
+foreground; o sistema falha fechado nessa situacao.

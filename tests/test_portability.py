@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ai_presence_monitor.config import load_config, resolve_env_path
+from ai_presence_monitor.config import load_config, resolve_env_path, user_config_dir
 from ai_presence_monitor.identity import scoped_worker_id
 from ai_presence_monitor.systemd_service import (
     install_reply_observer_service,
@@ -18,8 +18,21 @@ from ai_presence_monitor.systemd_service import (
     uninstall_user_service,
 )
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 class ConfigPortabilityTests(unittest.TestCase):
+    def test_windows_launchers_preserve_failures_and_have_python_fallback(self) -> None:
+        batch = (PROJECT_ROOT / "run_interactive.bat").read_text(encoding="utf-8")
+        installer = (PROJECT_ROOT / "scripts" / "install-user-command.ps1").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("if errorlevel 1 goto python_fallback", batch)
+        self.assertEqual(batch.count("exit /b %errorlevel%"), 2)
+        self.assertIn("Get-Command py", installer)
+        self.assertIn("Get-Command python", installer)
+
     def test_relative_database_is_resolved_from_env_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config_dir = Path(tmp) / "config"
@@ -78,6 +91,17 @@ class ConfigPortabilityTests(unittest.TestCase):
 
             self.assertEqual(resolved, checkout_env.resolve())
 
+    def test_windows_configuration_uses_roaming_app_data(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"APPDATA": "C:/Users/test/AppData/Roaming"},
+            clear=True,
+        ):
+            self.assertEqual(
+                user_config_dir("win32"),
+                Path("C:/Users/test/AppData/Roaming") / "ai-presence-monitor",
+            )
+
     def test_codex_hook_module_entrypoint_processes_stdin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             env_path = Path(tmp) / ".env"
@@ -130,13 +154,15 @@ class WorkerIdentityTests(unittest.TestCase):
 
 class SystemdServiceTests(unittest.TestCase):
     def test_render_uses_absolute_python_and_env_without_working_directory(self) -> None:
+        env_file = Path("/tmp/config with spaces/.env")
         rendered = render_user_service(
-            env_file=Path("/tmp/config with spaces/.env"),
-            python_executable="/opt/venv/bin/python",
+            env_file=env_file,
+            python_executable="python-test",
         )
 
-        self.assertIn('ExecStart="/opt/venv/bin/python" -m ai_presence_monitor', rendered)
-        self.assertIn('"/tmp/config with spaces/.env" monitor', rendered)
+        expected_env = str(env_file.resolve()).replace("\\", "\\\\")
+        self.assertIn('ExecStart="python-test" -m ai_presence_monitor', rendered)
+        self.assertIn(f'"{expected_env}" monitor', rendered)
         self.assertNotIn("WorkingDirectory=", rendered)
 
     def test_install_is_idempotent_and_uninstall_creates_backup(self) -> None:
