@@ -10,9 +10,11 @@
 - Adicionados Task Scheduler e comandos `install-background-service` e
   `uninstall-background-service` para monitor e observer de respostas.
 - Configuracao Windows passa a usar `%APPDATA%`; estado usa `%LOCALAPPDATA%`.
+- Windows instala `tzdata`, e sessoes SQLite passam a ser fechadas
+  deterministicamente para permitir remocao segura dos arquivos.
 - Adicionados instalador PowerShell, gate de qualidade Python portatil e CI em
   Ubuntu/Windows para Python 3.10, 3.11 e 3.12.
-- Suite ampliada de 88 para 114 testes, mantendo 86% de cobertura local.
+- Suite ampliada de 88 para 117 testes, mantendo 86% de cobertura local.
 
 ## 2026-08-02 - Documentacao internacional
 

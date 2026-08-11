@@ -151,7 +151,7 @@ class WindowsAlarmProcessBackend:
         command.append("/F")
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         try:
-            subprocess.run(
+            result = subprocess.run(
                 command,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -163,6 +163,11 @@ class WindowsAlarmProcessBackend:
             raise AlarmProcessError(
                 f"Falha ao interromper arvore do alarme PID {pid}: {exc}"
             ) from exc
+        if result.returncode != 0 and self.snapshot(pid) is not None:
+            raise AlarmProcessError(
+                "taskkill.exe nao interrompeu a arvore do alarme "
+                f"PID {pid} (codigo {result.returncode})."
+            )
 
 
 def _last_error() -> int:

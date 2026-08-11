@@ -9,7 +9,7 @@ A versao 0.5.0 oferece no Windows:
 - alarme local com limite obrigatorio e `stop-alarm`;
 - monitor e observer de respostas no Task Scheduler;
 - caminhos nativos em `%APPDATA%` e `%LOCALAPPDATA%`;
-- testes automatizados em `windows-latest`.
+- workflow automatizado configurado para `windows-latest`.
 
 Nao e necessario executar como administrador. A automacao GUI exige a sessao do
 usuario desbloqueada e uma janela visivel.
@@ -28,6 +28,9 @@ O script cria:
 ```text
 %LOCALAPPDATA%\ai-presence-monitor\venv
 ```
+
+O `pip` instala automaticamente `tzdata`, necessario para validar o expediente
+com timezones IANA como `America/Sao_Paulo` no Windows.
 
 Teste o launcher instalado:
 

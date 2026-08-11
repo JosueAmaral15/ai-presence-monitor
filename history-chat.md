@@ -209,8 +209,18 @@ configuracao global do Windows usa `%APPDATA%`; definicoes e estado usam
 `%LOCALAPPDATA%`. Nenhum segredo, `.env`, banco, hook ou servico ativo foi
 alterado durante a implementacao.
 
-O gate local aprovou 114 testes, cobertura de 86%, Ruff, mypy, build 0.5.0,
+O gate local aprovou 117 testes, cobertura de 86%, Ruff, mypy, build 0.5.0,
 `git diff --check`, matriz Python 3.10/3.11/3.12 e instalacao isolada do wheel.
 O teste nativo de desktop e o registro real no Task Scheduler nao podem ser
 executados nesta maquina Linux; a CI `windows-latest` permanece como proximo
 checkpoint antes de concluir a tarefa.
+
+O primeiro push da Task 012 criou o run GitHub Actions `31540396474`, mas os
+seis jobs foram recusados antes do checkout porque a conta estava bloqueada por
+problema de cobranca. Um runtime Windows Python 3.10 em Wine foi usado como
+evidencia complementar. Ele expôs a ausencia de timezone IANA e conexoes SQLite
+nao fechadas; a implementacao passou a instalar `tzdata` condicionalmente no
+Windows e a fechar cada sessao do store. Depois da correcao, 115 de 117 testes
+passaram nesse runtime; os dois restantes exigem `taskkill /T`, opcao ausente
+na implementacao reduzida do Wine. A confirmacao em Windows real continua
+pendente e a Task 012 permanece em andamento.

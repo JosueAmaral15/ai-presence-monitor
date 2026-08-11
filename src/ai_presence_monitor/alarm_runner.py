@@ -8,7 +8,7 @@ import sys
 def _terminate_tree(process: subprocess.Popen[bytes]) -> None:
     creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -17,6 +17,9 @@ def _terminate_tree(process: subprocess.Popen[bytes]) -> None:
             creationflags=creationflags,
         )
     except OSError:
+        process.kill()
+        return
+    if result.returncode != 0:
         process.kill()
 
 

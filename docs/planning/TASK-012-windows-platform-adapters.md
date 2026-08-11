@@ -145,5 +145,8 @@ nome do player.
 - [x] Contratos e factories implementados.
 - [x] Adaptadores Windows implementados.
 - [x] CLI e menu integrados.
-- [ ] Testes e CI multiplataforma aprovados.
+- [x] Testes locais Linux e runtime Windows em Wine aprovados dentro dos
+      limites documentados.
+- [ ] GitHub Actions em `windows-latest` aprovado; run `31540396474` bloqueado
+      antes dos jobs por problema de cobranca da conta.
 - [x] Documentacao final atualizada.

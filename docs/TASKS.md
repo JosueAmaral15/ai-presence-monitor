@@ -5,29 +5,34 @@
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta
-**Status**: em andamento
+**Status**: em andamento - CI externa bloqueada por cobranca da conta GitHub
 **Objetivo**: oferecer no Windows as integracoes locais que antes existiam
 somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
 **Criterios de aceite**:
 
-- [ ] Uma Abstract Factory seleciona automaticamente a familia Linux ou Windows.
-- [ ] O dispatcher Windows captura e revalida uma unica janela visivel por
+- [x] Uma Abstract Factory seleciona automaticamente a familia Linux ou Windows.
+- [x] O dispatcher Windows captura e revalida uma unica janela visivel por
       identificador e titulo antes de clicar, digitar e pressionar Enter.
-- [ ] O alarme Windows possui duracao maxima, deduplicacao, identidade de
+- [x] O alarme Windows possui duracao maxima, deduplicacao, identidade de
       processo e interrupcao manual sem depender de `/proc` ou GNU `timeout`.
-- [ ] O monitor e o observer de respostas podem ser registrados no Task
+- [x] O monitor e o observer de respostas podem ser registrados no Task
       Scheduler para iniciar no logon do usuario.
-- [ ] Comandos Linux existentes continuam compativeis.
-- [ ] A CLI oferece comandos portateis para instalar e remover execucao
+- [x] Comandos Linux existentes continuam compativeis.
+- [x] A CLI oferece comandos portateis para instalar e remover execucao
       continua, alem dos comandos legados de systemd.
-- [ ] O menu interativo informa e usa a integracao da plataforma atual.
+- [x] O menu interativo informa e usa a integracao da plataforma atual.
 - [ ] A CI executa testes em Linux e Windows com Python suportado.
-- [ ] README, arquitetura, portabilidade, seguranca, rollback, decisoes e
+- [x] README, arquitetura, portabilidade, seguranca, rollback, decisoes e
       changelog documentam a implementacao.
-- [ ] Testes, cobertura, lint, tipos, build e verificacao de diff passam.
+- [x] Testes, cobertura, lint, tipos, build e verificacao de diff passam.
 
 **Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
+
+**Checkpoint externo**: o run `31540396474` nao iniciou nenhum job porque a
+conta GitHub esta bloqueada por problema de cobranca. O workflow permanece
+configurado para seis jobs; a tarefa nao sera movida para concluidas ate um run
+real em `windows-latest` passar.
 
 ## Concluidas
 

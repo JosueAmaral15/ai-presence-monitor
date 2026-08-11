@@ -66,9 +66,10 @@ class ConfigPortabilityTests(unittest.TestCase):
             cwd = Path(tmp)
             (cwd / ".env").write_text("PRESENCE_DB_PATH=wrong.db\n", encoding="utf-8")
             config_home = cwd / "config"
+            variable = "APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME"
             with patch.dict(
                 os.environ,
-                {"XDG_CONFIG_HOME": str(config_home)},
+                {variable: str(config_home)},
                 clear=True,
             ):
                 resolved = resolve_env_path(cwd=cwd)
@@ -77,6 +78,11 @@ class ConfigPortabilityTests(unittest.TestCase):
                 resolved,
                 (config_home / "ai-presence-monitor" / ".env").resolve(),
             )
+
+    def test_windows_wheel_declares_timezone_database(self) -> None:
+        pyproject = (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+        self.assertIn("tzdata>=2024.1; platform_system == 'Windows'", pyproject)
 
     def test_checkout_dotenv_is_supported_with_src_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

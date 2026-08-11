@@ -70,7 +70,9 @@ The Portuguese version of this README is preserved in
 - on Windows: an interactive unlocked desktop for GUI input and Task Scheduler
   for optional continuous execution.
 
-The core package has no third-party runtime Python dependencies.
+Linux has no third-party runtime Python dependency. On Windows, `pip` installs
+the platform-neutral `tzdata` package because the standard library does not
+ship the IANA time-zone database there.
 
 ## Installation
 

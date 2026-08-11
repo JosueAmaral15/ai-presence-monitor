@@ -29,6 +29,8 @@
   plataforma, sem duplicar a logica dos protocolos.
 - A execucao continua deve usar systemd de usuario no Linux e Task Scheduler do
   usuario no Windows.
+- A distribuicao Windows deve instalar uma base IANA de timezones para
+  `ZoneInfo` e fechar conexoes SQLite antes de liberar arquivos.
 
 ## Respostas Remotas
 

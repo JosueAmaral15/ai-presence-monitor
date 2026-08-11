@@ -63,6 +63,16 @@ class WindowsAlarmProcessBackendTests(unittest.TestCase):
             ["taskkill.exe", "/PID", "10", "/T", "/F"],
         )
 
+    def test_terminate_reports_taskkill_failure_for_live_process(self) -> None:
+        backend = WindowsAlarmProcessBackend(api=FakeProcessApi())
+
+        with patch(
+            "ai_presence_monitor.windows_process.subprocess.run",
+            return_value=subprocess.CompletedProcess([], 1),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "nao interrompeu"):
+                backend.terminate(10, force=True)
+
     def test_native_api_rejects_non_windows_runtime(self) -> None:
         if sys.platform != "win32":
             with self.assertRaisesRegex(RuntimeError, "requer Windows"):
