@@ -1,5 +1,34 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento
+
+### Task 012 - Adaptadores operacionais para Windows
+
+**Prioridade**: Alta
+**Status**: em andamento
+**Objetivo**: oferecer no Windows as integracoes locais que antes existiam
+somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
+
+**Criterios de aceite**:
+
+- [ ] Uma Abstract Factory seleciona automaticamente a familia Linux ou Windows.
+- [ ] O dispatcher Windows captura e revalida uma unica janela visivel por
+      identificador e titulo antes de clicar, digitar e pressionar Enter.
+- [ ] O alarme Windows possui duracao maxima, deduplicacao, identidade de
+      processo e interrupcao manual sem depender de `/proc` ou GNU `timeout`.
+- [ ] O monitor e o observer de respostas podem ser registrados no Task
+      Scheduler para iniciar no logon do usuario.
+- [ ] Comandos Linux existentes continuam compativeis.
+- [ ] A CLI oferece comandos portateis para instalar e remover execucao
+      continua, alem dos comandos legados de systemd.
+- [ ] O menu interativo informa e usa a integracao da plataforma atual.
+- [ ] A CI executa testes em Linux e Windows com Python suportado.
+- [ ] README, arquitetura, portabilidade, seguranca, rollback, decisoes e
+      changelog documentam a implementacao.
+- [ ] Testes, cobertura, lint, tipos, build e verificacao de diff passam.
+
+**Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
+
 ## Concluidas
 
 ### Task 011 - Duracao limitada do alarme vermelho
