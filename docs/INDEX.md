@@ -8,6 +8,7 @@
 - [Continue integrado para o Codex](CONTINUE-CODEX.md)
 - [Respostas remotas Discord para Codex](RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Portabilidade e reutilizacao](PORTABILIDADE.md)
+- [Guia operacional do Windows](WINDOWS.md)
 
 ## Projeto
 

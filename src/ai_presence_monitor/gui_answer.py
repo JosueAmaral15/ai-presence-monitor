@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass
+from typing import Protocol
 
 from .store import RemoteQuestion
 
@@ -18,6 +19,25 @@ class WindowTarget:
     window_id: str
     title: str
     pattern: str
+
+
+class GuiAnswerDispatcher(Protocol):
+    def capture_target(
+        self,
+        *,
+        title_pattern: str,
+        window_id: str | None = None,
+    ) -> WindowTarget: ...
+
+    def dispatch(self, question: RemoteQuestion) -> None: ...
+
+    def dispatch_text(
+        self,
+        *,
+        target: WindowTarget,
+        text: str,
+        allow_title_change: bool = False,
+    ) -> None: ...
 
 
 class X11GuiAnswerDispatcher:

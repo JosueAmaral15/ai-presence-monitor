@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import stat
 import tempfile
 import unittest
@@ -92,8 +93,9 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             _write_env(env_path, values)
 
             self.assertEqual(_read_env(env_path), values)
-            permissions = stat.S_IMODE(env_path.stat().st_mode)
-            self.assertEqual(permissions, 0o600)
+            if os.name != "nt":
+                permissions = stat.S_IMODE(env_path.stat().st_mode)
+                self.assertEqual(permissions, 0o600)
 
     def test_read_missing_env_returns_empty_mapping(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -233,7 +235,10 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             env_path = root / ".env"
             env_path.touch()
             config = make_config(root)
-            options = [str(number) for number in range(1, 20)] + ["0"]
+            options = (
+                [str(number) for number in range(1, 21)]
+                + ["monitor", "21", "monitor", "0"]
+            )
 
             with patch(
                 "ai_presence_monitor.interactive._prompt_text",

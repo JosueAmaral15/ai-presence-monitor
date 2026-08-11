@@ -64,7 +64,7 @@ def set_worker_clock(
     *,
     timestamp: float,
 ) -> None:
-    with store.connect() as conn:
+    with store.session() as conn:
         conn.execute(
             """
             UPDATE workers
@@ -130,7 +130,7 @@ class ContinueTaskTests(unittest.TestCase):
             self.assertEqual(updated.last_signal_at, 1000)
             self.assertEqual(updated.last_activity_at, 2000)
             self.assertIsNone(updated.last_alert_level)
-            with store.connect() as conn:
+            with store.session() as conn:
                 event = conn.execute(
                     "SELECT event_type FROM events ORDER BY id DESC LIMIT 1"
                 ).fetchone()

@@ -166,7 +166,7 @@ PRESENCE_CONTINUE_DELAY_SECONDS=60
 PRESENCE_CONTINUE_SYNC_ACTIVITY=true
 ```
 
-Com sincronizacao ativa, somente clique, colagem e Enter bem-sucedidos
+Com sincronizacao ativa, somente clique, escrita e Enter bem-sucedidos
 atualizam `last_activity_at` de um worker ja ativo. O Protocolo 1 preserva
 `last_signal_at`. Consulte `docs/CONTINUE-CODEX.md`.
 
@@ -187,6 +187,15 @@ Modo alarme local:
 RED_NOTIFICATION_MODE=alarm
 RED_ALERT_MAX_DURATION_SECONDS=15
 RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
+PHONE_WEBHOOK_URL=
+```
+
+No Windows, um exemplo equivalente com FFmpeg/ffplay instalado e:
+
+```env
+RED_NOTIFICATION_MODE=alarm
+RED_ALERT_MAX_DURATION_SECONDS=15
+RED_ALERT_COMMAND=ffplay.exe -nodisp -loop 0 "C:\Sounds\alarm.mp3"
 PHONE_WEBHOOK_URL=
 ```
 

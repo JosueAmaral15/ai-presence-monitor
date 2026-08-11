@@ -6,7 +6,8 @@ from typing import Any
 
 from .config import AppConfig
 from .discord_questions import DiscordQuestionClient, DiscordQuestionError
-from .gui_answer import GuiDispatchError, WindowTarget, X11GuiAnswerDispatcher
+from .gui_answer import GuiAnswerDispatcher, GuiDispatchError, WindowTarget
+from .platform_integration import UnsupportedPlatformError, get_platform_factory
 from .store import PresenceStore, RemoteQuestion
 
 CURSOR_KEY_PREFIX = "discord-question-channel:"
@@ -62,7 +63,7 @@ def capture_gui_target(
     *,
     window_id: str | None = None,
     title_pattern: str | None = None,
-    dispatcher: X11GuiAnswerDispatcher | None = None,
+    dispatcher: GuiAnswerDispatcher | None = None,
 ) -> WindowTarget | None:
     if not config.gui_answer_enabled:
         return None
@@ -71,13 +72,13 @@ def capture_gui_target(
         raise RemoteQuestionError(
             "PRESENCE_CODEX_GUI_WINDOW_TITLE e obrigatorio quando a entrega GUI esta ativa."
         )
-    actor = dispatcher or X11GuiAnswerDispatcher(
-        x_ratio=config.codex_gui_click_x_ratio,
-        y_ratio=config.codex_gui_click_y_ratio,
-    )
     try:
+        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+            x_ratio=config.codex_gui_click_x_ratio,
+            y_ratio=config.codex_gui_click_y_ratio,
+        )
         return actor.capture_target(title_pattern=pattern, window_id=window_id)
-    except GuiDispatchError as exc:
+    except (GuiDispatchError, UnsupportedPlatformError) as exc:
         raise RemoteQuestionError(str(exc)) from exc
 
 
@@ -91,7 +92,7 @@ def ask_remote_question(
     window_id: str | None = None,
     title_pattern: str | None = None,
     client: DiscordQuestionClient | None = None,
-    dispatcher: X11GuiAnswerDispatcher | None = None,
+    dispatcher: GuiAnswerDispatcher | None = None,
     now: float | None = None,
 ) -> RemoteQuestion:
     validate_remote_question_config(config)
@@ -151,7 +152,7 @@ def observe_discord_replies_once(
     config: AppConfig,
     store: PresenceStore,
     client: DiscordQuestionClient | None = None,
-    dispatcher: X11GuiAnswerDispatcher | None = None,
+    dispatcher: GuiAnswerDispatcher | None = None,
     now: float | None = None,
 ) -> ReplyObserverResult:
     validate_remote_question_config(config)
@@ -183,10 +184,13 @@ def observe_discord_replies_once(
     dispatch_failed = 0
     actor = dispatcher
     if config.gui_answer_enabled and actor is None:
-        actor = X11GuiAnswerDispatcher(
-            x_ratio=config.codex_gui_click_x_ratio,
-            y_ratio=config.codex_gui_click_y_ratio,
-        )
+        try:
+            actor = get_platform_factory().create_gui_dispatcher(
+                x_ratio=config.codex_gui_click_x_ratio,
+                y_ratio=config.codex_gui_click_y_ratio,
+            )
+        except UnsupportedPlatformError as exc:
+            raise RemoteQuestionError(str(exc)) from exc
 
     last_message_id = cursor
     for message in messages:
@@ -243,7 +247,7 @@ def retry_gui_dispatch(
     config: AppConfig,
     store: PresenceStore,
     question_id: str,
-    dispatcher: X11GuiAnswerDispatcher | None = None,
+    dispatcher: GuiAnswerDispatcher | None = None,
     now: float | None = None,
 ) -> RemoteQuestion:
     if not config.gui_answer_enabled:
@@ -255,13 +259,13 @@ def retry_gui_dispatch(
         raise RemoteQuestionError(
             f"A pergunta esta em estado {question.status!r}, sem resposta pronta para entrega."
         )
-    actor = dispatcher or X11GuiAnswerDispatcher(
-        x_ratio=config.codex_gui_click_x_ratio,
-        y_ratio=config.codex_gui_click_y_ratio,
-    )
     try:
+        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+            x_ratio=config.codex_gui_click_x_ratio,
+            y_ratio=config.codex_gui_click_y_ratio,
+        )
         actor.dispatch(question)
-    except GuiDispatchError as exc:
+    except (GuiDispatchError, UnsupportedPlatformError) as exc:
         if question.status == "answered":
             store.mark_question_error(
                 question.question_id,

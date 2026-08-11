@@ -3,6 +3,8 @@ from __future__ import annotations
 import sqlite3
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,8 +59,17 @@ class PresenceStore:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @contextmanager
+    def session(self) -> Iterator[sqlite3.Connection]:
+        conn = self.connect()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS workers (
@@ -162,7 +173,7 @@ class PresenceStore:
             )
 
     def get_worker(self, worker_id: str) -> WorkerState | None:
-        with self.connect() as conn:
+        with self.session() as conn:
             row = conn.execute(
                 "SELECT * FROM workers WHERE worker_id = ?",
                 (worker_id,),
@@ -176,7 +187,7 @@ class PresenceStore:
             query += " WHERE status = ?"
             params = ("active",)
         query += " ORDER BY computer, ia_name, worker_id"
-        with self.connect() as conn:
+        with self.session() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._row_to_worker(row) for row in rows]
 
@@ -221,7 +232,7 @@ class PresenceStore:
             updated_at=now,
         )
 
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO workers (
@@ -306,7 +317,7 @@ class PresenceStore:
             updated_at=observed_at,
         )
 
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO workers (
@@ -368,7 +379,7 @@ class PresenceStore:
         triggered_at: float | None = None,
     ) -> None:
         now = time.time() if triggered_at is None else triggered_at
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO alerts (
@@ -419,7 +430,7 @@ class PresenceStore:
             last_error=None,
             updated_at=created_at,
         )
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO remote_questions (
@@ -463,7 +474,7 @@ class PresenceStore:
         now: float | None = None,
     ) -> RemoteQuestion:
         updated_at = time.time() if now is None else now
-        with self.connect() as conn:
+        with self.session() as conn:
             cursor = conn.execute(
                 """
                 UPDATE remote_questions
@@ -488,7 +499,7 @@ class PresenceStore:
         updated_at = time.time() if now is None else now
         placeholders = ", ".join("?" for _ in allowed_statuses)
         params = (status, error, updated_at, question_id, *allowed_statuses)
-        with self.connect() as conn:
+        with self.session() as conn:
             cursor = conn.execute(
                 f"""
                 UPDATE remote_questions
@@ -512,7 +523,7 @@ class PresenceStore:
         now: float | None = None,
     ) -> RemoteQuestion | None:
         answered_at = time.time() if now is None else now
-        with self.connect() as conn:
+        with self.session() as conn:
             row = conn.execute(
                 """
                 SELECT * FROM remote_questions
@@ -569,7 +580,7 @@ class PresenceStore:
         emitted_at = time.time() if now is None else now
         allowed = ("answered", "dispatch_failed") if allow_retry else ("answered",)
         placeholders = ", ".join("?" for _ in allowed)
-        with self.connect() as conn:
+        with self.session() as conn:
             cursor = conn.execute(
                 f"""
                 UPDATE remote_questions
@@ -590,7 +601,7 @@ class PresenceStore:
         observed_at: float,
         timeout_seconds: int,
     ) -> int:
-        with self.connect() as conn:
+        with self.session() as conn:
             cursor = conn.execute(
                 """
                 UPDATE remote_questions
@@ -614,7 +625,7 @@ class PresenceStore:
 
     def expire_questions(self, now: float | None = None) -> int:
         checked_at = time.time() if now is None else now
-        with self.connect() as conn:
+        with self.session() as conn:
             cursor = conn.execute(
                 """
                 UPDATE remote_questions
@@ -626,7 +637,7 @@ class PresenceStore:
         return cursor.rowcount
 
     def get_question(self, question_id: str) -> RemoteQuestion | None:
-        with self.connect() as conn:
+        with self.session() as conn:
             row = conn.execute(
                 "SELECT * FROM remote_questions WHERE question_id = ?",
                 (question_id,),
@@ -653,12 +664,12 @@ class PresenceStore:
         else:
             params = (limit,)
         query += " ORDER BY created_at DESC LIMIT ?"
-        with self.connect() as conn:
+        with self.session() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._row_to_question(row) for row in rows]
 
     def get_observer_state(self, key: str) -> str | None:
-        with self.connect() as conn:
+        with self.session() as conn:
             row = conn.execute(
                 "SELECT state_value FROM observer_state WHERE state_key = ?",
                 (key,),
@@ -673,7 +684,7 @@ class PresenceStore:
         now: float | None = None,
     ) -> None:
         updated_at = time.time() if now is None else now
-        with self.connect() as conn:
+        with self.session() as conn:
             conn.execute(
                 """
                 INSERT INTO observer_state (state_key, state_value, updated_at)

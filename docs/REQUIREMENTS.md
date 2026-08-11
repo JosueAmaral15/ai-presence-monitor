@@ -25,6 +25,12 @@
 - Workers devem poder ser isolados por projeto e sessao.
 - O servico de monitoramento continuo deve ser gerado sem caminhos fixos da
   maquina de desenvolvimento.
+- Linux e Windows devem selecionar adaptadores operacionais por uma factory de
+  plataforma, sem duplicar a logica dos protocolos.
+- A execucao continua deve usar systemd de usuario no Linux e Task Scheduler do
+  usuario no Windows.
+- A distribuicao Windows deve instalar uma base IANA de timezones para
+  `ZoneInfo` e fechar conexoes SQLite antes de liberar arquivos.
 
 ## Respostas Remotas
 
@@ -32,17 +38,19 @@
 - Somente resposta direta de usuario em allowlist deve ser aceita.
 - O observer nao deve expor servidor HTTP publico.
 - A entrega GUI deve ficar desativada por padrao.
-- O alvo GUI deve ser uma janela X11 exata, sem fallback para primeira janela.
+- O alvo GUI deve ser uma janela exata X11 ou Win32, sem fallback para a
+  primeira janela.
 - Falha ou resultado incerto nao deve causar reenvio automatico.
 - Hook posterior do mesmo worker deve confirmar a atividade depois da entrega.
-- O observer continuo deve ter unidade systemd separada e opcional.
+- O observer continuo deve ter unidade systemd ou tarefa agendada separada e
+  opcional.
 
 ## Continue Integrado
 
 - Monitoramento e continuidade devem pertencer ao mesmo pacote e a mesma CLI.
 - A mensagem padrao deve ser `continue`.
 - O delay padrao deve ser 60 segundos.
-- O alvo deve ser uma unica janela X11, capturada e revalidada.
+- O alvo deve ser uma unica janela X11 ou Win32, capturada e revalidada.
 - `--dry-run` nao deve esperar, controlar GUI ou gravar banco.
 - Somente emissao bem-sucedida pode sincronizar atividade.
 - Sincronizacao deve exigir worker existente e ativo.

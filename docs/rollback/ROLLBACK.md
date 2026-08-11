@@ -168,3 +168,28 @@ porque os novos campos possuem defaults internos.
 
 Para reverter o checkout local, use a baseline ou o commit anterior em uma nova
 branch. Nao apague o `.env` nem o banco durante o rollback.
+
+## Task 012 - Adaptadores do Windows
+
+Antes de voltar para a versao 0.4.3, interrompa um alarme ativo:
+
+```powershell
+ai-presence.exe stop-alarm
+```
+
+Remova somente as tarefas administradas pelo pacote:
+
+```powershell
+ai-presence.exe uninstall-background-service --component monitor
+ai-presence.exe uninstall-background-service --component reply-observer
+```
+
+Se o launcher nao estiver disponivel, o fallback explicito e:
+
+```powershell
+schtasks.exe /Delete /TN "AI Presence Monitor" /F
+schtasks.exe /Delete /TN "AI Presence Reply Observer" /F
+```
+
+Depois, reinstale um wheel 0.4.3 conhecido. Nao remova o `.env` nem o SQLite:
+nao houve migracao de esquema e as chaves novas preservam defaults compativeis.

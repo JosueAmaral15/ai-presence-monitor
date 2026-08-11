@@ -8,6 +8,7 @@ from .cli import (
     _ask_user,
     _continue_task,
     _init_db,
+    _install_background_service,
     _observe_replies_once,
     _record_event,
     _run_monitor,
@@ -16,6 +17,7 @@ from .cli import (
     _show_questions,
     _show_status,
     _stop_alarm,
+    _uninstall_background_service,
 )
 from .codex_hook_installer import (
     default_user_hooks_path,
@@ -776,7 +778,7 @@ def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
         required=True,
         allow_clear=False,
     )
-    window_id = _prompt_text("ID X11 exato, opcional", "")
+    window_id = _prompt_text("ID exato da janela, opcional", "")
     sync_activity = _prompt_yes_no(
         "Sincronizar o envio com a atividade do worker",
         config.continue_sync_activity,
@@ -851,6 +853,8 @@ def _menu() -> None:
     print("17. Listar perguntas e respostas")
     print("18. Agendar e enviar continue ao Codex")
     print("19. Interromper alarme local")
+    print("20. Instalar execucao continua desta plataforma")
+    print("21. Remover execucao continua desta plataforma")
     print("0. Sair")
 
 
@@ -912,6 +916,24 @@ def run_interactive(env_file: Path, dry_run: bool = False) -> None:
                     dry_run=dry_run,
                 )
                 _stop_alarm(args)
+            elif option in {"20", "21"}:
+                component = _prompt_choice(
+                    "Componente",
+                    ["monitor", "reply-observer"],
+                    "monitor",
+                )
+                args = argparse.Namespace(
+                    component=component,
+                    target=None,
+                    python=None,
+                    no_backup=False,
+                    dry_run=dry_run,
+                )
+                config = _load_current_config(env_file)
+                if option == "20":
+                    _install_background_service(args, config)
+                else:
+                    _uninstall_background_service(args, config)
             elif option == "0":
                 return
             else:

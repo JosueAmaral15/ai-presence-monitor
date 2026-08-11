@@ -5,7 +5,7 @@
 O AI Presence Monitor tem cinco blocos:
 
 - **Producers**: CLI manual, menu interativo e observers.
-- **GUI Automation**: entrada X11 local para respostas e continuidade.
+- **GUI Automation**: entrada local X11 ou Win32 para respostas e continuidade.
 - **Event Store**: SQLite local via `PresenceStore`.
 - **Rule Engine**: protocolos e limiares em `protocols.py`, janela de expediente em `work_window.py` e avaliacao em `cli._check_once`.
 - **Notifiers**: Discord, Telegram e escalonamento vermelho.
@@ -101,26 +101,28 @@ ask-user -> webhook Discord -> remote_questions
 Discord REST polling -> validacao-+-> resposta autorizada
                                   |
                                   v
-                     X11GuiAnswerDispatcher
+                  GuiAnswerDispatcher (Protocol)
+                    /                     \
+     X11GuiAnswerDispatcher       Win32GuiAnswerDispatcher
                                   |
                                   v
                      input_emitted -> hook -> delivery_confirmed
 ```
 
 `discord_questions.py` encapsula HTTP. `remote_questions.py` aplica correlacao,
-allowlist e estados. `gui_answer.py` atua somente no ID X11 capturado e
-revalidado.
+allowlist e estados. O dispatcher selecionado atua somente no ID capturado e
+revalidado da janela da plataforma.
 
-O polling possui unidade systemd separada. Assim, falha de Discord ou da GUI nao
-interrompe o monitor de atrasos nem o hook passivo.
+O polling possui unidade systemd ou tarefa agendada separada. Assim, falha de
+Discord ou da GUI nao interrompe o monitor de atrasos nem o hook passivo.
 
 ## Continue Integrado
 
 ```text
-CLI/menu -> captura alvo X11 unico -> delay -> revalidacao
+CLI/menu -> captura alvo de janela unico -> delay -> revalidacao
                                            |
                                            v
-                               clique + clipboard + Enter
+                              adaptador GUI + texto + Enter
                                            |
                                            v
                               input_emitted localmente
@@ -153,17 +155,24 @@ Windows. Alias de shell nao faz parte do contrato porque hooks, subprocessos e
 servicos podem executar sem carregar configuracao interativa do shell.
 
 O nucleo de configuracao, identidade, protocolos e SQLite e independente da
-plataforma. As integracoes externas atuais possuem fronteiras concretas:
+plataforma. `platform_integration.py` implementa Abstract Factory e cria tres
+produtos coerentes:
 
-- `systemd_service.py`: processo continuo em Linux;
-- `gui_answer.py`: entrada grafica X11 com `xdotool` e `xclip`;
-- `notify.py`: transporte HTTP e comando local.
+```text
+PlatformIntegrationFactory
+  +-- LinuxPlatformFactory
+  |     +-- X11GuiAnswerDispatcher
+  |     +-- LinuxAlarmProcessBackend
+  |     `-- LinuxBackgroundServiceManager
+  `-- WindowsPlatformFactory
+        +-- Win32GuiAnswerDispatcher
+        +-- WindowsAlarmProcessBackend
+        `-- WindowsTaskSchedulerService
+```
 
-Uma implementacao Windows deve adicionar interfaces estreitas para gerencia de
-servico e despacho de entrada. A selecao por plataforma pode usar Strategy ou
-Factory quando o segundo adaptador existir. Uma Abstract Factory completa nao
-e introduzida antes disso porque ainda nao ha duas familias concretas de
-objetos com contratos validados.
+`continue_task.py`, `remote_questions.py`, `alarm.py` e a CLI dependem dos
+contratos, nao da implementacao nativa. Imports de Win32 sao tardios para que o
+pacote continue importavel no Linux.
 
 ## Controle do Alarme Local
 
@@ -171,13 +180,10 @@ objetos com contratos validados.
 somente PID, fingerprint e token de inicio. Antes de iniciar outro alarme, o
 controlador confirma que o processo registrado ainda e o mesmo.
 
-O comando e envolvido por GNU `timeout` com duracao configurada por
-`RED_ALERT_MAX_DURATION_SECONDS`. Assim, o limite continua valendo mesmo se o
-monitor for reiniciado enquanto o som esta tocando.
-
-Nesta versao, a verificacao segura de identidade do processo depende do
-`/proc` do Linux. Em outra plataforma, o disparo controlado e recusado antes de
-iniciar o comando.
+No Linux, o comando e envolvido por GNU `timeout` e a identidade e lida em
+`/proc`. No Windows, `CommandLineToArgvW` interpreta o comando, um runner Python
+aplica o limite e `GetProcessTimes` mais `QueryFullProcessImageNameW` fornecem a
+identidade. `taskkill /T /F` encerra somente a arvore do runner revalidado.
 
 Uma thread chama `wait()` para coletar corretamente o filho e remover o estado
 quando o som termina. `stop-alarm` revalida PID, fingerprint e token antes de

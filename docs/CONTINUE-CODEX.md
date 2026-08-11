@@ -3,7 +3,7 @@
 ## Objetivo
 
 O AI Presence Monitor pode aguardar um intervalo, localizar uma unica janela
-X11 do Codex, clicar no prompt, colar uma mensagem e pressionar Enter. A
+visivel do Codex, clicar no prompt, escrever uma mensagem e pressionar Enter. A
 mensagem padrao e `continue` e o atraso padrao e 60 segundos.
 
 Esse recurso substitui o uso separado de `prosseguir_tarefas.py` no fluxo
@@ -11,11 +11,11 @@ monitorado.
 
 ## Requisitos
 
-- Linux em sessao X11;
-- `xdotool`;
-- `xclip`;
 - pacote AI Presence Monitor instalado;
 - titulo que identifique exatamente uma janela visivel do Codex.
+
+No Linux, a sessao deve ser X11 e os comandos `xdotool` e `xclip` precisam
+estar instalados. Verifique:
 
 Verifique:
 
@@ -25,7 +25,9 @@ command -v xclip
 printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 ```
 
-Wayland, Windows e macOS nao possuem adaptador nesta versao.
+No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. O
+adaptador usa a API Win32 nativa e nao requer dependencia GUI externa. Wayland
+e macOS ainda nao possuem adaptador.
 
 ## Configuracao
 
@@ -115,25 +117,35 @@ setsid nohup ai-presence continue \
   > "$HOME/.local/state/ai-presence-continue.log" 2>&1 < /dev/null &
 ```
 
+No Windows PowerShell, inicie um processo separado:
+
+```powershell
+Start-Process ai-presence.exe -ArgumentList @(
+  "continue", "--worker", "ID_EXATO_DO_WORKER",
+  "--window-title", "Codex"
+)
+```
+
 O processo captura a janela antes da espera e revalida o mesmo ID e titulo no
 momento do envio. Fechar a janela ou mudar seu titulo causa falha fechada.
 
 Terminais que alteram o titulo enquanto o Codex trabalha podem usar o modo
-opt-in abaixo. Ele exige o ID X11 explicito e continua revalidando tanto esse ID
+opt-in abaixo. Ele exige o ID da janela explicito e continua revalidando esse ID
 quanto o padrao de titulo; somente a igualdade do titulo completo e relaxada:
 
 ```bash
 ai-presence continue \
-  --window-id ID_X11_EXATO \
+  --window-id ID_EXATO_DA_JANELA \
   --window-title 'trecho estavel do projeto' \
   --allow-title-change
 ```
 
 Nao use essa opcao sem um padrao estavel e especifico para o projeto.
 
-O mantenedor da selecao iniciado por `xclip` tem sua saida isolada dos pipes do
-comando. Isso permite que a automacao prossiga para o clique e o Enter sem ficar
-bloqueada enquanto o conteudo permanece disponivel na area de transferencia.
+No Linux, o mantenedor da selecao iniciado por `xclip` tem sua saida isolada dos
+pipes do comando. Isso permite que a automacao prossiga sem ficar bloqueada
+enquanto o conteudo permanece disponivel na area de transferencia. No Windows,
+o texto Unicode e emitido por `SendInput`; a area de transferencia nao e usada.
 
 ## Sincronizacao com o Protocolo 2
 
@@ -224,8 +236,9 @@ mensagem, atraso, titulo, ID opcional e sincronizacao.
 ## Seguranca
 
 - O programa nunca escolhe a primeira janela de uma lista ambigua.
-- O texto e enviado pelo clipboard e nao passa por shell.
-- O clipboard anterior e restaurado.
+- O texto nao passa por shell.
+- No Linux, o clipboard anterior e restaurado.
+- No Windows, a digitacao Unicode nao altera o clipboard.
 - O alvo e revalidado depois do delay.
 - Nao existe retry automatico depois de resultado incerto.
 - Revise visualmente o primeiro teste real.

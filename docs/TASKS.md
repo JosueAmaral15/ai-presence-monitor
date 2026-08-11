@@ -1,5 +1,39 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento
+
+### Task 012 - Adaptadores operacionais para Windows
+
+**Prioridade**: Alta
+**Status**: em andamento - CI externa bloqueada por cobranca da conta GitHub
+**Objetivo**: oferecer no Windows as integracoes locais que antes existiam
+somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
+
+**Criterios de aceite**:
+
+- [x] Uma Abstract Factory seleciona automaticamente a familia Linux ou Windows.
+- [x] O dispatcher Windows captura e revalida uma unica janela visivel por
+      identificador e titulo antes de clicar, digitar e pressionar Enter.
+- [x] O alarme Windows possui duracao maxima, deduplicacao, identidade de
+      processo e interrupcao manual sem depender de `/proc` ou GNU `timeout`.
+- [x] O monitor e o observer de respostas podem ser registrados no Task
+      Scheduler para iniciar no logon do usuario.
+- [x] Comandos Linux existentes continuam compativeis.
+- [x] A CLI oferece comandos portateis para instalar e remover execucao
+      continua, alem dos comandos legados de systemd.
+- [x] O menu interativo informa e usa a integracao da plataforma atual.
+- [ ] A CI executa testes em Linux e Windows com Python suportado.
+- [x] README, arquitetura, portabilidade, seguranca, rollback, decisoes e
+      changelog documentam a implementacao.
+- [x] Testes, cobertura, lint, tipos, build e verificacao de diff passam.
+
+**Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
+
+**Checkpoint externo**: o run `31540396474` nao iniciou nenhum job porque a
+conta GitHub esta bloqueada por problema de cobranca. O workflow permanece
+configurado para seis jobs; a tarefa nao sera movida para concluidas ate um run
+real em `windows-latest` passar.
+
 ## Concluidas
 
 ### Task 011 - Duracao limitada do alarme vermelho
@@ -63,7 +97,8 @@ estavel, com identidade explicita de projeto e protocolo documentado.
 - [x] Monitor, observer de respostas e dispatcher GUI sao diferenciados.
 - [x] A limitacao de titulos de abas do terminal esta documentada.
 - [x] Linux e Windows possuem limites de portabilidade explicitos.
-- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto.
+- [x] Abstract Factory foi adiada ate existir um adaptador Windows concreto;
+      a Task 012 implementa essa segunda familia.
 
 ### Task 007 - Unificacao com o comando de continuidade
 
@@ -77,8 +112,9 @@ estavel, com identidade explicita de projeto e protocolo documentado.
 
 - [x] Existe um unico pacote e uma unica CLI para monitoramento e continuidade.
 - [x] A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
-- [x] O alvo X11 e validado sem selecionar silenciosamente uma janela ambigua.
-- [x] O envio oferece `--dry-run` e preserva o clipboard.
+- [x] O alvo GUI e validado sem selecionar silenciosamente uma janela ambigua.
+- [x] O envio oferece `--dry-run`; Linux preserva o clipboard e Windows nao o
+      altera.
 - [x] Depois de uma emissao GUI bem-sucedida, um worker ja ativo recebe uma
       observacao auditavel de automacao.
 - [x] No Protocolo 2, essa observacao sincroniza `last_activity_at` e reinicia

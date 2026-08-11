@@ -19,8 +19,9 @@ Desde a versao 0.2.0, a configuracao e procurada nesta ordem:
 1. caminho passado por `--env-file`;
 2. variavel `PRESENCE_ENV_FILE`;
 3. `.ai-presence-monitor.env` existente no diretorio atual;
-4. `$XDG_CONFIG_HOME/ai-presence-monitor/.env`;
-5. `~/.config/ai-presence-monitor/.env`.
+4. no Linux, `$XDG_CONFIG_HOME/ai-presence-monitor/.env` ou
+   `~/.config/ai-presence-monitor/.env`;
+5. no Windows, `%APPDATA%\ai-presence-monitor\.env`.
 
 O `.env` comum no diretorio atual e reconhecido automaticamente apenas dentro
 do checkout do proprio AI Presence Monitor. Essa compatibilidade evita que a
@@ -46,7 +47,10 @@ O AI Presence Monitor tem quatro partes principais:
 
 Os comandos gravam eventos no banco SQLite. O monitor le esse banco em ciclos e verifica apenas workers com `status=active`. Quando encontra atraso suficiente, ele envia um alerta e grava esse alerta no banco para evitar repetir o mesmo nivel indefinidamente.
 
-O monitor nao roda sozinho depois de um `start`. Para alertas reais, mantenha este comando aberto em outro terminal, `systemd`, `cron`, supervisor ou outro processo de sua escolha:
+O monitor nao roda sozinho depois de um `start`. Para alertas reais, mantenha
+este comando aberto em outro terminal ou instale a execucao continua com
+`install-background-service`, que usa systemd no Linux e Task Scheduler no
+Windows:
 
 ```bash
 python3 -m ai_presence_monitor monitor
@@ -339,8 +343,9 @@ aceita.
 fica no SQLite como `answered`; nenhum controle de GUI acontece.
 
 Quando `true`, `PRESENCE_CODEX_GUI_WINDOW_TITLE` deve identificar uma unica
-janela X11. As proporcoes X/Y definem o clique dentro da janela. O alvo e salvo
-por ID e titulo e revalidado antes de colar o texto e pressionar Enter.
+janela visivel. As proporcoes X/Y definem o clique dentro da janela. O alvo e
+salvo por ID e titulo e revalidado antes de escrever o texto e pressionar
+Enter. Linux usa X11 com `xdotool`/`xclip`; Windows usa Win32 e `SendInput`.
 
 O observer continuo e separado do monitor de alertas:
 
@@ -412,17 +417,26 @@ RED_ALERT_COMMAND=paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapse
 
 Use comandos simples e seguros. Evite comandos destrutivos.
 
-`RED_ALERT_MAX_DURATION_SECONDS` limita obrigatoriamente a execucao local. O
-padrao e 15 segundos. Mesmo se `RED_ALERT_COMMAND` usar um loop continuo, GNU
-`timeout` encerra o grupo ao atingir esse limite. O valor precisa ser positivo.
+Exemplo Windows com FFmpeg/ffplay instalado:
 
-O controle seguro do processo requer Linux com `/proc` nesta versao.
+```env
+RED_ALERT_COMMAND=ffplay.exe -nodisp -loop 0 "C:\Sounds\alarm.mp3"
+```
+
+`RED_ALERT_MAX_DURATION_SECONDS` limita obrigatoriamente a execucao local. O
+padrao e 15 segundos. Mesmo se `RED_ALERT_COMMAND` usar um loop continuo, o
+backend da plataforma encerra a arvore ao atingir esse limite. Linux usa GNU
+`timeout` e `/proc`; Windows usa um runner dedicado, identidade nativa de
+processo e `taskkill /T /F`. O valor precisa ser positivo.
 
 O monitor registra PID, fingerprint do comando e identidade do processo em:
 
 ```text
 ~/.local/state/ai-presence-monitor/red-alarm.json
 ```
+
+No Windows, o estado fica em
+`%LOCALAPPDATA%\ai-presence-monitor\state\red-alarm.json`.
 
 O arquivo possui permissao `600` e nao contem o comando em texto. Se um alarme
 ja estiver ativo, um novo processo nao e iniciado. Para interromper:
@@ -431,8 +445,10 @@ ja estiver ativo, um novo processo nao e iniciado. Para interromper:
 ai-presence stop-alarm
 ```
 
-O comando envia `SIGTERM`, aguarda tres segundos e usa `SIGKILL` somente se o
-processo continuar ativo. Use `--no-force` para desativar o fallback:
+No Linux, o comando envia `SIGTERM`, aguarda tres segundos e usa `SIGKILL`
+somente se o processo continuar ativo. Use `--no-force` para desativar o
+fallback. No Windows, a arvore dedicada e encerrada imediatamente por
+`taskkill /T /F`:
 
 ```bash
 ai-presence stop-alarm --no-force
@@ -702,7 +718,7 @@ O usuario pode:
 - publicar perguntas em canal dedicado do Discord;
 - restringir respostas por ID de usuario e referencia;
 - manter respostas apenas no SQLite ou entrega-las ao Codex GUI;
-- executar o observer de respostas em terminal ou systemd separado.
+- executar o observer em terminal, systemd ou Task Scheduler separado;
 - agendar `continue` na mesma CLI e sincronizar uma emissao bem-sucedida com o
   relogio de atividade do Protocolo 2.
 

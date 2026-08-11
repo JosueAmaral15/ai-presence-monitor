@@ -8,6 +8,11 @@ from datetime import datetime
 from pathlib import Path
 
 from .alarm import AlarmControlError, AlarmController
+from .background_service import (
+    BACKGROUND_COMPONENTS,
+    BackgroundServiceError,
+    print_background_service_result,
+)
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
@@ -20,6 +25,7 @@ from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
+from .platform_integration import UnsupportedPlatformError, get_platform_factory
 from .protocols import (
     PROTOCOLS,
     choose_threshold,
@@ -468,6 +474,40 @@ def _uninstall_reply_observer_service(
     return 0
 
 
+def _install_background_service(args: argparse.Namespace, config: AppConfig) -> int:
+    try:
+        manager = get_platform_factory().create_background_service_manager()
+        result = manager.install(
+            component=args.component,
+            env_file=config.env_path,
+            target_path=args.target,
+            python_executable=args.python,
+            dry_run=args.dry_run,
+            backup=not args.no_backup,
+        )
+    except (BackgroundServiceError, UnsupportedPlatformError) as exc:
+        print(f"Falha ao instalar execucao continua: {exc}", file=sys.stderr)
+        return 2
+    print_background_service_result(result, dry_run=args.dry_run)
+    return 0
+
+
+def _uninstall_background_service(args: argparse.Namespace, config: AppConfig) -> int:
+    try:
+        manager = get_platform_factory().create_background_service_manager()
+        result = manager.uninstall(
+            component=args.component,
+            target_path=args.target,
+            dry_run=args.dry_run,
+            backup=not args.no_backup,
+        )
+    except (BackgroundServiceError, UnsupportedPlatformError) as exc:
+        print(f"Falha ao remover execucao continua: {exc}", file=sys.stderr)
+        return 2
+    print_background_service_result(result, dry_run=args.dry_run)
+    return 0
+
+
 def _show_status(config: AppConfig) -> int:
     store = PresenceStore(config.db_path)
     now = time.time()
@@ -602,12 +642,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--timeout",
         type=float,
         default=3.0,
-        help="Segundos para aguardar SIGTERM antes do fallback. Padrao: 3.",
+        help="Segundos para aguardar parada normal antes do fallback forcado. Padrao: 3.",
     )
     stop_alarm_parser.add_argument(
         "--no-force",
         action="store_true",
-        help="Nao envia SIGKILL se o processo ignorar SIGTERM.",
+        help="Nao forca a arvore se o processo ignorar a parada normal.",
     )
     stop_alarm_parser.set_defaults(func=lambda args, config: _stop_alarm(args))
 
@@ -620,7 +660,7 @@ def build_parser() -> argparse.ArgumentParser:
     ask_parser.add_argument("--timeout", type=int, help="Prazo da pergunta em segundos.")
     ask_parser.add_argument(
         "--window-id",
-        help="ID X11 exato. Se omitido, exige um unico titulo correspondente.",
+        help="ID exato da janela. Se omitido, exige um unico titulo correspondente.",
     )
     ask_parser.add_argument(
         "--window-title",
@@ -668,7 +708,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     continue_parser.add_argument(
         "--window-id",
-        help="ID X11 exato. Se omitido, exige um unico titulo correspondente.",
+        help="ID exato da janela. Se omitido, exige um unico titulo correspondente.",
     )
     continue_parser.add_argument(
         "--window-title",
@@ -801,6 +841,58 @@ def build_parser() -> argparse.ArgumentParser:
     )
     uninstall_reply_service_parser.set_defaults(
         func=lambda args, config: _uninstall_reply_observer_service(args, config)
+    )
+
+    install_background_parser = subparsers.add_parser(
+        "install-background-service",
+        help="Instala execucao continua via systemd ou Task Scheduler.",
+    )
+    install_background_parser.add_argument(
+        "--component",
+        choices=BACKGROUND_COMPONENTS,
+        default="monitor",
+        help="Componente continuo. Padrao: monitor.",
+    )
+    install_background_parser.add_argument(
+        "--target",
+        type=Path,
+        help="Caminho opcional da definicao gerada.",
+    )
+    install_background_parser.add_argument(
+        "--python",
+        help="Executavel Python. Padrao: o mesmo Python desta instalacao.",
+    )
+    install_background_parser.add_argument(
+        "--no-backup",
+        action="store_true",
+        help="Nao cria backup da definicao anterior.",
+    )
+    install_background_parser.set_defaults(
+        func=lambda args, config: _install_background_service(args, config)
+    )
+
+    uninstall_background_parser = subparsers.add_parser(
+        "uninstall-background-service",
+        help="Remove execucao continua via systemd ou Task Scheduler.",
+    )
+    uninstall_background_parser.add_argument(
+        "--component",
+        choices=BACKGROUND_COMPONENTS,
+        default="monitor",
+        help="Componente continuo. Padrao: monitor.",
+    )
+    uninstall_background_parser.add_argument(
+        "--target",
+        type=Path,
+        help="Caminho opcional da definicao administrada.",
+    )
+    uninstall_background_parser.add_argument(
+        "--no-backup",
+        action="store_true",
+        help="Nao cria backup da definicao removida.",
+    )
+    uninstall_background_parser.set_defaults(
+        func=lambda args, config: _uninstall_background_service(args, config)
     )
 
     status_parser = subparsers.add_parser("status", help="Mostra estado dos workers.")

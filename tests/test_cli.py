@@ -5,17 +5,20 @@ import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import replace
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from ai_presence_monitor.alarm import AlarmControlError
+from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
     _ask_user,
     _continue_task,
     _dispatch_answer,
     _identity,
+    _install_background_service,
     _install_codex_hook,
     _install_reply_observer_service,
     _install_systemd_service,
@@ -29,6 +32,7 @@ from ai_presence_monitor.cli import (
     _show_status,
     _stop_alarm,
     _timestamp,
+    _uninstall_background_service,
     _uninstall_codex_hook,
     _uninstall_reply_observer_service,
     _uninstall_systemd_service,
@@ -135,6 +139,12 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertEqual(stop_alarm_args.command, "stop-alarm")
         self.assertEqual(stop_alarm_args.timeout, 1)
         self.assertTrue(stop_alarm_args.no_force)
+
+        background_args = parser.parse_args(
+            ["--dry-run", "install-background-service", "--component", "reply-observer"]
+        )
+        self.assertEqual(background_args.component, "reply-observer")
+        self.assertTrue(background_args.dry_run)
 
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +279,45 @@ class CliBehaviorTests(unittest.TestCase):
                     _uninstall_reply_observer_service(service_args, config),
                     0,
                 )
+
+    def test_portable_background_service_helpers_use_platform_factory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = make_config(root)
+            result = BackgroundServiceResult(
+                action="install",
+                component="monitor",
+                target_path=root / "service.xml",
+                changed=True,
+                backup_path=None,
+                rendered_definition="definition\n",
+                follow_up_commands=(),
+            )
+            manager = SimpleNamespace(
+                install=Mock(return_value=result),
+                uninstall=Mock(
+                    return_value=replace(result, action="uninstall")
+                ),
+            )
+            factory = SimpleNamespace(
+                create_background_service_manager=lambda: manager,
+            )
+            args = argparse.Namespace(
+                component="monitor",
+                target=None,
+                python=None,
+                dry_run=True,
+                no_backup=False,
+            )
+            with patch(
+                "ai_presence_monitor.cli.get_platform_factory",
+                return_value=factory,
+            ), redirect_stdout(StringIO()):
+                self.assertEqual(_install_background_service(args, config), 0)
+                self.assertEqual(_uninstall_background_service(args, config), 0)
+
+            manager.install.assert_called_once()
+            manager.uninstall.assert_called_once()
 
     def test_remote_question_cli_helpers_are_safe_in_dry_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

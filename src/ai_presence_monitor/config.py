@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import socket
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,7 +12,11 @@ APP_DIR_NAME = "ai-presence-monitor"
 PROJECT_ENV_NAME = ".ai-presence-monitor.env"
 
 
-def user_config_dir() -> Path:
+def user_config_dir(platform_name: str | None = None) -> Path:
+    if (platform_name or sys.platform).lower() in {"win32", "windows"}:
+        windows_config = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+        base = Path(windows_config) if windows_config else Path.home() / "AppData" / "Roaming"
+        return base / APP_DIR_NAME
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg_config_home).expanduser() if xdg_config_home else Path.home() / ".config"
     return base / APP_DIR_NAME

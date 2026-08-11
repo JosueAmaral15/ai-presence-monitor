@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-08-11 - Abstract Factory para integracoes Linux e Windows
+
+**Decisao**: selecionar dispatcher GUI, backend de alarme e gerenciador de
+execucao continua por uma Abstract Factory de plataforma.
+
+**Motivo**:
+
+- agora existem duas familias concretas com os mesmos tres produtos;
+- `continue`, respostas remotas e alarme nao devem conhecer APIs nativas;
+- Windows precisa de Win32, Task Scheduler e identidade de processo propria;
+- condicionais `if sys.platform` nos casos de uso aumentariam acoplamento.
+
+**Alternativas consideradas**:
+
+- apenas documentar o launcher `.exe`: rejeitado porque nao oferece GUI, alarme
+  controlado nem execucao continua;
+- adicionar condicionais em cada modulo: rejeitado por duplicar selecao;
+- usar `pyautogui` e `psutil`: rejeitado para manter zero dependencias Python de
+  runtime e usar garantias nativas.
+
+**Consequencia**:
+
+Linux preserva X11, `/proc`, GNU `timeout` e systemd. Windows usa Win32 via
+`ctypes`, runner Python, `taskkill` e Task Scheduler. Wayland e macOS continuam
+fora do escopo. O schema SQLite e o `.env` permanecem compativeis.
+
 ## 2026-08-01 - Duracao maxima obrigatoria do alarme local
 
 **Decisao**: executar `RED_ALERT_COMMAND` sob GNU `timeout`, com limite padrao
@@ -200,13 +226,13 @@ documentar uma maquina de estados para AI-workers.
   carregado de forma consistente;
 - controlar uma aba por seu rotulo: descartado porque uma aba do terminal pode
   nao ser uma janela X11;
-- Abstract Factory imediata: adiada ate existir um adaptador Windows concreto.
+- Abstract Factory imediata: foi adiada nesta decisao; a versao 0.5.0 passou a
+  usa-la depois da implementacao dos adaptadores Windows concretos.
 
 **Consequencia**:
 
-`AGENTS.md` e `docs/AI-WORKER-COMMAND-PROTOCOL.md` definem os comandos. Linux
-usa systemd/X11; Windows pode reutilizar a CLI e o SQLite, mas ainda precisa de
-Task Scheduler e dispatcher GUI nativo para equivalencia operacional.
+`AGENTS.md` e `docs/AI-WORKER-COMMAND-PROTOCOL.md` definem os comandos. Esta
+lacuna foi fechada na versao 0.5.0 com Task Scheduler e dispatcher Win32.
 
 ## 2026-07-30 - Alarme local controlado por PID
 

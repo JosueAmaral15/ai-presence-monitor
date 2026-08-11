@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 from .config import AppConfig
-from .gui_answer import GuiDispatchError, WindowTarget, X11GuiAnswerDispatcher
+from .gui_answer import GuiAnswerDispatcher, GuiDispatchError, WindowTarget
+from .platform_integration import UnsupportedPlatformError, get_platform_factory
 from .store import PresenceStore, WorkerState
 
 
@@ -50,7 +51,7 @@ def execute_continue_task(
     sync_activity: bool | None = None,
     dry_run: bool = False,
     store: PresenceStore | None = None,
-    dispatcher: X11GuiAnswerDispatcher | None = None,
+    dispatcher: GuiAnswerDispatcher | None = None,
     wait: Callable[[int], None] = countdown,
     now: float | None = None,
 ) -> ContinueTaskResult:
@@ -89,11 +90,11 @@ def execute_continue_task(
             worker=None,
         )
 
-    actor = dispatcher or X11GuiAnswerDispatcher(
-        x_ratio=config.codex_gui_click_x_ratio,
-        y_ratio=config.codex_gui_click_y_ratio,
-    )
     try:
+        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+            x_ratio=config.codex_gui_click_x_ratio,
+            y_ratio=config.codex_gui_click_y_ratio,
+        )
         target = actor.capture_target(
             title_pattern=pattern,
             window_id=window_id,
@@ -104,7 +105,7 @@ def execute_continue_task(
             text=text,
             allow_title_change=allow_title_change,
         )
-    except GuiDispatchError as exc:
+    except (GuiDispatchError, UnsupportedPlatformError) as exc:
         raise ContinueTaskError(str(exc)) from exc
 
     if not should_sync:

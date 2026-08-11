@@ -65,7 +65,7 @@ def make_stale_worker(store: PresenceStore, *, protocol: str, now: float, age_se
         task="teste",
     )
     stale_clock = now - age_seconds
-    with store.connect() as conn:
+    with store.session() as conn:
         conn.execute(
             """
             UPDATE workers
