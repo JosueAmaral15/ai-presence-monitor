@@ -224,3 +224,12 @@ Windows e a fechar cada sessao do store. Depois da correcao, 115 de 117 testes
 passaram nesse runtime; os dois restantes exigem `taskkill /T`, opcao ausente
 na implementacao reduzida do Wine. A confirmacao em Windows real continua
 pendente e a Task 012 permanece em andamento.
+
+Em 2026-08-12, as condicoes operacionais do antigo protocolo de
+`prosseguir_tarefas.py` foram incorporadas normativamente a
+`docs/CONTINUE-CODEX.md`. A IA somente pode agendar continuidade quando possui
+autorizacao explicita, concluiu a etapa atual, identificou uma proxima tarefa
+concreta e nao possui perguntas, bloqueios ou outra execucao pendente. O novo
+texto proibe uso para simular presenca e preserva a politica mais segura do
+projeto integrado: alvo ambiguo falha fechado e nunca e resolvido pela janela
+ativa ou pela primeira correspondencia.

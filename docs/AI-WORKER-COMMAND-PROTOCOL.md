@@ -116,9 +116,15 @@ ai-presence --dry-run continue --project "$PROJECT"
 ai-presence continue --project "$PROJECT"
 ```
 
-Use o segundo comando somente com autorizacao explicita. Uma emissao
-bem-sucedida atualiza `last_activity_at` de um worker ativo no Protocolo 2.
-Falha, cancelamento, dry-run e worker inativo nao atualizam o monitor.
+Use o segundo comando somente com autorizacao explicita e depois de aplicar a
+[norma de acionamento](CONTINUE-CODEX.md#norma-de-acionamento-pela-ia). Em
+resumo: a etapa atual deve estar concluida, a proxima tarefa precisa ser
+concreta e nao pode existir pergunta, bloqueio ou outra execucao pendente.
+
+Uma emissao bem-sucedida atualiza `last_activity_at` de um worker ativo no
+Protocolo 2. Falha, cancelamento, dry-run e worker inativo nao atualizam o
+monitor. O evento nao prova que o Codex processou a mensagem; verifique um hook
+posterior antes de considerar a retomada confirmada.
 
 Uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para

@@ -17,8 +17,6 @@ monitorado.
 No Linux, a sessao deve ser X11 e os comandos `xdotool` e `xclip` precisam
 estar instalados. Verifique:
 
-Verifique:
-
 ```bash
 command -v xdotool
 command -v xclip
@@ -28,6 +26,88 @@ printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. O
 adaptador usa a API Win32 nativa e nao requer dependencia GUI externa. Wayland
 e macOS ainda nao possuem adaptador.
+
+## Norma de Acionamento pela IA
+
+Esta secao incorpora e atualiza as regras operacionais do antigo protocolo de
+`prosseguir_tarefas.py`. Ela se aplica tanto ao Linux quanto ao Windows.
+
+### Pre-condicoes obrigatorias
+
+A IA somente deve executar `ai-presence continue` quando **todas** estas
+condicoes forem verdadeiras:
+
+1. O usuario autorizou explicitamente a automacao GUI para essa execucao.
+2. A etapa limitada da sessao atual foi concluida e existe uma proxima tarefa
+   concreta, documentada e executavel pelo mesmo AI-worker.
+3. A proxima tarefa nao depende de resposta, aprovacao, credencial, arquivo ou
+   decisao ainda pendente do usuario.
+4. Nao existe erro bloqueante, teste critico falhando sem diagnostico, estado
+   inconsistente ou operacao destrutiva aguardando revisao.
+5. A sessao seguinte ainda faz parte do trabalho autorizado e esta dentro do
+   periodo em que o usuario permitiu a automacao.
+6. O titulo ou ID configurado identifica exatamente uma janela visivel do
+   Codex na sessao grafica atual.
+7. Nao existe outra execucao de `continue` pendente para o mesmo worker e a
+   mesma janela.
+8. Quando a sincronizacao estiver ativa, o worker existe e permanece `active`
+   porque o trabalho completo ainda nao terminou.
+
+Uma "proxima tarefa concreta" deve estar registrada no plano, `TASKS.md`, issue
+ou instrucao atual. A mera possibilidade de encontrar trabalho adicional nao e
+suficiente.
+
+### Situacoes em que e proibido executar
+
+A IA nao deve executar `continue`:
+
+- para simular presenca, evitar alertas ou manter artificialmente o Protocolo 2
+  ativo sem trabalho correspondente;
+- quando o usuario pediu pausa, cancelamento, revisao ou apenas um relatorio;
+- enquanto houver pergunta pendente ou quando a resposta puder alterar a
+  proxima tarefa;
+- depois de concluir todo o trabalho autorizado ou registrar `finish`;
+- para encadear sessoes indefinidamente sem tarefas previamente identificadas;
+- quando a tela estiver bloqueada, a sessao grafica estiver indisponivel ou o
+  alvo da janela for ambiguo;
+- como retry automatico depois de clique, digitacao ou Enter com resultado
+  incerto;
+- para substituir `start`, `heartbeat`, `touch`, hooks ou `finish`.
+
+Se qualquer condicao mudar durante o delay, o alvo deve falhar fechado. A IA
+nao deve contornar a falha escolhendo a janela ativa, a primeira janela da
+lista ou coordenadas globais.
+
+### Sequencia normativa
+
+Quando as pre-condicoes forem satisfeitas, a IA deve:
+
+1. concluir e validar a etapa atual;
+2. registrar o proximo passo concreto no plano ou controle de tarefas;
+3. confirmar que nao ha pergunta nem bloqueio pendente;
+4. usar `--dry-run` no primeiro uso, depois de alterar titulo/ID ou depois de
+   mudar de sistema operacional;
+5. iniciar uma unica execucao em segundo plano com worker, projeto e alvo
+   especificos;
+6. confirmar que o processo foi iniciado e que o log possui destino conhecido;
+7. encerrar a sessao atual sem aguardar o fim do delay;
+8. na sessao seguinte, verificar o status e os hooks antes de considerar que o
+   Codex retomou o trabalho.
+
+`input_emitted` confirma apenas que o sistema operacional aceitou os eventos de
+entrada. A retomada deve ser confirmada por hook posterior, resultado visivel
+ou nova evidencia de trabalho. Resultado incerto exige inspecao, nao reenvio.
+
+### Relacao com os protocolos de presenca
+
+No Protocolo 1, `continue` nunca substitui o heartbeat publico. No Protocolo 2,
+a emissao bem-sucedida reinicia temporariamente `last_activity_at`, mas nao
+prova execucao da tarefa. Se nao houver atividade posterior, os alertas devem
+retornar normalmente.
+
+O AI-worker deve permanecer `active` entre sessoes somente quando continua
+responsavel por uma cadeia autorizada de tarefas. Quando a cadeia terminar, a
+IA deve executar `finish` e nao agendar outro `continue`.
 
 ## Configuracao
 
@@ -130,8 +210,9 @@ O processo captura a janela antes da espera e revalida o mesmo ID e titulo no
 momento do envio. Fechar a janela ou mudar seu titulo causa falha fechada.
 
 Terminais que alteram o titulo enquanto o Codex trabalha podem usar o modo
-opt-in abaixo. Ele exige o ID da janela explicito e continua revalidando esse ID
-quanto o padrao de titulo; somente a igualdade do titulo completo e relaxada:
+opt-in abaixo. Ele exige o ID da janela explicito e continua revalidando tanto
+esse ID quanto o padrao de titulo; somente a igualdade do titulo completo e
+relaxada:
 
 ```bash
 ai-presence continue \

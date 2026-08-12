@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-12 - Protocolo normativo de continuidade
+
+- Incorporadas ao guia integrado as condicoes de acionamento do antigo
+  `prosseguir_tarefas.py`.
+- Definidas pre-condicoes, situacoes proibidas, sequencia operacional e regras
+  de encerramento para AI-workers em Linux e Windows.
+- Preservada a falha fechada para janelas ambiguas; a janela ativa nao e usada
+  como desempate.
+- Explicitado que `continue` nao pode simular presenca, substituir sinais dos
+  protocolos nem ser reenviado automaticamente depois de resultado incerto.
+
 ## 2026-08-11 - v0.5.0
 
 - Adicionada Abstract Factory para familias operacionais Linux e Windows.
