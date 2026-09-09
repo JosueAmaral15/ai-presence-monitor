@@ -170,6 +170,10 @@ class SystemdServiceTests(unittest.TestCase):
         self.assertIn('ExecStart="python-test" -m ai_presence_monitor', rendered)
         self.assertIn(f'"{expected_env}" monitor', rendered)
         self.assertNotIn("WorkingDirectory=", rendered)
+        self.assertIn("Restart=always", rendered)
+        self.assertIn("RestartSec=5", rendered)
+        self.assertNotIn("StartLimitIntervalSec=", rendered)
+        self.assertNotIn("StartLimitBurst=", rendered)
 
     def test_install_is_idempotent_and_uninstall_creates_backup(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -219,6 +223,13 @@ class SystemdServiceTests(unittest.TestCase):
                 "AI Presence Discord Reply Observer",
                 target.read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "StartLimitIntervalSec=300",
+                target.read_text(encoding="utf-8"),
+            )
+            self.assertIn("StartLimitBurst=3", target.read_text(encoding="utf-8"))
+            self.assertIn("Restart=on-failure", target.read_text(encoding="utf-8"))
+            self.assertIn("RestartSec=30", target.read_text(encoding="utf-8"))
 
             removed = uninstall_reply_observer_service(target_path=target)
             self.assertTrue(removed.changed)

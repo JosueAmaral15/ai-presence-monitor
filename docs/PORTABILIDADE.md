@@ -235,6 +235,17 @@ Para o observer:
 ai-presence install-background-service --component reply-observer
 ```
 
+No Linux, o observer espera 30 segundos entre falhas e o systemd bloqueia uma
+tempestade depois de tres falhas em cinco minutos. Depois de corrigir a causa:
+
+```bash
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user start ai-presence-reply-observer.service
+```
+
+Essa protecao e exclusiva do observer; o monitor principal preserva a politica
+de reinicio continuo. No Windows, a tarefa ja limita reinicios a tres falhas.
+
 Rollback:
 
 ```bash

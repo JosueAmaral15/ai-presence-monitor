@@ -44,6 +44,14 @@
 - Hook posterior do mesmo worker deve confirmar a atividade depois da entrega.
 - O observer continuo deve ter unidade systemd ou tarefa agendada separada e
   opcional.
+- Falhas persistentes do observer nao devem provocar reinicios ilimitados em
+  intervalo curto nem alterar a politica de recuperacao do monitor principal.
+- Enquanto houver pergunta pendente, mensagem nao correlacionada de usuario
+  autorizado deve receber orientacao no mesmo canal para usar **Responder**.
+- Conteudo vazio deve orientar a verificacao de `Message Content Intent`.
+- Orientacao nao deve ser enviada para bot, webhook, usuario nao autorizado ou
+  quando nao houver pergunta dentro do prazo.
+- Cada mensagem invalida deve causar no maximo uma tentativa de orientacao.
 
 ## Continue Integrado
 

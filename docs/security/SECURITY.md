@@ -116,3 +116,36 @@ Qualquer automacao de teclado pode influenciar a aplicacao alvo. A revalidacao
 reduz selecao incorreta, mas nao substitui sessao desbloqueada, titulo especifico
 e revisao humana antes de comandos destrutivos. O Windows tambem pode negar
 foreground; o sistema falha fechado nessa situacao.
+
+## Task 013 - Hardening operacional do observer
+
+- [x] Limite de reinicio e aplicado somente ao observer de respostas.
+- [x] Tres falhas em cinco minutos bloqueiam uma tempestade de reinicios.
+- [x] O intervalo entre tentativas sobe de cinco para 30 segundos.
+- [x] O monitor principal preserva sua politica independente.
+- [x] Recuperacao exige corrigir a causa e executar `reset-failed`.
+- [x] Nenhum token, webhook ou conteudo do `.env` entra na unidade.
+
+### Risco residual
+
+O limite interrompe recuperacao automatica depois de falhas persistentes. Essa
+escolha evita carga e ruido indefinidos; depois de corrigir rede, canal ou
+credenciais, o operador precisa liberar e iniciar a unidade explicitamente.
+
+## Task 014 - Orientacao para respostas Discord invalidas
+
+- [x] Orientacao exige pergunta pendente no mesmo canal.
+- [x] Somente autor humano presente na allowlist pode receber o aviso.
+- [x] Mensagens de bot e webhook nao geram resposta, evitando ciclo.
+- [x] Mencao usa `parse=[]` e lista explicita com somente o autor validado.
+- [x] Mensagem invalida nunca e persistida como resposta nem enviada a GUI.
+- [x] Cursor avanca depois de uma tentativa de aviso, inclusive em timeout
+      incerto, para impedir duplicacao automatica.
+- [x] Nenhum token, webhook ou conteudo invalido e incluido no log.
+
+### Risco residual
+
+Um usuario permitido que converse normalmente no canal dedicado enquanto
+existir pergunta pendente recebera orientacao. O canal deve permanecer dedicado
+ao fluxo de perguntas. Falha do webhook pode impedir um aviso; por seguranca,
+o sistema nao repete uma entrega cujo resultado externo seja incerto.

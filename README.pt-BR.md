@@ -166,6 +166,12 @@ A versao 0.3.0 pode publicar uma pergunta em um canal dedicado do Discord,
 aceitar somente resposta direta de usuario autorizado e, opcionalmente, colar a
 resposta na janela exata do Codex GUI.
 
+Enquanto existir pergunta pendente, uma mensagem invalida de usuario
+autorizado recebe uma unica orientacao no Discord. O aviso explica como usar
+**Responder** e aponta `Message Content Intent` quando a API entregar texto
+vazio. Bots, webhooks, usuarios nao autorizados e canais sem pergunta pendente
+permanecem silenciosos.
+
 O recurso e desativado por padrao. Configure e teste primeiro com a entrega GUI
 desativada, seguindo
 [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
@@ -187,6 +193,11 @@ ai-presence install-background-service --component reply-observer
 
 No Linux, execute os comandos `systemctl` impressos. No Windows, execute o
 comando `schtasks.exe /Run` impresso para iniciar a tarefa imediatamente.
+No Linux, o observer tenta novamente a cada 30 segundos e interrompe o ciclo
+depois de tres falhas em cinco minutos. Depois de corrigir credenciais ou rede,
+execute `systemctl --user reset-failed
+ai-presence-reply-observer.service` antes de inicia-lo novamente. O monitor
+principal preserva sua politica de reinicio independente.
 
 ## Continue Integrado
 

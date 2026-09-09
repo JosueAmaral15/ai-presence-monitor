@@ -149,6 +149,24 @@ ai-presence finish \
 Nao use `finish` para pausas curtas se a tarefa continua sob responsabilidade
 do mesmo worker.
 
+## Integracao Git por Sessao
+
+Ao terminar cada sessao de implementacao:
+
+1. execute os gates aplicaveis e revise o diff;
+2. crie um commit na branch da tarefa;
+3. integre trabalho funcional e validado em `develop`;
+4. promova `develop` para `main` somente quando todos os requisitos de
+   publicacao, testes de integracao e dependencias externas obrigatorias
+   estiverem concluidos;
+5. registre bloqueios no plano ou em `docs/TASKS.md`, sem declarar a versao
+   pronta para publicacao.
+
+Uma suite local aprovada nao substitui um E2E real exigido pelo plano nem uma
+CI de plataforma que ainda nao executou. Commit e promocao de branch devem
+preservar o historico; nunca descarte alteracoes do usuario para obter um
+worktree limpo.
+
 ## Comandos de Diagnostico
 
 Estes comandos nao controlam a GUI:

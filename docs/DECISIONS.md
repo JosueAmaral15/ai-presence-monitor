@@ -251,3 +251,58 @@ processo e oferecer `stop-alarm`.
 O estado usa permissao `600` e nao guarda o comando em texto. A parada valida
 PID, fingerprint e token de inicio antes de `SIGTERM`; `SIGKILL` e fallback
 configuravel.
+
+## 2026-09-08 - Limite de reinicio exclusivo do reply observer
+
+**Decisao**: manter a recuperacao rapida do monitor principal e aplicar ao
+reply observer Linux tres tentativas em cinco minutos, com espera de 30
+segundos e reinicio somente em falha.
+
+**Motivo**:
+
+- um `403` persistente produziu reinicios a cada cinco segundos;
+- o observer depende de rede e permissoes externas, ao contrario do nucleo do
+  monitor;
+- Windows ja limita reinicios da tarefa a tres falhas;
+- interromper o ciclo protege recursos e torna o erro observavel.
+
+**Alternativas consideradas**:
+
+- alterar o monitor e o observer juntos: descartado porque reduziria a
+  resiliencia do monitor;
+- retry infinito com backoff dentro do Python: adiado por adicionar estado e
+  complexidade sem necessidade atual;
+- manter cinco segundos sem limite: descartado depois do ciclo real de `403`.
+
+**Consequencia**:
+
+Depois de atingir o limite, o operador corrige a causa, executa `systemctl
+--user reset-failed ai-presence-reply-observer.service` e inicia a unidade. A
+definicao continua sem segredos e usa o mesmo Python instalado.
+
+## 2026-09-09 - Orientar resposta Discord invalida sem relaxar a correlacao
+
+**Decisao**: enquanto houver pergunta pendente no canal, publicar uma
+orientacao para cada mensagem invalida de usuario autorizado.
+
+**Motivo**:
+
+- rejeitar silenciosamente nao ensina o usuario a usar **Responder**;
+- texto vazio pode indicar `Message Content Intent` desativado;
+- a allowlist permite direcionar a orientacao sem notificar terceiros;
+- o E2E real demonstrou a lacuna sem provocar entrada GUI indevida.
+
+**Alternativas consideradas**:
+
+- aceitar mensagem solta mais recente: descartado por remover correlacao;
+- orientar qualquer autor: descartado por ruido e divulgacao do fluxo;
+- repetir aviso ate obter sucesso: descartado porque timeout de webhook tem
+  resultado incerto e pode duplicar mensagens;
+- persistir nova tabela de avisos: descartado porque o cursor existente ja
+  fornece uma tentativa por mensagem e nao ha requisito de consulta historica.
+
+**Consequencia**:
+
+Ausencia de referencia, referencia sem pergunta pendente ou texto vazio gera
+uma tentativa de orientacao e contadores no log. A mensagem invalida nao vira
+resposta, nao toca a GUI e nao altera o estado da pergunta.

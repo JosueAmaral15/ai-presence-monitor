@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-09-09 - v0.5.2
+
+- Adicionada orientacao no Discord para mensagem invalida de usuario
+  autorizado enquanto houver pergunta pendente.
+- O aviso ensina a usar **Responder** e diagnostica texto vazio por ausencia de
+  `Message Content Intent`.
+- Mencoes ficam restritas ao autor validado pela allowlist.
+- Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente nao
+  geram orientacao.
+- Cada mensagem causa no maximo uma tentativa, inclusive depois de timeout
+  incerto, sem entrada GUI ou retry automatico.
+- Adicionados contadores operacionais e testes de regressao.
+
+## 2026-09-08 - v0.5.1
+
+- Limitado o reply observer Linux a tres falhas em cinco minutos.
+- Aumentado para 30 segundos o intervalo de reinicio do observer e usado
+  `Restart=on-failure`.
+- Preservada a politica `Restart=always` do monitor principal.
+- Corrigido o gate global de Ruff em `scripts/quality_check.py`.
+- Adicionados plano operacional, testes, seguranca, rollback e troubleshooting
+  para falhas persistentes e HTTP 403.
+
 ## 2026-08-12 - Protocolo normativo de continuidade
 
 - Incorporadas ao guia integrado as condicoes de acionamento do antigo

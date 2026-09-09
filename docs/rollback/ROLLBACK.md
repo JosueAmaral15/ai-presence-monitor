@@ -98,6 +98,18 @@ ai-presence uninstall-systemd-service
 systemctl --user daemon-reload
 ```
 
+Depois de corrigir uma falha persistente e antes de reativar a unidade:
+
+```bash
+ai-presence observe-replies --once
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user start ai-presence-reply-observer.service
+```
+
+O limite padrao do observer e tres falhas em cinco minutos, com 30 segundos
+entre tentativas. O rollback do wheel restaura a definicao anterior quando a
+unidade for reinstalada.
+
 O desinstalador informa o caminho do backup `.service.backup-*`.
 
 Para restaurar hooks, use `hooks.json.backup-*` ou execute:
