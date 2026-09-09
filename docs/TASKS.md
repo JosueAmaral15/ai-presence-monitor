@@ -2,6 +2,50 @@
 
 ## Em andamento
 
+### Task 014 - Orientacao para respostas Discord invalidas
+
+**Prioridade**: Alta
+**Status**: implementacao local concluida; E2E real pendente
+**Objetivo**: orientar no proprio Discord o usuario autorizado quando houver
+pergunta dentro do prazo, mas sua mensagem nao estiver vinculada ou nao puder
+ser lida.
+
+**Criterios de aceite**:
+
+- [x] Mensagem autorizada sem resposta direta recebe instrucao para usar
+      **Responder**.
+- [x] Conteudo ocultado pelo Discord recebe orientacao sobre
+      `Message Content Intent`.
+- [x] Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente
+      nao produzem lembrete.
+- [x] Cada mensagem invalida causa no maximo uma tentativa, sem loop ou retry
+      automatico.
+- [x] Respostas validas e a protecao da GUI permanecem inalteradas.
+- [x] Testes, documentacao, build e instalacao local passam.
+- [ ] E2E real confirma a orientacao e a resposta valida depois de habilitar
+      `Message Content Intent`.
+
+**Plano**: `docs/planning/TASK-014-discord-reply-guidance.md`.
+
+### Task 013 - Hardening operacional e E2E Discord-Codex
+
+**Prioridade**: Critica
+**Status**: em andamento
+**Objetivo**: impedir tempestade de reinicios do observer em falhas persistentes
+e validar o fluxo real de pergunta, resposta correlacionada e entrega no Codex
+GUI.
+
+**Criterios de aceite**:
+
+- [x] O reply observer limita reinicios sem alterar a recuperacao do monitor.
+- [x] O gate de qualidade local passa integralmente.
+- [x] Wheel atualizado e servicos reinstalados sao validados.
+- [ ] E2E Discord-Codex alcanca `delivery_confirmed` sem retry automatico.
+- [ ] Workers historicos sao reconciliados conforme decisao do usuario.
+- [ ] Evidencias, rollback e dependencias externas ficam documentados.
+
+**Plano**: `docs/planning/TASK-013-operational-hardening-and-e2e.md`.
+
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta

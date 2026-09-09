@@ -389,6 +389,12 @@ question in a dedicated Discord channel, accept only a direct reply from an
 allowlisted user, and optionally deliver the answer to the exact Codex GUI
 window.
 
+While a question is still pending, an invalid message from an allowlisted user
+receives one Discord guidance notice. The notice explains how to use
+**Reply**, and identifies a missing **Message Content Intent** when the API
+returns empty text. Bots, webhooks, unauthorized users, and channels with no
+pending question remain silent.
+
 Keep GUI delivery disabled until the Discord correlation flow has been tested.
 See the [remote response guide](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
 
@@ -409,6 +415,11 @@ ai-presence install-background-service --component reply-observer
 
 On Linux, run the printed `systemctl` commands. On Windows, the task is
 registered at logon and the printed `schtasks.exe /Run` command starts it now.
+The Linux reply observer retries failures at 30-second intervals and stops
+after three failed starts within five minutes. After fixing credentials or
+network access, run `systemctl --user reset-failed
+ai-presence-reply-observer.service` before starting it again. The main monitor
+keeps its independent restart policy.
 
 ## Integrated Codex Continue Command
 

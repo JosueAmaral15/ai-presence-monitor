@@ -270,7 +270,8 @@ def _observe_replies_once(config: AppConfig, dry_run: bool = False) -> int:
         return 2
     print(
         f"respostas: lidas={result.fetched} aceitas={result.accepted} "
-        f"entregues={result.dispatched} falhas_gui={result.dispatch_failed}"
+        f"entregues={result.dispatched} falhas_gui={result.dispatch_failed} "
+        f"orientadas={result.guided} falhas_orientacao={result.guidance_failed}"
     )
     return 0
 

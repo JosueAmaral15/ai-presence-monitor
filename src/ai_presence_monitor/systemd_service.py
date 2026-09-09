@@ -43,6 +43,7 @@ def render_user_service(
     description: str = "AI Presence Monitor",
 ) -> str:
     python = python_executable or sys.executable
+    is_reply_observer = service_command == "observe-replies"
     exec_start = " ".join(
         (
             _systemd_quote(python),
@@ -53,18 +54,26 @@ def render_user_service(
             service_command,
         )
     )
+    unit_lines = [
+        "[Unit]",
+        f"Description={description}",
+        "After=network-online.target",
+        "Wants=network-online.target",
+    ]
+    if is_reply_observer:
+        unit_lines.extend(("StartLimitIntervalSec=300", "StartLimitBurst=3"))
+
+    restart_policy = "on-failure" if is_reply_observer else "always"
+    restart_seconds = 30 if is_reply_observer else 5
     return "\n".join(
         (
-            "[Unit]",
-            f"Description={description}",
-            "After=network-online.target",
-            "Wants=network-online.target",
+            *unit_lines,
             "",
             "[Service]",
             "Type=simple",
             f"ExecStart={exec_start}",
-            "Restart=always",
-            "RestartSec=5",
+            f"Restart={restart_policy}",
+            f"RestartSec={restart_seconds}",
             "Environment=PYTHONUNBUFFERED=1",
             "",
             "[Install]",
