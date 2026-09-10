@@ -84,9 +84,9 @@ reinicios em falha, sem enfraquecer a recuperacao do monitor principal.
 | 2 | Plano e Task 013 registrados | concluida |
 | 3 | Hardening systemd, testes e lint | concluida |
 | 4 | Suite, cobertura, tipos, build e instalacao | concluida |
-| 5 | E2E Discord para Codex GUI | duas perguntas expiraram; nova autorizacao pendente |
-| 6 | Decisao e saneamento dos workers historicos | aguardando novo E2E |
-| 7 | Evidencias finais e dependencias externas | pendente |
+| 5 | E2E Discord para Codex GUI | concluida |
+| 6 | Decisao e saneamento dos workers historicos | concluida: manter ambos |
+| 7 | Evidencias finais e dependencias externas | concluida |
 
 ## Roteiro E2E Autorizado
 
@@ -116,11 +116,11 @@ Teste E2E e decisao operacional: os workers historicos AmaralAgenda-23813ab6 e O
 - [x] O wheel atualizado e instalado no ambiente dedicado.
 - [x] Servicos gerados usam o Python instalado e o `.env` central.
 - [x] Cada pergunta autorizada e publicada uma unica vez, sem retry automatico.
-- [ ] A resposta e aceita somente por correlacao e allowlist.
-- [ ] A entrega GUI chega a `input_emitted` sem retry automatico.
-- [ ] Um hook posterior confirma `delivery_confirmed`.
-- [ ] Workers historicos sao encerrados ou mantidos conforme a resposta.
-- [ ] Tudo que depender de sistema externo fica registrado abaixo.
+- [x] A resposta e aceita somente por correlacao e allowlist.
+- [x] A entrega GUI chega a `input_emitted` sem retry automatico.
+- [x] Um hook posterior confirma `delivery_confirmed`.
+- [x] Workers historicos sao encerrados ou mantidos conforme a resposta.
+- [x] Tudo que depender de sistema externo fica registrado abaixo.
 
 ## Rollback
 
@@ -149,8 +149,8 @@ Teste E2E e decisao operacional: os workers historicos AmaralAgenda-23813ab6 e O
   registrada na Task 012.
 - Persistencia depois de reboot/login: requer uma reinicializacao deliberada;
   validar em uma sessao operacional futura, sem reiniciar automaticamente.
-- Resposta do E2E: sera obtida no canal Discord dedicado e registrada no
-  SQLite.
+- Resposta do E2E: concluida no canal Discord dedicado e registrada no SQLite
+  como `delivery_confirmed`.
 
 ## Checkpoint de Continuidade
 
@@ -217,3 +217,14 @@ publicacao e uma nova entrada GUI exigem autorizacao explicita do usuario.
   um novo E2E depende de `Message Content Intent` e autorizacao do usuario.
 - 2026-09-09: primeira resposta da nova pergunta lida, mas rejeitada por falta
   de correlacao direta e de conteudo visivel; zero entradas GUI emitidas.
+- 2026-09-10: `Message Content Intent` habilitado e confirmado pela flag
+  `GATEWAY_MESSAGE_CONTENT_LIMITED` (`524288`) da aplicacao.
+- 2026-09-10: uma resposta que referenciava a orientacao foi rejeitada e
+  recebeu novo aviso; nenhuma entrada GUI invalida foi emitida.
+- 2026-09-10: resposta `MANTER AMBOS` do usuario autorizado referenciou a
+  pergunta `7a22a705-8a91-41cc-81c9-93c3b041c837`, foi aceita uma unica vez,
+  emitida para a janela revalidada e confirmada por hook como
+  `delivery_confirmed`, sem falha GUI ou retry automatico.
+- 2026-09-10: os workers historicos `AmaralAgenda-23813ab6` e
+  `O-Juramento-da-Herdeira-de-Vinterholm-e7e0651f` foram mantidos `active`,
+  conforme a decisao explicita `MANTER AMBOS`.

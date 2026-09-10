@@ -58,7 +58,7 @@ pendente e conteudo textual nao vazio.
 | 3 | Testes unitarios e regressao | concluida |
 | 4 | Documentacao e versao | concluida |
 | 5 | Gate, build e instalacao | concluida |
-| 6 | Retomada do E2E real | aguardando intent e nova autorizacao |
+| 6 | Retomada do E2E real | concluida |
 
 ## Criterios de Aceite
 
@@ -74,7 +74,7 @@ pendente e conteudo textual nao vazio.
 - [x] Resposta valida preserva `answered -> input_emitted ->
       delivery_confirmed`.
 - [x] Testes, cobertura, lint, tipos, build e verificacao de diff passam.
-- [ ] E2E real confirma a orientacao no canal e depois uma resposta valida.
+- [x] E2E real confirma a orientacao no canal e depois uma resposta valida.
 
 ## Rollback
 
@@ -83,11 +83,15 @@ respostas existentes permanecem no SQLite; nao ha migracao de esquema.
 
 ## Dependencias Externas
 
-- O usuario precisa habilitar e salvar **Message Content Intent** no aplicativo
-  do bot para que respostas textuais em canal de servidor cheguem preenchidas.
-- A pergunta usada no diagnostico expirou antes da instalacao. O E2E depende
-  de autorizacao explicita para publicar outra pergunta e entregar a futura
-  resposta ao Codex GUI.
+- O usuario habilitou e salvou **Message Content Intent** no aplicativo do bot;
+  a API passou a retornar o conteudo textual das mensagens.
+- A segunda tentativa usou uma nova pergunta dentro do prazo e uma resposta
+  direta do usuario autorizado. A API retornou o texto vazio e as flags da
+  aplicacao confirmaram que os recursos `gateway_message_content` e
+  `gateway_message_content_limited` continuam desativados.
+- A dependencia externa foi resolvida com a flag
+  `GATEWAY_MESSAGE_CONTENT_LIMITED` (`524288`). O fluxo continua exigindo
+  autorizacao explicita para perguntas e futuras entregas ao Codex GUI.
 
 ## Registro de Evidencias
 
@@ -99,3 +103,17 @@ respostas existentes permanecem no SQLite; nao ha migracao de esquema.
   `NRestarts=0`.
 - 2026-09-09: processo atual do observer registra os contadores
   `orientadas` e `falhas_orientacao`; E2E externo permanece pendente.
+- 2026-09-10: pergunta `7a22a705-8a91-41cc-81c9-93c3b041c837` publicada com
+  nova correlacao e prazo de 30 minutos.
+- 2026-09-10: resposta direta do usuario autorizado referenciou a mensagem
+  correta, mas chegou com `content_length=0`; permaneceu `pending`, nao foi
+  enviada a GUI e gerou uma orientacao no canal.
+- 2026-09-10: consulta autenticada da aplicacao `AI Presence Monitor` retornou
+  `flags=0`, confirmando que o Message Content Intent nao esta ativo.
+- 2026-09-10: depois da ativacao no portal, a mesma consulta retornou
+  `flags=524288` e `GATEWAY_MESSAGE_CONTENT_LIMITED=true`.
+- 2026-09-10: uma resposta ao aviso, em vez da pergunta, foi classificada como
+  referencia incorreta e recebeu orientacao; nenhuma entrada GUI foi emitida.
+- 2026-09-10: a resposta direta seguinte chegou com conteudo `MANTER AMBOS`,
+  foi aceita e percorreu `answered -> input_emitted -> delivery_confirmed` sem
+  falha GUI ou retry automatico. O E2E da orientacao foi concluido.

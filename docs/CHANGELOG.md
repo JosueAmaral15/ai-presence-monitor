@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-10 - Verificacao operacional da v0.5.2
+
+- Confirmado `Message Content Intent` pela flag da aplicacao
+  `GATEWAY_MESSAGE_CONTENT_LIMITED` (`524288`).
+- Concluido o fluxo real do Discord ao Codex GUI ate `delivery_confirmed`.
+- Verificado que uma resposta com referencia incorreta recebe orientacao sem
+  entrada GUI, enquanto a resposta valida seguinte e entregue uma unica vez.
+- Mantidos ativos os workers historicos de AmaralAgenda e Vinterholm conforme
+  a resposta autorizada `MANTER AMBOS`.
+
 ## 2026-09-09 - v0.5.2
 
 - Adicionada orientacao no Discord para mensagem invalida de usuario
