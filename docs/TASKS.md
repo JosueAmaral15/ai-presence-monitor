@@ -2,55 +2,6 @@
 
 ## Em andamento
 
-### Task 014 - Orientacao para respostas Discord invalidas
-
-**Prioridade**: Alta
-**Status**: implementacao local concluida; E2E real pendente
-**Objetivo**: orientar no proprio Discord o usuario autorizado quando houver
-pergunta dentro do prazo, mas sua mensagem nao estiver vinculada ou nao puder
-ser lida.
-
-**Criterios de aceite**:
-
-- [x] Mensagem autorizada sem resposta direta recebe instrucao para usar
-      **Responder**.
-- [x] Conteudo ocultado pelo Discord recebe orientacao sobre
-      `Message Content Intent`.
-- [x] Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente
-      nao produzem lembrete.
-- [x] Cada mensagem invalida causa no maximo uma tentativa, sem loop ou retry
-      automatico.
-- [x] Respostas validas e a protecao da GUI permanecem inalteradas.
-- [x] Testes, documentacao, build e instalacao local passam.
-- [ ] E2E real confirma a orientacao e a resposta valida depois de habilitar
-      `Message Content Intent`.
-
-**Plano**: `docs/planning/TASK-014-discord-reply-guidance.md`.
-
-**Checkpoint externo (2026-09-10)**: uma nova resposta direta e autorizada
-referenciou a pergunta correta, mas a API ainda retornou `content_length=0`.
-A consulta autenticada da aplicacao retornou `flags=0`; o E2E continua
-bloqueado ate o **Message Content Intent** ser habilitado e salvo.
-
-### Task 013 - Hardening operacional e E2E Discord-Codex
-
-**Prioridade**: Critica
-**Status**: em andamento
-**Objetivo**: impedir tempestade de reinicios do observer em falhas persistentes
-e validar o fluxo real de pergunta, resposta correlacionada e entrega no Codex
-GUI.
-
-**Criterios de aceite**:
-
-- [x] O reply observer limita reinicios sem alterar a recuperacao do monitor.
-- [x] O gate de qualidade local passa integralmente.
-- [x] Wheel atualizado e servicos reinstalados sao validados.
-- [ ] E2E Discord-Codex alcanca `delivery_confirmed` sem retry automatico.
-- [ ] Workers historicos sao reconciliados conforme decisao do usuario.
-- [ ] Evidencias, rollback e dependencias externas ficam documentados.
-
-**Plano**: `docs/planning/TASK-013-operational-hardening-and-e2e.md`.
-
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta
@@ -84,6 +35,58 @@ configurado para seis jobs; a tarefa nao sera movida para concluidas ate um run
 real em `windows-latest` passar.
 
 ## Concluidas
+
+### Task 014 - Orientacao para respostas Discord invalidas
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: orientar no proprio Discord o usuario autorizado quando houver
+pergunta dentro do prazo, mas sua mensagem nao estiver vinculada ou nao puder
+ser lida.
+
+**Criterios de aceite**:
+
+- [x] Mensagem autorizada sem resposta direta recebe instrucao para usar
+      **Responder**.
+- [x] Conteudo ocultado pelo Discord recebe orientacao sobre
+      `Message Content Intent`.
+- [x] Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente
+      nao produzem lembrete.
+- [x] Cada mensagem invalida causa no maximo uma tentativa, sem loop ou retry
+      automatico.
+- [x] Respostas validas e a protecao da GUI permanecem inalteradas.
+- [x] Testes, documentacao, build e instalacao local passam.
+- [x] E2E real confirma a orientacao e a resposta valida depois de habilitar
+      `Message Content Intent`.
+
+**Plano**: `docs/planning/TASK-014-discord-reply-guidance.md`.
+
+**Conclusao (2026-09-10)**: `Message Content Intent` confirmado pela flag
+`524288`. O fluxo orientou uma referencia incorreta e aceitou a resposta direta
+seguinte, concluindo em `delivery_confirmed` sem retry ou falha GUI.
+
+### Task 013 - Hardening operacional e E2E Discord-Codex
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir tempestade de reinicios do observer em falhas persistentes
+e validar o fluxo real de pergunta, resposta correlacionada e entrega no Codex
+GUI.
+
+**Criterios de aceite**:
+
+- [x] O reply observer limita reinicios sem alterar a recuperacao do monitor.
+- [x] O gate de qualidade local passa integralmente.
+- [x] Wheel atualizado e servicos reinstalados sao validados.
+- [x] E2E Discord-Codex alcanca `delivery_confirmed` sem retry automatico.
+- [x] Workers historicos sao reconciliados conforme decisao do usuario.
+- [x] Evidencias, rollback e dependencias externas ficam documentados.
+
+**Plano**: `docs/planning/TASK-013-operational-hardening-and-e2e.md`.
+
+**Conclusao (2026-09-10)**: a resposta autorizada `MANTER AMBOS` foi entregue
+e confirmada por hook. Os workers historicos de AmaralAgenda e Vinterholm
+permanecem ativos conforme a decisao do usuario.
 
 ### Task 011 - Duracao limitada do alarme vermelho
 
