@@ -27,6 +27,11 @@ ser lida.
 
 **Plano**: `docs/planning/TASK-014-discord-reply-guidance.md`.
 
+**Checkpoint externo (2026-09-10)**: uma nova resposta direta e autorizada
+referenciou a pergunta correta, mas a API ainda retornou `content_length=0`.
+A consulta autenticada da aplicacao retornou `flags=0`; o E2E continua
+bloqueado ate o **Message Content Intent** ser habilitado e salvo.
+
 ### Task 013 - Hardening operacional e E2E Discord-Codex
 
 **Prioridade**: Critica
