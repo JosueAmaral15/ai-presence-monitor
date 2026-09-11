@@ -130,27 +130,47 @@ Scheduler ja limita a tres reinicializacoes em falha.
 ## Continue Integrado
 
 ```text
-CLI/menu -> captura alvo de janela unico -> delay -> revalidacao
-                                           |
-                                           v
-                              adaptador GUI + texto + Enter
-                                           |
-                                           v
-                              input_emitted localmente
-                                           |
-                       worker active? -----+----- nao -> sem sync
-                             |
-                             v
-          observation:automation:continue -> last_activity_at
-                             |
-                             v
-                    hook posterior do Codex
+CLI/bandeja -> ControlStore -> resolve sessao/alvo -> delay
+                                      |
+                     +----------------+----------------+
+                     |                                 |
+                     v                                 v
+       CodexQueueClient (`codex queue`)      dispatcher GUI opt-in
+                     |                                 |
+                     +----------------+----------------+
+                                      |
+                                      v
+                               input_emitted
+                                      |
+                  worker active? -----+----- nao -> sem sync
+                        |
+                        v
+     observation:automation:continue -> last_activity_at
+                        |
+                        v
+               hook posterior do Codex
 ```
 
-`continue_task.py` coordena o caso de uso. `gui_answer.py` oferece a operacao
-generica de despacho textual, tambem reutilizada por respostas remotas. A
-sincronizacao ocorre depois do despacho; falha ou cancelamento nao alteram o
-SQLite.
+`continue_task.py` coordena o caso de uso. `codex_input.py` encapsula o
+subprocesso nativo sem shell e o destino local/remoto. `gui_answer.py` permanece
+como fallback de despacho textual. A sincronizacao ocorre depois do despacho;
+falha ou cancelamento nao alteram o SQLite.
+
+## Bandeja e Politica de Automacao
+
+`control.py` persiste `ControlSettings` em JSON por substituicao atomica. Por
+padrao, o arquivo fica na area de estado do usuario, fora do checkout, e nao
+armazena token, somente o nome da variavel de ambiente. CLI e `tray.py` leem o
+mesmo arquivo.
+
+`tray.py` importa PySide6 apenas ao iniciar a interface. Isso mantem a camada
+grafica fora da dependencia base e permite executar monitor/hooks em ambientes
+sem desktop. O menu oferece tres comandos; o dialogo de preferencias edita as
+flags e o compositor chama o mesmo `send_native_message` usado pela CLI.
+
+A permissao `task_automation_enabled` e um gate, nao um scheduler. A decisao de
+executar `continue` continua pertencendo ao AI-worker e as pre-condicoes
+normativas da tarefa.
 
 ## Source Layout
 

@@ -362,19 +362,35 @@ Consulte o procedimento completo em
 PRESENCE_CONTINUE_MESSAGE=continue
 PRESENCE_CONTINUE_DELAY_SECONDS=60
 PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+PRESENCE_CONTROL_PATH=
+PRESENCE_TASK_AUTOMATION_ENABLED=false
+PRESENCE_NATIVE_INPUT_ENABLED=true
+PRESENCE_GUI_FALLBACK_ENABLED=false
+PRESENCE_REMOTE_INPUT_ENABLED=false
+PRESENCE_CONTINUE_TRANSPORT=auto
+PRESENCE_CONTINUE_DESTINATION=local
+PRESENCE_CODEX_THREAD_ID=
+PRESENCE_CODEX_REMOTE=
+PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV=CODEX_REMOTE_AUTH_TOKEN
+CODEX_REMOTE_AUTH_TOKEN=
 ```
 
 `PRESENCE_CONTINUE_MESSAGE` define o texto usado quando `--message` nao e
 informado. `PRESENCE_CONTINUE_DELAY_SECONDS` define a espera antes da emissao.
 
-Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, uma emissao GUI bem-sucedida
+Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, uma emissao bem-sucedida
 registra `observation:automation:continue` para um worker existente e ativo. No
 Protocolo 2, isso atualiza `last_activity_at` e reinicia os limites 5/10/15
 minutos. Sem atividade posterior, os alertas retornam normalmente. No Protocolo
 1, `last_signal_at` nao muda.
 
-Agendamento, `dry-run`, falha GUI e worker inativo nao atualizam o monitor. O
-guia completo esta em `docs/CONTINUE-CODEX.md`.
+Agendamento, `dry-run`, falha de transporte e worker inativo nao atualizam o
+monitor. `auto` prefere `codex queue`; o fallback GUI precisa ser habilitado.
+`control.json` fica na area de estado do usuario quando
+`PRESENCE_CONTROL_PATH` esta vazio, guarda a decisao atual da bandeja/CLI e nao
+guarda token. O guia
+completo esta em `docs/CONTINUE-CODEX.md` e
+`docs/SYSTEM-TRAY-NATIVE-INPUT.md`.
 
 ## Alerta Vermelho
 
@@ -698,6 +714,17 @@ PRESENCE_GUI_CONFIRMATION_TIMEOUT_SECONDS=120
 PRESENCE_CONTINUE_MESSAGE=continue
 PRESENCE_CONTINUE_DELAY_SECONDS=60
 PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+PRESENCE_CONTROL_PATH=
+PRESENCE_TASK_AUTOMATION_ENABLED=false
+PRESENCE_NATIVE_INPUT_ENABLED=true
+PRESENCE_GUI_FALLBACK_ENABLED=false
+PRESENCE_REMOTE_INPUT_ENABLED=false
+PRESENCE_CONTINUE_TRANSPORT=auto
+PRESENCE_CONTINUE_DESTINATION=local
+PRESENCE_CODEX_THREAD_ID=
+PRESENCE_CODEX_REMOTE=
+PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV=CODEX_REMOTE_AUTH_TOKEN
+CODEX_REMOTE_AUTH_TOKEN=
 ```
 
 ## O Que o Usuario Pode Fazer
@@ -721,6 +748,8 @@ O usuario pode:
 - executar o observer em terminal, systemd ou Task Scheduler separado;
 - agendar `continue` na mesma CLI e sincronizar uma emissao bem-sucedida com o
   relogio de atividade do Protocolo 2.
+- controlar autorizacoes pela bandeja ou CLI e enviar mensagens nativas a uma
+  sessao Codex local ou a um app-server autenticado no computador cliente.
 
 ## Cuidados
 

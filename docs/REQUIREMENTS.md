@@ -58,7 +58,10 @@
 - Monitoramento e continuidade devem pertencer ao mesmo pacote e a mesma CLI.
 - A mensagem padrao deve ser `continue`.
 - O delay padrao deve ser 60 segundos.
-- O alvo deve ser uma unica janela X11 ou Win32, capturada e revalidada.
+- O transporte nativo deve usar `codex queue` sem shell, mouse ou teclado.
+- O alvo nativo deve ser uma sessao explicita ou inferida de hook do mesmo worker.
+- X11/Win32 deve permanecer fallback explicito, desativado por padrao, com
+  janela unica capturada e revalidada.
 - `--dry-run` nao deve esperar, controlar GUI ou gravar banco.
 - Somente emissao bem-sucedida pode sincronizar atividade.
 - Sincronizacao deve exigir worker existente e ativo.
@@ -66,3 +69,16 @@
 - No Protocolo 1, a sincronizacao deve preservar `last_signal_at`.
 - Ausencia de atividade posterior deve voltar a gerar alertas normais.
 - O projeto deve usar layout `src/` e produzir wheel independente do checkout.
+- Uma autorizacao persistente deve bloquear ou liberar a automacao, sem criar
+  um temporizador de presenca artificial.
+
+## Bandeja e Controle de Entrada
+
+- CLI e bandeja devem compartilhar o mesmo estado persistente de autorizacao.
+- O estado deve ser atomico, local, ignorado pelo Git e nao conter tokens.
+- A bandeja deve oferecer habilitar automacao, responder mensagem e sair.
+- Preferencias devem separar entrada nativa, fallback GUI, destino remoto e
+  sincronizacao de atividade.
+- O compositor deve enviar para este computador ou para um endpoint Codex
+  remoto autenticado.
+- A dependencia da bandeja deve ser opcional para preservar instalacoes CLI.

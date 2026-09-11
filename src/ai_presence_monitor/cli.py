@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from dataclasses import replace
@@ -21,8 +22,14 @@ from .codex_hook_installer import (
 from .codex_hook_installer import (
     print_result as print_hook_install_result,
 )
+from .codex_input import (
+    CodexInputError,
+    resolve_native_destination,
+    send_native_message,
+)
 from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
+from .control import CONTROL_NAMES, ControlError, ControlStore
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
 from .platform_integration import UnsupportedPlatformError, get_platform_factory
@@ -334,6 +341,19 @@ def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
 
 def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
     worker_id, _, _, _ = _identity(args, config)
+    controls = ControlStore.from_config(config).load()
+    if (
+        not args.dry_run
+        and not controls.task_automation_enabled
+        and not getattr(args, "authorize_once", False)
+    ):
+        print(
+            "Falha ao executar continue: automacao de tarefas desativada. "
+            "Habilite com 'ai-presence control enable task-automation' ou use "
+            "--authorize-once para esta execucao.",
+            file=sys.stderr,
+        )
+        return 2
     try:
         result = execute_continue_task(
             config=config,
@@ -344,7 +364,13 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
             title_pattern=args.window_title,
             allow_title_change=args.allow_title_change,
             sync_activity=args.sync_activity,
+            input_transport=getattr(args, "transport", None),
+            input_destination=getattr(args, "destination", None),
+            thread_id=getattr(args, "thread", None),
+            remote=getattr(args, "remote", None),
+            remote_auth_token_env=getattr(args, "remote_auth_token_env", None),
             dry_run=args.dry_run,
+            controls=controls,
         )
     except ContinueTaskError as exc:
         print(f"Falha ao executar continue: {exc}", file=sys.stderr)
@@ -352,24 +378,34 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
 
     if args.dry_run:
         sync = (
-            config.continue_sync_activity
+            controls.sync_activity_enabled
             if args.sync_activity is None
             else args.sync_activity
         )
         print(
             f"[dry-run:continue] worker={worker_id} "
             f"atraso={result.delay_seconds}s mensagem={result.message!r} "
+            f"transporte={result.transport} "
+            f"destino={result.destination} "
+            f"sessao={result.thread_id or '-'} "
             f"permitir_mudanca_titulo={str(args.allow_title_change).lower()} "
             f"sincronizar_atividade={str(sync).lower()}; "
-            "espera, GUI e banco nao foram acessados."
+            "espera, entrada e banco nao foram acessados."
         )
         return 0
 
-    assert result.target is not None
-    print(
-        f"continue: input_emitted janela={result.target.window_id} "
-        f"worker={worker_id}"
-    )
+    if result.transport == "native":
+        print(
+            f"continue: input_emitted transporte=native "
+            f"destino={result.destination} sessao={result.thread_id} "
+            f"worker={worker_id}"
+        )
+    else:
+        assert result.target is not None
+        print(
+            f"continue: input_emitted transporte=gui "
+            f"janela={result.target.window_id} worker={worker_id}"
+        )
     if result.activity_synced:
         print(
             "continue: atividade sincronizada "
@@ -386,6 +422,104 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
         file=sys.stderr,
     )
     return 2
+
+
+def _control(args: argparse.Namespace, config: AppConfig) -> int:
+    store = ControlStore.from_config(config)
+    settings = store.load()
+    if args.action in {"enable", "disable"}:
+        if args.control_name is None:
+            raise ControlError("Informe qual controle deve ser alterado.")
+        settings = settings.with_control(
+            args.control_name,
+            args.action == "enable",
+        )
+        if not getattr(args, "dry_run", False):
+            store.save(settings)
+    elif args.action == "target":
+        thread_id = (
+            None
+            if args.clear_thread
+            else args.thread
+            if args.thread is not None
+            else settings.codex_thread_id
+        )
+        if args.clear_remote:
+            remote = None
+            auth_env = None
+        else:
+            remote = args.remote if args.remote is not None else settings.codex_remote
+            auth_env = (
+                args.remote_auth_token_env
+                if args.remote_auth_token_env is not None
+                else settings.remote_auth_token_env
+            )
+        settings = settings.with_target(
+            thread_id=thread_id,
+            remote=remote,
+            remote_auth_token_env=auth_env,
+        )
+        if not getattr(args, "dry_run", False):
+            store.save(settings)
+
+    payload = {
+        "control_path": str(store.path),
+        **settings.__dict__,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        if getattr(args, "dry_run", False) and args.action != "show":
+            print("[dry-run:control] alteracao nao persistida")
+        print(f"controle={store.path}")
+        for key, value in payload.items():
+            if key == "control_path":
+                continue
+            print(f"{key}={value if value is not None else '-'}")
+    return 0
+
+
+def _tray(args: argparse.Namespace, config: AppConfig) -> int:
+    from .tray import TrayUnavailableError, run_tray
+
+    try:
+        return run_tray(config, check_only=args.check)
+    except TrayUnavailableError as exc:
+        print(f"Bandeja indisponivel: {exc}", file=sys.stderr)
+        return 2
+
+
+def _send_input(args: argparse.Namespace, config: AppConfig) -> int:
+    settings = ControlStore.from_config(config).load()
+    destination = "remote" if args.destination == "client" else "local"
+    try:
+        if not args.message.strip():
+            raise CodexInputError("A mensagem para o Codex nao pode ficar vazia.")
+        thread_id, remote, _ = resolve_native_destination(
+            settings=settings,
+            destination=destination,
+            thread_id=args.thread,
+        )
+        if args.dry_run:
+            print(
+                f"[dry-run:input] sessao={thread_id} "
+                f"destino={'cliente' if remote else 'local'}; nenhuma entrada foi emitida."
+            )
+            return 0
+        result = send_native_message(
+            settings=settings,
+            message=args.message,
+            destination=destination,
+            thread_id=thread_id,
+        )
+    except CodexInputError as exc:
+        print(f"Falha ao enviar entrada: {exc}", file=sys.stderr)
+        return 2
+    print(
+        f"input_emitted transporte=native sessao={result.thread_id} "
+        f"destino={'cliente' if result.remote else 'local'}"
+    )
+    return 0
 
 
 def _install_codex_hook(args: argparse.Namespace, config: AppConfig) -> int:
@@ -695,7 +829,7 @@ def build_parser() -> argparse.ArgumentParser:
     continue_parser = subparsers.add_parser(
         "continue-task",
         aliases=["continue"],
-        help="Agenda e envia uma mensagem de continuidade ao Codex GUI.",
+        help="Agenda e envia uma mensagem de continuidade a uma sessao Codex.",
     )
     _add_identity_args(continue_parser, include_task_message=False)
     continue_parser.add_argument(
@@ -732,9 +866,86 @@ def build_parser() -> argparse.ArgumentParser:
             "Padrao: PRESENCE_CONTINUE_SYNC_ACTIVITY."
         ),
     )
+    continue_parser.add_argument(
+        "--transport",
+        choices=("auto", "native", "gui"),
+        help="Transporte de entrada. Padrao: PRESENCE_CONTINUE_TRANSPORT ou auto.",
+    )
+    continue_parser.add_argument(
+        "--thread",
+        help="UUID ou nome exato da sessao Codex para transporte nativo.",
+    )
+    continue_parser.add_argument(
+        "--destination",
+        choices=("local", "client"),
+        help="Computador de destino. Padrao: local.",
+    )
+    continue_parser.add_argument(
+        "--remote",
+        help="Endpoint app-server ws://, wss:// ou unix:// no computador cliente.",
+    )
+    continue_parser.add_argument(
+        "--remote-auth-token-env",
+        help="Nome da variavel de ambiente com o token do endpoint remoto.",
+    )
+    continue_parser.add_argument(
+        "--authorize-once",
+        action="store_true",
+        help="Autoriza somente esta execucao quando a automacao persistente esta desligada.",
+    )
     continue_parser.set_defaults(
         func=lambda args, config: _continue_task(args, config)
     )
+
+    control_parser = subparsers.add_parser(
+        "control",
+        help="Consulta ou altera autorizacoes compartilhadas pela CLI e bandeja.",
+    )
+    control_parser.add_argument(
+        "action",
+        nargs="?",
+        default="show",
+        choices=("show", "enable", "disable", "target"),
+    )
+    control_parser.add_argument("control_name", nargs="?", choices=CONTROL_NAMES)
+    control_parser.add_argument("--thread", help="UUID ou nome exato da sessao Codex.")
+    control_parser.add_argument("--clear-thread", action="store_true")
+    control_parser.add_argument("--remote", help="Endpoint app-server remoto.")
+    control_parser.add_argument(
+        "--remote-auth-token-env",
+        help="Nome da variavel de ambiente com o token remoto.",
+    )
+    control_parser.add_argument("--clear-remote", action="store_true")
+    control_parser.add_argument("--json", action="store_true")
+    control_parser.set_defaults(func=lambda args, config: _control(args, config))
+
+    tray_parser = subparsers.add_parser(
+        "tray",
+        help="Inicia o controlador na bandeja do sistema.",
+    )
+    tray_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Verifica suporte a bandeja sem manter o processo aberto.",
+    )
+    tray_parser.set_defaults(func=lambda args, config: _tray(args, config))
+
+    input_parser = subparsers.add_parser(
+        "send-input",
+        help="Envia texto diretamente para uma sessao Codex, sem mouse ou teclado.",
+    )
+    input_parser.add_argument("--message", required=True, help="Texto a enfileirar.")
+    input_parser.add_argument(
+        "--destination",
+        choices=("local", "client"),
+        default="local",
+        help="Instancia Codex local ou endpoint do computador cliente.",
+    )
+    input_parser.add_argument(
+        "--thread",
+        help="UUID ou nome exato; sobrescreve o alvo persistente.",
+    )
+    input_parser.set_defaults(func=lambda args, config: _send_input(args, config))
 
     hook_parser = subparsers.add_parser(
         "codex-hook",
@@ -916,7 +1127,7 @@ def main(argv: list[str] | None = None) -> None:
         if args.db:
             config = replace(config, db_path=Path(args.db).expanduser())
         raise_code = args.func(args, config)
-    except (ValueError, KeyboardInterrupt) as exc:
+    except (ControlError, ValueError, KeyboardInterrupt) as exc:
         print(str(exc), file=sys.stderr)
         raise_code = 1
     raise SystemExit(raise_code)

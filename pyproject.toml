@@ -1,6 +1,6 @@
 [project]
 name = "ai-presence-monitor"
-version = "0.5.2"
+version = "0.6.0"
 description = "Monitor local de presenca artificial com alertas por Discord e Telegram."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,12 +15,16 @@ dev = [
     "mypy>=1.11",
     "ruff>=0.8",
 ]
+tray = [
+    "PySide6>=6.7",
+]
 
 [project.scripts]
 ai-presence = "ai_presence_monitor.cli:main"
 ai-presence-interactive = "ai_presence_monitor.interactive:main"
 ai-presence-codex-hook = "ai_presence_monitor.codex_hook:main"
 ai-presence-codex-hooks = "ai_presence_monitor.codex_hook_installer:main"
+ai-presence-tray = "ai_presence_monitor.tray:main"
 
 [build-system]
 requires = ["setuptools>=68"]

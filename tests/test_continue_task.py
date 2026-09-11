@@ -8,6 +8,7 @@ from pathlib import Path
 from test_cli import make_config
 
 from ai_presence_monitor.cli import _check_once
+from ai_presence_monitor.codex_input import CodexInputError, CodexInputResult
 from ai_presence_monitor.continue_task import (
     ContinueTaskError,
     countdown,
@@ -48,6 +49,36 @@ class FakeDispatcher:
         self.dispatched.append((target, text, allow_title_change))
 
 
+class FakeQueueClient:
+    def __init__(self, *, available: bool = True, fail: bool = False):
+        self.available = available
+        self.fail = fail
+        self.sent: list[dict[str, str | None]] = []
+
+    def is_available(self) -> bool:
+        return self.available
+
+    def send(
+        self,
+        *,
+        thread_id: str,
+        text: str,
+        remote: str | None = None,
+        remote_auth_token_env: str | None = None,
+    ) -> CodexInputResult:
+        if self.fail:
+            raise CodexInputError("resultado incerto")
+        self.sent.append(
+            {
+                "thread_id": thread_id,
+                "text": text,
+                "remote": remote,
+                "remote_auth_token_env": remote_auth_token_env,
+            }
+        )
+        return CodexInputResult(thread_id=thread_id, remote=remote)
+
+
 def continue_config(root: Path):
     return replace(
         make_config(root),
@@ -55,6 +86,8 @@ def continue_config(root: Path):
         continue_message="continue",
         continue_delay_seconds=60,
         continue_sync_activity=True,
+        continue_transport="gui",
+        gui_fallback_enabled=True,
     )
 
 
@@ -78,6 +111,119 @@ def set_worker_clock(
 
 
 class ContinueTaskTests(unittest.TestCase):
+    def test_native_transport_uses_exact_thread_without_gui(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                make_config(root),
+                continue_transport="native",
+                codex_thread_id="thread-1",
+                remote_input_enabled=True,
+                codex_remote="wss://client.example/app-server",
+                codex_remote_auth_token_env="REMOTE_TOKEN",
+            )
+            store = PresenceStore(config.db_path)
+            worker = store.record_event(
+                worker_id="worker",
+                computer="computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+            queue = FakeQueueClient()
+
+            result = execute_continue_task(
+                config=config,
+                worker_id=worker.worker_id,
+                store=store,
+                queue_client=queue,  # type: ignore[arg-type]
+                wait=lambda _: None,
+            )
+
+            self.assertEqual(result.transport, "native")
+            self.assertEqual(result.destination, "local")
+            self.assertEqual(result.thread_id, "thread-1")
+            self.assertEqual(queue.sent[0]["text"], "continue")
+            self.assertIsNone(queue.sent[0]["remote"])
+            self.assertIsNone(result.target)
+
+            remote_result = execute_continue_task(
+                config=config,
+                worker_id=worker.worker_id,
+                input_destination="client",
+                sync_activity=False,
+                store=store,
+                queue_client=queue,  # type: ignore[arg-type]
+                wait=lambda _: None,
+            )
+            self.assertEqual(remote_result.destination, "client")
+            self.assertEqual(
+                queue.sent[1]["remote"],
+                "wss://client.example/app-server",
+            )
+
+    def test_native_thread_is_inferred_only_from_same_worker_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(make_config(root), continue_transport="native")
+            store = PresenceStore(config.db_path)
+            session = "019f5691-c118-7370-a205-94cfde0a93d7"
+            other = "11111111-1111-1111-1111-111111111111"
+            for worker_id, session_id in (("other", other), ("worker", session)):
+                store.record_observation(
+                    worker_id=worker_id,
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    source="codex:UserPromptSubmit",
+                    message=f"codex hook UserPromptSubmit | session={session_id}",
+                )
+            queue = FakeQueueClient()
+
+            result = execute_continue_task(
+                config=config,
+                worker_id="worker",
+                store=store,
+                queue_client=queue,  # type: ignore[arg-type]
+                sync_activity=False,
+                wait=lambda _: None,
+            )
+
+            self.assertEqual(result.thread_id, session)
+            self.assertEqual(queue.sent[0]["thread_id"], session)
+            self.assertEqual(
+                [item.session_id for item in store.list_codex_sessions()],
+                [session, other],
+            )
+            self.assertEqual(
+                [
+                    item.session_id
+                    for item in store.list_codex_sessions(worker_id="worker")
+                ],
+                [session],
+            )
+            self.assertEqual(store.list_codex_sessions(limit=0), [])
+
+    def test_native_failure_does_not_fall_back_to_gui(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = replace(
+                continue_config(Path(tmp)),
+                continue_transport="auto",
+                codex_thread_id="thread",
+                native_input_enabled=True,
+            )
+            dispatcher = FakeDispatcher()
+            with self.assertRaisesRegex(ContinueTaskError, "incerto"):
+                execute_continue_task(
+                    config=config,
+                    worker_id="worker",
+                    queue_client=FakeQueueClient(fail=True),  # type: ignore[arg-type]
+                    dispatcher=dispatcher,  # type: ignore[arg-type]
+                    sync_activity=False,
+                    wait=lambda _: None,
+                )
+            self.assertEqual(dispatcher.captured, [])
+
     def test_dry_run_does_not_use_gui_store_or_wait(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = continue_config(Path(tmp))

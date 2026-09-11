@@ -34,6 +34,7 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
 - [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
+- [docs/SYSTEM-TRAY-NATIVE-INPUT.md](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md)
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
@@ -62,6 +63,18 @@ python3 main.py
 ```
 
 O menu pergunta os dados no terminal e pode criar o `.env`, inicializar o banco, registrar ponto, registrar inicio/fim de tarefa e rodar o monitor.
+
+A versao 0.6.0 tambem oferece entrada direta por `codex queue`, sem controlar
+mouse ou teclado, e uma bandeja opcional. Instale e inicie com:
+
+```bash
+python -m pip install '/caminho/para/ai-presence-monitor[tray]'
+ai-presence tray --check
+ai-presence tray
+```
+
+O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
+local/remoto e a autorizacao do procedimento `continue`.
 
 Atalho equivalente no Linux:
 

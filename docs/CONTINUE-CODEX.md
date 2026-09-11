@@ -2,9 +2,10 @@
 
 ## Objetivo
 
-O AI Presence Monitor pode aguardar um intervalo, localizar uma unica janela
-visivel do Codex, clicar no prompt, escrever uma mensagem e pressionar Enter. A
-mensagem padrao e `continue` e o atraso padrao e 60 segundos.
+O AI Presence Monitor pode aguardar um intervalo e enfileirar uma mensagem em
+uma sessao exata do Codex. O transporte recomendado usa `codex queue`, sem
+mouse, teclado ou clipboard. X11 e Win32 permanecem como fallback explicito.
+A mensagem padrao e `continue` e o atraso padrao e 60 segundos.
 
 Esse recurso substitui o uso separado de `prosseguir_tarefas.py` no fluxo
 monitorado.
@@ -12,7 +13,11 @@ monitorado.
 ## Requisitos
 
 - pacote AI Presence Monitor instalado;
-- titulo que identifique exatamente uma janela visivel do Codex.
+- Codex CLI com `codex queue` para a entrada nativa;
+- UUID/nome exato da sessao, ou hook recente do mesmo worker.
+
+Para o fallback GUI, tambem e necessario um titulo que identifique exatamente
+uma janela visivel do Codex.
 
 No Linux, a sessao deve ser X11 e os comandos `xdotool` e `xclip` precisam
 estar instalados. Verifique:
@@ -37,7 +42,8 @@ Esta secao incorpora e atualiza as regras operacionais do antigo protocolo de
 A IA somente deve executar `ai-presence continue` quando **todas** estas
 condicoes forem verdadeiras:
 
-1. O usuario autorizou explicitamente a automacao GUI para essa execucao.
+1. O usuario habilitou a automacao de tarefas na bandeja/CLI ou autorizou uma
+   unica execucao com `--authorize-once`.
 2. A etapa limitada da sessao atual foi concluida e existe uma proxima tarefa
    concreta, documentada e executavel pelo mesmo AI-worker.
 3. A proxima tarefa nao depende de resposta, aprovacao, credencial, arquivo ou
@@ -46,10 +52,10 @@ condicoes forem verdadeiras:
    inconsistente ou operacao destrutiva aguardando revisao.
 5. A sessao seguinte ainda faz parte do trabalho autorizado e esta dentro do
    periodo em que o usuario permitiu a automacao.
-6. O titulo ou ID configurado identifica exatamente uma janela visivel do
-   Codex na sessao grafica atual.
-7. Nao existe outra execucao de `continue` pendente para o mesmo worker e a
-   mesma janela.
+6. O transporte nativo aponta para uma sessao Codex exata; no fallback GUI, o
+   titulo ou ID identifica exatamente uma janela visivel.
+7. Nao existe outra execucao de `continue` pendente para o mesmo worker e o
+   mesmo alvo.
 8. Quando a sincronizacao estiver ativa, o worker existe e permanece `active`
    porque o trabalho completo ainda nao terminou.
 
@@ -68,15 +74,14 @@ A IA nao deve executar `continue`:
   proxima tarefa;
 - depois de concluir todo o trabalho autorizado ou registrar `finish`;
 - para encadear sessoes indefinidamente sem tarefas previamente identificadas;
-- quando a tela estiver bloqueada, a sessao grafica estiver indisponivel ou o
-  alvo da janela for ambiguo;
-- como retry automatico depois de clique, digitacao ou Enter com resultado
-  incerto;
+- quando o alvo nativo estiver indefinido; no fallback GUI, quando a tela
+  estiver bloqueada, indisponivel ou a janela for ambigua;
+- como retry automatico depois de qualquer envio com resultado incerto;
 - para substituir `start`, `heartbeat`, `touch`, hooks ou `finish`.
 
 Se qualquer condicao mudar durante o delay, o alvo deve falhar fechado. A IA
-nao deve contornar a falha escolhendo a janela ativa, a primeira janela da
-lista ou coordenadas globais.
+nao deve contornar a falha escolhendo outra sessao, a janela ativa, a primeira
+janela da lista ou coordenadas globais.
 
 ### Sequencia normativa
 
@@ -87,16 +92,16 @@ Quando as pre-condicoes forem satisfeitas, a IA deve:
 3. confirmar que nao ha pergunta nem bloqueio pendente;
 4. usar `--dry-run` no primeiro uso, depois de alterar titulo/ID ou depois de
    mudar de sistema operacional;
-5. iniciar uma unica execucao em segundo plano com worker, projeto e alvo
+5. iniciar uma unica execucao com worker, projeto, transporte e alvo
    especificos;
 6. confirmar que o processo foi iniciado e que o log possui destino conhecido;
 7. encerrar a sessao atual sem aguardar o fim do delay;
 8. na sessao seguinte, verificar o status e os hooks antes de considerar que o
    Codex retomou o trabalho.
 
-`input_emitted` confirma apenas que o sistema operacional aceitou os eventos de
-entrada. A retomada deve ser confirmada por hook posterior, resultado visivel
-ou nova evidencia de trabalho. Resultado incerto exige inspecao, nao reenvio.
+`input_emitted` confirma apenas que o transporte aceitou o envio. A retomada
+deve ser confirmada por hook posterior, resultado visivel ou nova evidencia de
+trabalho. Resultado incerto exige inspecao, nao reenvio.
 
 ### Relacao com os protocolos de presenca
 
@@ -120,7 +125,21 @@ PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
 PRESENCE_CONTINUE_MESSAGE=continue
 PRESENCE_CONTINUE_DELAY_SECONDS=60
 PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+PRESENCE_TASK_AUTOMATION_ENABLED=false
+PRESENCE_NATIVE_INPUT_ENABLED=true
+PRESENCE_GUI_FALLBACK_ENABLED=false
+PRESENCE_CONTINUE_TRANSPORT=auto
+PRESENCE_CONTINUE_DESTINATION=local
+PRESENCE_CODEX_THREAD_ID=
 ```
+
+`auto` prefere `codex queue`. Se `PRESENCE_CODEX_THREAD_ID` estiver vazio, o
+comando real procura o `session_id` do hook mais recente do mesmo worker. O
+fallback GUI so pode ser usado quando estiver habilitado.
+
+O destino `local` e independente do endpoint remoto salvo. Para enviar ao
+computador cliente, use `--destination client`; apenas informar um endpoint na
+configuracao nao muda silenciosamente o destino.
 
 `PRESENCE_CODEX_GUI_WINDOW_TITLE` e uma expressao regular. Ela precisa
 corresponder a uma unica janela. Use um titulo mais especifico quando houver
@@ -139,7 +158,8 @@ acessa a GUI e nao grava o banco:
 ```bash
 ai-presence --dry-run continue \
   --worker ID_EXATO_DO_WORKER \
-  --window-title 'Codex'
+  --transport native \
+  --thread SESSAO_EXATA
 ```
 
 Saida esperada:
@@ -162,9 +182,9 @@ ai-presence start \
 Agende o envio:
 
 ```bash
+ai-presence control enable task-automation
 ai-presence continue \
-  --worker ID_EXATO_DO_WORKER \
-  --window-title 'Codex'
+  --worker ID_EXATO_DO_WORKER
 ```
 
 Valores temporarios podem sobrescrever o `.env`:
@@ -174,13 +194,14 @@ ai-presence continue \
   --worker ID_EXATO_DO_WORKER \
   --message "continue" \
   --delay 30 \
-  --window-title 'Codex - projeto'
+  --transport native \
+  --thread SESSAO_EXATA
 ```
 
 Para envio imediato:
 
 ```bash
-ai-presence continue --delay 0 --window-title 'Codex'
+ai-presence continue --delay 0 --thread SESSAO_EXATA
 ```
 
 O alias `continue-task` executa o mesmo comando.
@@ -193,7 +214,7 @@ Para encerrar o terminal atual sem cancelar a espera:
 mkdir -p "$HOME/.local/state"
 setsid nohup ai-presence continue \
   --worker ID_EXATO_DO_WORKER \
-  --window-title 'Codex' \
+  --thread SESSAO_EXATA \
   > "$HOME/.local/state/ai-presence-continue.log" 2>&1 < /dev/null &
 ```
 
@@ -202,12 +223,13 @@ No Windows PowerShell, inicie um processo separado:
 ```powershell
 Start-Process ai-presence.exe -ArgumentList @(
   "continue", "--worker", "ID_EXATO_DO_WORKER",
-  "--window-title", "Codex"
+  "--thread", "SESSAO_EXATA"
 )
 ```
 
-O processo captura a janela antes da espera e revalida o mesmo ID e titulo no
-momento do envio. Fechar a janela ou mudar seu titulo causa falha fechada.
+No modo nativo, o processo fixa a sessao antes da espera. No modo GUI, captura
+a janela antes da espera e revalida o mesmo ID e titulo no momento do envio.
+Fechar a janela ou mudar seu titulo causa falha fechada.
 
 Terminais que alteram o titulo enquanto o Codex trabalha podem usar o modo
 opt-in abaixo. Ele exige o ID da janela explicito e continua revalidando tanto
@@ -216,6 +238,7 @@ relaxada:
 
 ```bash
 ai-presence continue \
+  --transport gui \
   --window-id ID_EXATO_DA_JANELA \
   --window-title 'trecho estavel do projeto' \
   --allow-title-change
@@ -232,10 +255,10 @@ o texto Unicode e emitido por `SendInput`; a area de transferencia nao e usada.
 
 Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, o fluxo e:
 
-1. a janela exata e capturada;
+1. a sessao exata e resolvida, ou a janela e capturada no fallback;
 2. o programa aguarda o delay;
-3. o mesmo alvo e revalidado;
-4. texto e Enter sao emitidos;
+3. a mensagem e enfileirada nativamente ou o alvo GUI e revalidado;
+4. o transporte informa sucesso;
 5. um worker existente e `active` recebe
    `observation:automation:continue`;
 6. `last_activity_at` e atualizado;
@@ -260,10 +283,10 @@ substitui o heartbeat publico esperado pelo Protocolo 1.
 - iniciar ou agendar o comando;
 - executar `--dry-run`;
 - cancelar durante a espera;
-- nao encontrar a janela;
-- encontrar mais de uma janela;
-- detectar mudanca do ID ou titulo;
-- falhar ao acessar clipboard, mouse ou teclado;
+- nao encontrar a sessao nativa;
+- falhar o Codex CLI ou o endpoint remoto;
+- no fallback, nao encontrar uma janela unica ou detectar mudanca do alvo;
+- no fallback, falhar clipboard, mouse ou teclado;
 - indicar worker inexistente;
 - indicar worker `idle`;
 - passar `--no-sync-activity`.
@@ -317,6 +340,7 @@ mensagem, atraso, titulo, ID opcional e sincronizacao.
 ## Seguranca
 
 - O programa nunca escolhe a primeira janela de uma lista ambigua.
+- A entrada nativa exige uma sessao exata e usa `subprocess` sem shell.
 - O texto nao passa por shell.
 - No Linux, o clipboard anterior e restaurado.
 - No Windows, a digitacao Unicode nao altera o clipboard.
@@ -324,7 +348,7 @@ mensagem, atraso, titulo, ID opcional e sincronizacao.
 - Nao existe retry automatico depois de resultado incerto.
 - Revise visualmente o primeiro teste real.
 
-## Evidencia E2E local
+## Evidencia E2E historica do fallback GUI
 
 Em 2026-09-11, uma execucao autorizada validou o fluxo instalado no Linux X11:
 
@@ -336,8 +360,10 @@ Em 2026-09-11, uma execucao autorizada validou o fluxo instalado no Linux X11:
 5. o banco registrou `observation:automation:continue` as `00:25:44` e o hook
    `observation:codex:UserPromptSubmit` as `00:25:45` no mesmo worker.
 
-Essa verificacao confirma a emissao e o processamento inicial desta execucao,
-sem ampliar a autorizacao para execucoes futuras.
+Essa verificacao confirma o fallback GUI anterior e o processamento inicial
+daquela execucao, sem ampliar a autorizacao para execucoes futuras. O
+transporte nativo da versao 0.6.0 possui testes automatizados; o E2E real requer
+uma autorizacao separada para uma mensagem e sessao especificas.
 
 ## Rollback
 
@@ -345,6 +371,14 @@ Desative apenas a sincronizacao:
 
 ```env
 PRESENCE_CONTINUE_SYNC_ACTIVITY=false
+```
+
+Desative a autorizacao persistente e os transportes:
+
+```bash
+ai-presence control disable task-automation
+ai-presence control disable native-input
+ai-presence control disable gui-fallback
 ```
 
 Ou deixe de executar `continue`. O monitor, os hooks, o banco e os protocolos

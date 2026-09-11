@@ -74,6 +74,15 @@ Desde a versao 0.5.0, Windows possui familia operacional completa:
 - configuracao global em `%APPDATA%\ai-presence-monitor\.env`;
 - estado e definicoes em `%LOCALAPPDATA%\ai-presence-monitor`.
 
+Desde a versao 0.6.0, `codex queue` oferece entrada nativa compartilhada entre
+Linux e Windows sem depender dos adaptadores GUI. O comando Codex precisa estar
+no `PATH`. A bandeja PySide6 tambem e portatil, mas permanece extra opcional:
+
+```bash
+python -m pip install '/caminho/para/ai-presence-monitor[tray]'
+ai-presence tray --check
+```
+
 Consulte [WINDOWS.md](WINDOWS.md) para o passo a passo.
 
 ## Onde Fica o `.env`
@@ -115,6 +124,11 @@ nao ao diretorio de onde o hook foi executado:
 ```env
 PRESENCE_DB_PATH=./data/presence.db
 ```
+
+Sem `PRESENCE_CONTROL_PATH`, o `control.json` usa a area de estado do usuario e
+fica fora do checkout. Quando configurado, um caminho relativo usa a mesma
+regra do banco. O arquivo centraliza flags e alvos alterados em tempo de
+execucao e deve permanecer fora do Git.
 
 ## Isolamento de Workers
 

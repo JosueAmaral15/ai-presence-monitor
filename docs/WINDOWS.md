@@ -11,6 +11,10 @@ A versao 0.5.0 oferece no Windows:
 - caminhos nativos em `%APPDATA%` e `%LOCALAPPDATA%`;
 - workflow automatizado configurado para `windows-latest`.
 
+A versao 0.6.0 acrescenta entrada nativa por `codex queue.exe` e bandeja
+PySide6 opcional. A entrada nativa nao precisa de desktop desbloqueado, nao usa
+mouse/teclado e deve ser preferida ao dispatcher Win32.
+
 Nao e necessario executar como administrador. A automacao GUI exige a sessao do
 usuario desbloqueada e uma janela visivel.
 
@@ -38,6 +42,18 @@ Teste o launcher instalado:
 $AiPresence = "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe"
 & $AiPresence --help
 ```
+
+Instale e verifique a bandeja opcional:
+
+```powershell
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\pip.exe" install `
+  '.[tray]'
+& $AiPresence tray --check
+& $AiPresence tray
+```
+
+O Codex CLI deve estar no `PATH` e `codex queue --help` deve funcionar. O modo
+remoto do app-server e experimental; use endpoint autenticado e TLS/tunel.
 
 Para usar diretamente do checkout:
 

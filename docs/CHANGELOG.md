@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-11 - v0.6.0
+
+- Adicionado transporte nativo por `codex queue`, sem controle de mouse,
+  teclado ou clipboard.
+- `continue` agora suporta `auto`, `native` e `gui`, com sessao explicita ou
+  inferida do hook do mesmo worker.
+- Adicionado `control.json` atomico para autorizacoes compartilhadas entre CLI
+  e bandeja.
+- Adicionados comandos `control`, `send-input` e `tray`.
+- Adicionada bandeja PySide6 opcional com habilitacao de automacao, compositor
+  local/remoto, preferencias e saida.
+- Mantido fallback X11/Win32 como opt-in, sem retry depois de resultado incerto.
+- Versao de pacote elevada para 0.6.0 e documentacao operacional atualizada.
+
 ## 2026-09-11 - Verificacao E2E do comando continue
 
 - Validado o comando instalado com uma unica janela X11 `ChatGPT`, mensagem
