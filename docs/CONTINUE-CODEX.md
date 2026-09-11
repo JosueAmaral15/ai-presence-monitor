@@ -324,6 +324,21 @@ mensagem, atraso, titulo, ID opcional e sincronizacao.
 - Nao existe retry automatico depois de resultado incerto.
 - Revise visualmente o primeiro teste real.
 
+## Evidencia E2E local
+
+Em 2026-09-11, uma execucao autorizada validou o fluxo instalado no Linux X11:
+
+1. o dry-run confirmou mensagem `continue`, delay de 60 segundos, worker e
+   sincronizacao;
+2. o padrao `^ChatGPT$` correspondeu a uma unica janela visivel;
+3. a execucao real terminou com `input_emitted` e atividade sincronizada;
+4. `continue` apareceu como nova entrada na tarefa do Codex;
+5. o banco registrou `observation:automation:continue` as `00:25:44` e o hook
+   `observation:codex:UserPromptSubmit` as `00:25:45` no mesmo worker.
+
+Essa verificacao confirma a emissao e o processamento inicial desta execucao,
+sem ampliar a autorizacao para execucoes futuras.
+
 ## Rollback
 
 Desative apenas a sincronizacao:
