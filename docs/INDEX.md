@@ -2,6 +2,7 @@
 
 ## Uso
 
+- [Uso como ferramenta para humanos e AI-workers](USO-COMO-FERRAMENTA.md)
 - [Configuracao rapida do `.env`](CONFIGURANDO-ENV.md)
 - [Protocolo de comandos para AI-workers](AI-WORKER-COMMAND-PROTOCOL.md)
 - [Guia completo do ambiente](ENVIRONMENT-GUIDE.md)

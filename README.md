@@ -53,6 +53,7 @@ sent only once per continuous inactivity episode. A valid `start`, `heartbeat`,
 Detailed operational documentation is currently available in Portuguese:
 
 - [Documentation index](docs/INDEX.md)
+- [Tool usage for humans and AI workers](docs/USO-COMO-FERRAMENTA.md)
 - [Environment setup](docs/CONFIGURANDO-ENV.md)
 - [Environment and architecture guide](docs/ENVIRONMENT-GUIDE.md)
 - [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
@@ -458,9 +459,10 @@ native input. X11 and Win32 are explicit, disabled-by-default fallbacks.
 
 When the target is the calling Codex session, native input starts a detached
 queue process and reports `dispatch_started` so the current turn does not wait
-for itself. This state does not update presence; a later Codex hook is the
-processing evidence. Use `--detach` to request this mode explicitly and
-`--no-detach` only for diagnostics outside the target turn.
+for itself. This state does not update presence; a later Codex hook provides
+session activity evidence but does not identify the message by itself. Use
+`--detach` to request this mode explicitly and `--no-detach` only for
+diagnostics outside the target turn.
 
 For terminals that dynamically change the full title, combine an explicit
 window ID with a stable project title pattern:
@@ -478,7 +480,8 @@ full-title equality.
 
 After successful input emission, an already active Protocol 2 worker may record
 `observation:automation:continue`, updating `last_activity_at`. A later Codex
-hook remains the confirmation that the session actually resumed.
+hook is evidence that the session later became active; it does not identify the
+originating message without additional correlation.
 
 Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
 transport failure, and inactive workers do not count as activity. Enabling task

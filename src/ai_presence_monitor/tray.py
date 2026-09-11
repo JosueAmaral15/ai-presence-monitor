@@ -295,7 +295,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             QMessageBox.information(
                 None,
                 "Dispatch started",
-                f"Dispatch started for {location}. A later Codex hook confirms processing.",
+                f"Dispatch started for {location}. Await later session evidence.",
             )
         except (CodexInputError, ControlError) as exc:
             show_error("Message was not sent", exc)

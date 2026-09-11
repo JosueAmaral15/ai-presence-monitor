@@ -1,19 +1,46 @@
 # Tasks - AI Presence Monitor
 
-## Concluida em 2026-09-11
+## Em validacao
+
+### Task 018 - Guia de uso para humanos e AI-workers
+
+**Prioridade**: Alta
+**Status**: validada na branch da tarefa; integracao local pendente
+**Objetivo**: oferecer uma referencia unica para seres humanos, AI-workers e
+adaptadores utilizarem o monitor como ferramenta sem superestimar evidencias.
+
+**Criterios de aceite**:
+
+- [x] Guia cobre instalacao, controles, bandeja e fluxos humanos.
+- [x] Guia cobre `start`, hooks, `touch`, perguntas, `continue` e `finish` para
+      AI-workers.
+- [x] Existe contrato para wrappers, MCP e function calling.
+- [x] Estados `dry-run`, `dispatch_started`, `input_emitted`, hook e
+      `delivery_confirmed` possuem limites explicitos.
+- [x] E2E nativo exige marcador exclusivo e distingue `prossiga` manual de
+      `continue` automatizado.
+- [x] Registro anterior foi corrigido para tentativa inconclusiva.
+- [x] AGENTS, READMEs, indice, seguranca e guias relacionados apontam para a
+      nova norma.
+- [x] Gate completo passa com 152 testes e 86% de cobertura.
+- [ ] Trabalho documentado e integrado localmente em `develop`.
+
+**Guia**: `docs/USO-COMO-FERRAMENTA.md`.
 
 ### Task 017 - Despacho nativo nao bloqueante na propria sessao
 
 **Prioridade**: Critica
-**Status**: concluida e integrada localmente em `develop`; `main` aguarda o
-gate externo Windows da Task 012
+**Status**: implementacao integrada localmente em `develop`; E2E nativo real
+aguarda nova autorizacao e mensagem com marcador exclusivo
 **Objetivo**: impedir que `codex queue` bloqueie o turno ativo ao enviar para a
 propria sessao e evitar falso positivo de atividade antes do hook.
 
 **Criterios de aceite**:
 
-- [x] E2E autorizado envia `continue` uma unica vez para a sessao exata.
-- [x] Um hook posterior confirma `SessionStart` e `UserPromptSubmit` no alvo.
+- [ ] E2E com marcador exclusivo chega uma unica vez a sessao exata.
+- [ ] Mensagem identificavel e hook posterior confirmam o processamento no alvo.
+- [x] Tentativa anterior foi reclassificada como inconclusiva depois que o
+      usuario informou ter digitado manualmente o `continue` observado.
 - [x] A propria sessao usa processo destacado no Linux e no Windows.
 - [x] `dispatch_started` nao grava `observation:automation:continue` nem altera
       `last_activity_at`.
@@ -23,6 +50,8 @@ propria sessao e evitar falso positivo de atividade antes do hook.
 - [x] Trabalho funcional e integrado localmente em `develop`.
 
 **Plano**: `docs/planning/TASK-017-native-self-queue.md`.
+
+## Concluida em 2026-09-11
 
 ### Task 016 - Bandeja do sistema e entrada nativa do Codex
 

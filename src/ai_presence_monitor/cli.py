@@ -400,7 +400,7 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
         print(
             "continue: dispatch_started transporte=native "
             f"destino={result.destination} sessao={result.thread_id} "
-            f"worker={worker_id}; um hook posterior confirma o processamento"
+            f"worker={worker_id}; aguarde evidencia posterior da sessao"
         )
         return 0
 

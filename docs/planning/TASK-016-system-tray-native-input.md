@@ -14,7 +14,8 @@ not take over the user's mouse or keyboard.
 - Allow the tray message composer to target the local Codex instance or a
   configured authenticated remote app-server endpoint.
 - Preserve presence synchronization only after an input command reports
-  success, with a later Codex hook remaining the processing confirmation.
+  success. A later Codex hook proves session activity; message-specific E2E
+  confirmation additionally requires a unique marker.
 
 ## Safety Rules
 
@@ -71,12 +72,12 @@ not take over the user's mouse or keyboard.
 
 ## External Validation Remaining
 
-A separately authorized native E2E was performed on 2026-09-11 against session
-`019f5691-c118-7370-a205-94cfde0a93d7`. Exactly one `continue` message arrived,
-and the same session produced subsequent `SessionStart` and `UserPromptSubmit`
-hooks. The synchronous client timed out before that late delivery, exposing a
-same-session blocking condition rather than a delivery failure. Task 017
-contains the non-blocking correction and its validation evidence.
+A separately authorized native E2E was attempted on 2026-09-11 against session
+`019f5691-c118-7370-a205-94cfde0a93d7`. The synchronous client timed out and was
+not retried. The user later clarified that the visible `continue` was typed
+manually, so the subsequent `SessionStart` and `UserPromptSubmit` hooks cannot
+prove native queue delivery. Task 017 contains the non-blocking correction and
+the requirements for a uniquely correlated retest.
 
-The external Windows CI gate recorded by Task 012 remains open, so `main`
-promotion is still blocked even after the local native E2E succeeds.
+Native queue E2E and the external Windows CI gate recorded by Task 012 remain
+open, so `main` promotion is still blocked.

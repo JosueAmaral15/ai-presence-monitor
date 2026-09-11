@@ -28,7 +28,7 @@ usuario, bandeja ou AI-worker
 ai-presence -> codex queue --thread SESSAO --message TEXTO
             |
             v
-fila da sessao Codex -> proximo hook confirma processamento
+fila da sessao Codex -> proximo hook registra atividade da sessao
 ```
 
 O texto e passado como um item de uma lista de argumentos a `subprocess`, com
@@ -37,9 +37,9 @@ Bash, PowerShell ou `cmd.exe`.
 
 Uma saida `dispatch_started` significa somente que o processo destacado foi
 criado. `input_emitted` significa que uma chamada sincrona terminou com
-sucesso. O hook posterior da mesma sessao continua sendo a confirmacao de que o
-agente iniciou o processamento. Timeout ou erro nao produz retry automatico
-nem troca de transporte.
+sucesso. Um hook posterior comprova atividade da sessao, mas nao identifica
+sozinho qual mensagem a originou. Um E2E exige marcador exclusivo. Timeout ou
+erro nao produz retry automatico nem troca de transporte.
 
 Quando o alvo coincide com `CODEX_SESSION_ID` ou `CODEX_THREAD_ID`, a CLI usa
 automaticamente o despacho destacado para evitar espera circular. A bandeja
@@ -270,8 +270,9 @@ relativo explicito e resolvido a partir do diretorio do `.env`.
 - Ela nao e iniciada automaticamente no login nesta versao.
 - O envio nativo depende do comando experimental `codex queue` instalado no
   mesmo computador que executa `ai-presence`.
-- Um processo destacado pode falhar depois de `dispatch_started`; somente um
-  hook posterior comprova processamento e atualiza atividade.
+- Um processo destacado pode falhar depois de `dispatch_started`; um hook
+  posterior comprova atividade da sessao e atualiza o monitor, mas a mensagem
+  especifica ainda exige correlacao.
 - O texto segue em `--message` para o processo Codex e pode aparecer
   temporariamente em ferramentas locais de inspecao; nao envie segredos.
 - O compositor manual nao correlaciona a mensagem com uma pergunta Discord;

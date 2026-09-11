@@ -213,8 +213,10 @@ A IA deve verificar o codigo de saida e relatar o erro. Nao deve repetir
 automaticamente nenhum envio com resultado incerto.
 
 `dispatch_started` com codigo zero significa apenas que o processo destacado
-foi criado. A IA deve encerrar o turno e confiar no hook seguinte, sem executar
-novo envio nem `touch` para fabricar confirmacao.
+foi criado. A IA deve encerrar o turno e aguardar evidencia posterior, sem
+executar novo envio nem `touch` para fabricar confirmacao. Hook isolado prova
+atividade, nao autoria; testes E2E exigem o marcador exclusivo definido em
+[USO-COMO-FERRAMENTA.md](USO-COMO-FERRAMENTA.md).
 
 ## Linux e Windows
 
@@ -244,9 +246,11 @@ logica dos Protocolos 1 e 2 permanece compartilhada.
 Use esta orientacao no prompt inicial:
 
 ```text
-Leia AGENTS.md e docs/AI-WORKER-COMMAND-PROTOCOL.md do projeto
-ai-presence-monitor. Use ai-presence com --project apontando para a raiz deste
-projeto. Registre start ao iniciar, confie nos hooks durante o trabalho e
-registre finish somente ao concluir. Prefira entrada nativa e nao execute
-automacao de continuidade ou fallback GUI sem autorizacao.
+Leia AGENTS.md, docs/USO-COMO-FERRAMENTA.md e
+docs/AI-WORKER-COMMAND-PROTOCOL.md do projeto ai-presence-monitor. Use
+ai-presence com --project apontando para a raiz deste projeto. Registre start
+ao iniciar, confie nos hooks durante o trabalho e registre finish somente ao
+concluir. Prefira entrada nativa e nao execute automacao de continuidade ou
+fallback GUI sem autorizacao. Em E2E, use marcador exclusivo e nunca atribua
+uma mensagem ao transporte apenas porque ocorreu um hook posterior.
 ```

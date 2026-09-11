@@ -187,6 +187,9 @@ esse transporte para enviar senhas, tokens ou outros segredos.
 - [x] Falha ao criar o processo e reportada sem retry.
 - [x] Falha posterior, ausencia de hook ou resultado incerto nao causa retry.
 - [x] A bandeja sempre usa despacho destacado e permanece responsiva.
+- [x] Hook isolado nao e tratado como prova da autoria de uma mensagem.
+- [x] E2E nativo exige marcador exclusivo e confirmacao de que o humano nao o
+      digitou.
 
 ### Risco residual
 
@@ -194,3 +197,7 @@ Depois que o processo destacado e criado, seu erro de saida nao retorna ao
 chamador. Isso e intencional para romper a espera circular. A ausencia de hook
 mantem o relogio de atividade inalterado e permite que o monitor alerte; o
 operador deve diagnosticar antes de autorizar um novo envio.
+
+A convencao humana `prossiga` versus automacao `continue` reduz ambiguidades,
+mas nao constitui controle de acesso nem correlacao criptografica. Um teste
+formal continua dependendo de marcador unico e trilha de auditoria.

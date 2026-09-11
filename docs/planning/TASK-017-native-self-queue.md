@@ -18,14 +18,16 @@ delay: 0
 ```
 
 The synchronous `codex queue` process reached its 15-second timeout. It was not
-retried. The message then appeared exactly once in the target task, and the
-SQLite audit recorded `SessionStart` at `16:00:10` and `UserPromptSubmit` at
-`16:00:11` for the same session.
+retried. A `continue` message and subsequent `SessionStart`/`UserPromptSubmit`
+hooks were initially attributed to that attempt. The user then clarified that
+the visible message was typed manually. Those observations prove only manual
+activity in the target session, not native queue delivery.
 
-The result demonstrates a same-session wait cycle: the caller waits for
-`codex queue`, while the queued turn cannot be handled until the current turn
-releases the session. A synchronous timeout is therefore uncertain and cannot
-be treated as a definitive delivery failure.
+The result is therefore inconclusive. It does demonstrate that the synchronous
+client did not complete within 15 seconds while targeting its calling session.
+A same-session wait cycle is the working diagnosis, but successful queue
+delivery must not be claimed without uniquely correlated evidence. A timeout
+is uncertain and cannot be treated as either definitive success or failure.
 
 ## Design
 
@@ -46,14 +48,18 @@ be treated as a definitive delivery failure.
 process. It does not prove acceptance or processing, so it must not create
 `observation:automation:continue` or change `last_activity_at`.
 
-The later Codex hook is the first processing evidence and updates normal
-Protocol 2 activity. This removes the false-positive interval that would
-otherwise credit work before the target session actually receives the input.
+A later Codex hook is session activity evidence and updates normal Protocol 2
+activity. It does not identify the originating message by itself. This removes
+the false-positive interval that would otherwise credit work before the target
+session actually receives any input.
 
 ## Acceptance Criteria
 
-- [x] One authorized native E2E reaches the exact target once.
-- [x] A later hook confirms activity in the same session.
+- [ ] One authorized native E2E with a unique marker reaches the exact target
+      once.
+- [ ] The identifiable message and a later hook confirm processing in the same
+      session.
+- [x] The previous manual `continue` was removed from the native E2E evidence.
 - [x] Current-session detection covers both Codex environment variables.
 - [x] POSIX and Windows detached process policies are unit-tested.
 - [x] Detached dispatch does not update presence state.
@@ -77,9 +83,20 @@ otherwise credit work before the target session actually receives the input.
 
 ## Release Boundary
 
-The authorized E2E has been consumed. No second real message may be sent
-without new explicit authorization. Automated tests and dry-runs validate this
-fix without producing another input.
+The previous authorization was consumed by the inconclusive attempt. No second
+real message may be sent without new explicit authorization. The retest must
+use a unique marker such as `[AI-PRESENCE-E2E:<id>] continue`; the human must
+not type that marker, and manual continuation should use `prossiga` during the
+test window.
+
+Automated tests and dry-runs validate the implementation without proving a
+real queue delivery. The E2E result requires all of the following:
+
+1. one command invocation against one exact session;
+2. one visible message containing the exact unique marker;
+3. no manual use of that marker;
+4. a later hook from the same session;
+5. no retry after timeout or another uncertain result.
 
 `main` promotion remains blocked by the external Windows CI gate documented in
 Task 012. Local Linux validation does not replace that platform evidence.

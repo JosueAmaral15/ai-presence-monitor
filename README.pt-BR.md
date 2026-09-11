@@ -31,6 +31,7 @@ Alertas:
 Guia detalhado do `.env` e dos dados necessarios:
 
 - [docs/INDEX.md](docs/INDEX.md)
+- [docs/USO-COMO-FERRAMENTA.md](docs/USO-COMO-FERRAMENTA.md)
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
 - [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
@@ -77,8 +78,8 @@ O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
 local/remoto e a autorizacao do procedimento `continue`.
 
 Quando o alvo e a propria sessao Codex, o comando retorna `dispatch_started`
-sem bloquear o turno e sem antecipar atividade. Um hook posterior confirma o
-processamento e atualiza o Protocolo 2.
+sem bloquear o turno e sem antecipar atividade. Um hook posterior registra
+atividade da sessao, mas a autoria de uma mensagem exige correlacao adicional.
 
 Atalho equivalente no Linux:
 
@@ -108,7 +109,8 @@ disponibiliza-lo no `PATH` do usuario Linux:
 ai-presence --help
 ```
 
-Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md) e
+Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md),
+[docs/USO-COMO-FERRAMENTA.md](docs/USO-COMO-FERRAMENTA.md) e
 [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md).
 O protocolo define inicio, atividade observada, perguntas, continuidade,
 encerramento, codigos de saida e limites da automacao GUI.

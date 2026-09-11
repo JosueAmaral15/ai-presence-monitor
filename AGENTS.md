@@ -2,6 +2,7 @@
 
 Before operating this project or using the monitor from another project, read:
 
+- `docs/USO-COMO-FERRAMENTA.md`
 - `docs/AI-WORKER-COMMAND-PROTOCOL.md`
 - `docs/security/SECURITY.md`
 
@@ -24,8 +25,9 @@ Operational rules:
    as a fallback, with correlation and allowlist enabled.
 6. Do not execute `continue`, `dispatch-answer`, or any GUI automation without
    explicit user authorization for that action.
-7. Treat a successful GUI input as `input_emitted`, not proof that Codex
-   processed it. A later hook is the confirmation signal.
+7. Treat `dispatch_started` and `input_emitted` as preliminary transport
+   states, not proof that Codex processed the input. A later hook is necessary;
+   an E2E claim also requires a unique marker that the human did not type.
 8. Check command exit status. Report failures instead of silently retrying GUI
    input.
 9. If the local alarm is audible, run `ai-presence stop-alarm` immediately.
