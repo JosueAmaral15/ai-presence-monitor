@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-11 - Guia de uso e correcao da evidencia E2E
+
+- Adicionado guia operacional para seres humanos e AI-workers utilizarem o
+  monitor como ferramenta por CLI, bandeja, hooks e Discord.
+- Definida a convencao de uso humano `prossiga` e automacao `continue`, sem
+  tratar essa convencao como substituta de correlacao tecnica.
+- O proximo E2E nativo deve usar marcador exclusivo, alvo exato, uma unica
+  tentativa e confirmacao por mensagem identificavel mais hook posterior.
+- Reclassificada como inconclusiva a tentativa nativa anterior: o usuario
+  informou que digitou manualmente o `continue` observado, portanto os hooks
+  seguintes nao comprovam entrega por `codex queue`.
+
 ## 2026-09-11 - v0.6.1
 
 - Corrigido o bloqueio de `codex queue` quando um AI-worker envia entrada para
@@ -12,9 +24,9 @@
 - A bandeja sempre usa despacho destacado para nao congelar a interface.
 - Adicionados `--detach` e `--no-detach` para diagnostico e controle explicito,
   sem retry automatico depois de resultado incerto.
-- E2E nativo autorizado confirmou uma unica mensagem `continue` e hooks
-  `SessionStart`/`UserPromptSubmit` na sessao exata. O timeout sincrono
-  observado nesse teste originou esta correcao.
+- Uma tentativa nativa autorizada atingiu timeout sincrono sem retry e motivou
+  esta correcao. A entrega permaneceu inconclusiva porque o `continue` visivel
+  foi enviado manualmente pelo usuario; um novo E2E correlacionado e necessario.
 
 ## 2026-09-11 - v0.6.0
 

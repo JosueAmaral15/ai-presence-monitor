@@ -1,0 +1,457 @@
+# AI Presence Monitor como Ferramenta para Humanos e AI-workers
+
+## Objetivo
+
+Este guia explica como um ser humano ou uma inteligencia artificial pode usar
+o AI Presence Monitor como ferramenta operacional. Ele cobre:
+
+- registro de inicio, atividade e fim de trabalho;
+- monitoramento pelos Protocolos 1 e 2;
+- perguntas correlacionadas pelo Discord;
+- envio direto de texto a uma sessao Codex sem ocupar mouse ou teclado;
+- automacao autorizada da mensagem `continue`;
+- interpretacao correta dos estados e das evidencias;
+- validacao E2E sem confundir entrada humana com entrada automatizada.
+
+O monitor mede evidencia de atividade. Ele nao prova qualidade, progresso util,
+conclusao correta nem autoria de uma mensagem apenas porque um hook ocorreu.
+
+## Modelo Operacional
+
+```text
+ser humano ou AI-worker
+          |
+          +---- ai-presence start/touch/finish
+          |
+          +---- ai-presence continue/send-input
+          |
+          +---- bandeja do sistema
+          |
+          +---- pergunta Discord correlacionada
+                         |
+                         v
+hooks Codex -> SQLite -> protocolos -> alertas Discord/Telegram/alarme
+```
+
+Os componentes sao independentes:
+
+| Componente | Responsabilidade |
+|---|---|
+| CLI `ai-presence` | interface deterministica para humanos, scripts e IAs |
+| hooks do Codex | registrar atividade local silenciosa |
+| monitor | avaliar atrasos e produzir alertas |
+| observer Discord | receber respostas correlacionadas de usuarios permitidos |
+| `codex queue` | enviar texto para uma sessao sem mouse ou teclado |
+| fallback GUI | usar X11/Win32 somente com autorizacao explicita |
+| bandeja | alterar permissoes e compor mensagens manualmente |
+
+## Instalacao e Descoberta
+
+No Linux, confirme primeiro o comando instalado:
+
+```bash
+command -v ai-presence
+ai-presence --help
+```
+
+Se ele nao estiver no `PATH`:
+
+```bash
+"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
+```
+
+No Windows PowerShell:
+
+```powershell
+$AiPresence = "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe"
+& $AiPresence --help
+```
+
+Use [CONFIGURANDO-ENV.md](CONFIGURANDO-ENV.md) para criar a configuracao. Nunca
+inclua `.env`, tokens, webhooks ou o banco em prompts, logs publicos ou commits.
+
+## Preparacao pelo Ser Humano
+
+1. Instale o pacote em ambiente virtual dedicado.
+2. Crie o `.env` fora do repositorio ou use um arquivo local ignorado pelo Git.
+3. Inicialize o banco com `ai-presence init`.
+4. Instale os hooks com `ai-presence install-codex-hook` e revise-os no Codex.
+5. Instale monitor e observer somente quando execucao continua for desejada.
+6. Consulte as autorizacoes atuais antes de liberar automacao.
+
+Comandos portateis para os processos de fundo:
+
+```bash
+ai-presence --dry-run install-background-service --component monitor
+ai-presence install-background-service --component monitor
+ai-presence --dry-run install-background-service --component reply-observer
+ai-presence install-background-service --component reply-observer
+```
+
+No Linux, a factory usa systemd de usuario. No Windows, usa Task Scheduler.
+
+## Autorizacoes e Bandeja
+
+Consulte a politica compartilhada:
+
+```bash
+ai-presence control show
+ai-presence control show --json
+```
+
+As autorizacoes sao independentes:
+
+| Controle | Efeito |
+|---|---|
+| `task-automation` | permite o procedimento real `continue` |
+| `native-input` | permite `codex queue` |
+| `gui-fallback` | permite controle X11/Win32 como fallback |
+| `remote-input` | permite destino em computador cliente |
+| `activity-sync` | permite sincronizacao depois de emissao sincrona confirmada |
+
+Exemplos:
+
+```bash
+ai-presence control enable native-input
+ai-presence control enable task-automation
+ai-presence control disable gui-fallback
+ai-presence control target --thread SESSAO_EXATA
+```
+
+Habilitar `task-automation` e uma autorizacao persistente, nao um timer. O
+sistema nao envia `continue` sozinho em intervalos fixos.
+
+Para usar a bandeja:
+
+```bash
+ai-presence tray --check
+ai-presence tray
+```
+
+Ela oferece habilitar automacao, responder uma mensagem e sair. O compositor
+usa despacho destacado para nao congelar a interface.
+
+## Fluxos para Seres Humanos
+
+### Acompanhar um AI-worker
+
+```bash
+ai-presence status
+```
+
+No Protocolo 1, o worker publica heartbeat a cada cinco minutos. No Protocolo
+2, publica `start` e `finish`; hooks ou `touch` significativo registram
+atividade silenciosa durante a tarefa.
+
+### Enviar texto sem usar mouse ou teclado
+
+```bash
+ai-presence --dry-run send-input \
+  --thread SESSAO_EXATA \
+  --message 'texto de teste'
+
+ai-presence send-input \
+  --thread SESSAO_EXATA \
+  --message 'texto autorizado'
+```
+
+`send-input` exige `native-input` habilitado. O humano que executa esse comando
+esta realizando a acao explicitamente; scripts e IAs ainda precisam respeitar
+a autorizacao definida pelo seu ambiente.
+
+### Autorizar uma unica continuidade
+
+```bash
+ai-presence --dry-run continue \
+  --project /caminho/absoluto/do/projeto \
+  --thread SESSAO_EXATA
+
+ai-presence continue \
+  --project /caminho/absoluto/do/projeto \
+  --thread SESSAO_EXATA \
+  --authorize-once
+```
+
+`--authorize-once` vale somente para aquela invocacao. Ele nao habilita
+permissao persistente.
+
+### Convencao de mensagens manuais
+
+Neste projeto, recomenda-se:
+
+- `prossiga`: mensagem digitada manualmente pelo usuario;
+- `continue`: mensagem padrao da automacao;
+- `[AI-PRESENCE-E2E:<id>] continue`: somente teste E2E automatizado.
+
+Essa convencao reduz confusao cotidiana, mas nao e uma garantia tecnica. Uma
+pessoa ainda poderia digitar `continue`. Para um E2E valido, use sempre um
+marcador exclusivo e confirme que o humano nao o digitou.
+
+## Contrato para AI-workers
+
+Antes de operar, a IA deve ler:
+
+1. `AGENTS.md`;
+2. este documento;
+3. `docs/AI-WORKER-COMMAND-PROTOCOL.md`;
+4. `docs/security/SECURITY.md`.
+
+A IA deve usar o caminho absoluto do projeto que esta executando, mesmo quando
+o monitor estiver instalado globalmente:
+
+```bash
+PROJECT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+TASK="descricao objetiva do trabalho"
+```
+
+### Inicio da responsabilidade
+
+Execute uma vez:
+
+```bash
+ai-presence start \
+  --project "$PROJECT" \
+  --protocol protocol2 \
+  --task "$TASK" \
+  --message "AI-worker iniciou a tarefa"
+```
+
+Nao use `start` como heartbeat. Com hooks funcionando, nao execute `touch` a
+cada comando.
+
+### Durante o trabalho
+
+Confie nos hooks do Codex. Somente quando eles estiverem indisponiveis e houver
+trabalho real concluido, use:
+
+```bash
+ai-presence touch \
+  --project "$PROJECT" \
+  --protocol protocol2 \
+  --task "$TASK" \
+  --message "checkpoint verificavel concluido"
+```
+
+`touch` baseado apenas em relogio e proibido porque simula atividade.
+
+### Perguntar ao usuario
+
+Prefira o mecanismo nativo de pergunta da plataforma da IA. Quando ele nao
+existir, o fallback Discord e:
+
+```bash
+ai-presence ask-user \
+  --project "$PROJECT" \
+  --question "Pergunta objetiva que bloqueia a proxima decisao"
+```
+
+A resposta valida precisa vir de usuario permitido, no canal correto, como
+resposta direta a pergunta ainda aberta. A IA nao deve contornar correlacao,
+allowlist ou expiracao.
+
+### Solicitar continuidade
+
+A IA so pode executar `continue` quando:
+
+1. o usuario autorizou a invocacao ou habilitou `task-automation`;
+2. a etapa atual terminou e foi validada;
+3. existe uma proxima tarefa concreta e documentada;
+4. nao existe pergunta, aprovacao ou erro bloqueante;
+5. nao existe outro `continue` pendente;
+6. a sessao exata esta definida;
+7. o trabalho ainda pertence ao mesmo escopo autorizado.
+
+Sequencia recomendada:
+
+```bash
+ai-presence control show --json
+ai-presence --dry-run continue \
+  --project "$PROJECT" \
+  --thread SESSAO_EXATA \
+  --transport native
+
+ai-presence continue \
+  --project "$PROJECT" \
+  --thread SESSAO_EXATA \
+  --transport native \
+  --authorize-once
+```
+
+Falha, timeout ou resultado incerto nunca autoriza retry automatico, fallback
+GUI ou escolha de outra sessao.
+
+### Encerramento da responsabilidade
+
+Execute uma vez quando todo o trabalho autorizado terminar:
+
+```bash
+ai-presence finish \
+  --project "$PROJECT" \
+  --protocol protocol2 \
+  --task "$TASK" \
+  --message "AI-worker concluiu a tarefa"
+```
+
+## Estados e Evidencias
+
+| Estado/evidencia | O que comprova | O que nao comprova |
+|---|---|---|
+| `dry-run` | argumentos e selecao calculados | emissao ou processamento |
+| `dispatch_started` | processo destacado foi criado | aceite, entrega ou atividade |
+| `input_emitted` | transporte sincrono terminou com sucesso | interpretacao correta pelo agente |
+| hook posterior | houve atividade posterior naquela sessao/worker | autoria da mensagem isoladamente |
+| `delivery_confirmed` | observer Discord correlacionou entrega GUI e hook | qualidade da resposta da IA |
+
+Para `continue` nativo, um hook isolado nao identifica qual entrada causou a
+atividade. Nao declare E2E concluido apenas porque apareceu um hook depois do
+comando.
+
+No envio para a propria sessao Codex, `dispatch_started` e o comportamento
+esperado. O monitor nao atualiza `last_activity_at` nesse momento; o proximo
+hook registra atividade normal. Isso evita falso positivo no Protocolo 2.
+
+## Protocolo E2E Nativo Correlacionado
+
+### Preparacao
+
+1. Obtenha autorizacao explicita para uma mensagem e sessao especificas.
+2. Confirme que nao existe outra execucao pendente para o alvo.
+3. Crie um identificador que ainda nao apareceu na conversa.
+4. Combine que o humano usara `prossiga` e nao digitara o marcador.
+5. Execute primeiro o dry-run.
+
+Exemplo de marcador:
+
+```text
+[AI-PRESENCE-E2E:20260911-001] continue
+```
+
+Dry-run:
+
+```bash
+ai-presence --dry-run continue \
+  --project /caminho/absoluto/do/projeto \
+  --thread SESSAO_EXATA \
+  --transport native \
+  --detach \
+  --delay 0 \
+  --message '[AI-PRESENCE-E2E:20260911-001] continue'
+```
+
+Execucao unica autorizada:
+
+```bash
+ai-presence continue \
+  --project /caminho/absoluto/do/projeto \
+  --thread SESSAO_EXATA \
+  --transport native \
+  --detach \
+  --delay 0 \
+  --message '[AI-PRESENCE-E2E:20260911-001] continue' \
+  --authorize-once
+```
+
+### Criterios de confirmacao
+
+O E2E somente esta confirmado quando todos forem verdadeiros:
+
+1. houve exatamente uma invocacao real;
+2. o texto exato com marcador apareceu uma vez no alvo;
+3. o humano confirmou que nao digitou nem colou o marcador;
+4. um hook posterior pertence a mesma sessao;
+5. nao houve retry depois de timeout ou resultado incerto.
+
+Classifique como **inconclusivo** quando a mensagem visivel puder ter sido
+manual, o alvo nao puder ser provado, o marcador estiver ausente ou houver
+somente hook. Classifique como **falha** apenas quando houver evidencia
+positiva de rejeicao sem resultado incerto.
+
+## Integracao por Subprocesso ou Ferramenta
+
+Outra IA, orquestrador, MCP server ou function-calling adapter pode expor a CLI
+como uma ferramenta local. O wrapper deve:
+
+1. fornecer argumentos como lista, nunca concatenar shell com entrada externa;
+2. limitar comandos e opcoes permitidos por allowlist;
+3. exigir `--project` absoluto;
+4. preservar o codigo de saida e a saida padrao/erro;
+5. nunca carregar nem retornar o `.env` ao modelo;
+6. pedir autorizacao humana antes de `continue`, `send-input`,
+   `dispatch-answer` ou fallback GUI;
+7. proibir retry automatico de entrada incerta;
+8. registrar alvo, estado e marcador, mas nao tokens ou conteudo sensivel.
+
+Interface minima recomendada para um adaptador:
+
+```text
+presence_start(project, protocol, task, message)
+presence_touch(project, protocol, task, message)
+presence_finish(project, protocol, task, message)
+presence_status()
+presence_ask_user(project, question, timeout)
+presence_continue(project, thread, message, delay, authorize_once)
+presence_stop_alarm()
+```
+
+O adaptador deve mapear cada funcao para um subcomando existente e retornar
+codigo de saida, estado textual e erro sanitizado. Ele nao deve transformar
+`dispatch_started` em sucesso de entrega.
+
+## Prompt Pronto para Outra IA
+
+```text
+Antes de trabalhar, leia AGENTS.md, docs/USO-COMO-FERRAMENTA.md,
+docs/AI-WORKER-COMMAND-PROTOCOL.md e docs/security/SECURITY.md do
+AI Presence Monitor. Use o comando ai-presence instalado e sempre informe
+--project com o caminho absoluto do projeto em que voce esta trabalhando.
+Execute start uma vez ao aceitar a tarefa, confie nos hooks durante o trabalho
+e execute finish uma vez ao concluir. Nao use touch por temporizador. Nao
+execute continue, send-input, dispatch-answer ou automacao GUI sem autorizacao
+humana explicita. Nao repita entrada com resultado incerto. Interprete
+dispatch_started apenas como processo criado e input_emitted apenas como
+transporte sincrono concluido. Hook isolado comprova atividade posterior, nao a
+autoria de uma mensagem. Para E2E, use marcador exclusivo e confirme que o
+humano nao digitou esse marcador.
+```
+
+## Diagnostico e Recuperacao
+
+Comandos sem controle de GUI:
+
+```bash
+ai-presence status
+ai-presence questions
+ai-presence stop-alarm
+```
+
+No Linux:
+
+```bash
+systemctl --user is-active ai-presence-monitor.service
+systemctl --user is-active ai-presence-reply-observer.service
+journalctl --user-unit ai-presence-reply-observer.service -n 30 --no-pager
+```
+
+Se o observer atingir o limite de reinicios, corrija a causa e execute:
+
+```bash
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user restart ai-presence-reply-observer.service
+```
+
+Se houver alarme audivel, execute `ai-presence stop-alarm` imediatamente.
+
+## Limites e Documentos Relacionados
+
+- [AI-WORKER-COMMAND-PROTOCOL.md](AI-WORKER-COMMAND-PROTOCOL.md): protocolo
+  normativo resumido para AI-workers.
+- [CONTINUE-CODEX.md](CONTINUE-CODEX.md): norma completa do procedimento
+  `continue`.
+- [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md): bandeja,
+  `codex queue` e controles.
+- [RESPOSTAS-REMOTAS-DISCORD-CODEX.md](RESPOSTAS-REMOTAS-DISCORD-CODEX.md):
+  perguntas e respostas correlacionadas.
+- [CONFIGURANDO-ENV.md](CONFIGURANDO-ENV.md): preenchimento seguro do `.env`.
+- [security/SECURITY.md](security/SECURITY.md): checklist e riscos residuais.
+- [planning/TASK-017-native-self-queue.md](planning/TASK-017-native-self-queue.md):
+  estado atual da validacao E2E nativa.

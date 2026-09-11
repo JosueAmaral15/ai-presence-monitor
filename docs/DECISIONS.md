@@ -28,8 +28,8 @@ sincronizar presenca.
 
 `CODEX_SESSION_ID` e `CODEX_THREAD_ID` ativam o modo automaticamente. POSIX usa
 uma nova sessao de processo e Windows usa um novo grupo sem janela. O hook
-posterior e a primeira evidencia de processamento e atualiza a atividade
-normalmente.
+posterior e evidencia de atividade e atualiza o monitor normalmente, mas um
+teste de mensagem exige marcador exclusivo para atribuir a origem.
 
 ## 2026-09-11 - Entrada nativa antes do fallback GUI
 

@@ -105,6 +105,10 @@ sucesso. Nenhum dos dois estados prova processamento: a retomada deve ser
 confirmada por hook posterior, resultado visivel ou nova evidencia de trabalho.
 Resultado incerto exige inspecao, nao reenvio.
 
+Um hook isolado comprova atividade posterior da sessao, nao a autoria de uma
+mensagem especifica. Para atribuir um E2E ao transporte, siga o protocolo com
+marcador exclusivo em [USO-COMO-FERRAMENTA.md](USO-COMO-FERRAMENTA.md).
+
 ### Relacao com os protocolos de presenca
 
 No Protocolo 1, `continue` nunca substitui o heartbeat publico. No Protocolo 2,
@@ -390,23 +394,28 @@ Em 2026-09-11, uma execucao autorizada validou o fluxo instalado no Linux X11:
 Essa verificacao confirma o fallback GUI anterior e o processamento inicial
 daquela execucao, sem ampliar a autorizacao para execucoes futuras.
 
-## Evidencia E2E do transporte nativo
+## Tentativa E2E inconclusiva do transporte nativo
 
-Em 2026-09-11, outra autorizacao explicita permitiu uma unica mensagem
+Em 2026-09-11, outra autorizacao explicita permitiu uma tentativa de mensagem
 `continue`, com delay zero, para a sessao local
 `019f5691-c118-7370-a205-94cfde0a93d7`:
 
 1. o dry-run confirmou destino, sessao, mensagem e transporte nativo;
 2. a chamada sincrona expirou depois de 15 segundos e nao foi repetida;
-3. a mensagem apareceu uma unica vez na sessao depois que o processo chamador
-   foi liberado;
-4. o SQLite registrou `SessionStart` as `16:00:10` e `UserPromptSubmit` as
-   `16:00:11` para a mesma sessao.
+3. uma mensagem `continue` apareceu e o SQLite registrou hooks posteriores;
+4. o usuario esclareceu que ele proprio havia digitado essa mensagem.
 
-O teste revelou que a propria sessao nao pode aguardar sincronicamente sua fila.
-A versao 0.6.1 passa a detectar esse caso, retornar `dispatch_started` e confiar
-no hook posterior sem criar atividade antecipada. A autorizacao foi consumida;
-nenhum novo envio real faz parte desta validacao.
+A mensagem e os hooks provam somente atividade manual, nao entrega pela fila.
+Logo, o E2E nativo permanece pendente. O timeout sustenta o diagnostico de
+bloqueio sincrono da propria sessao, e a versao 0.6.1 continua evitando essa
+espera ao retornar `dispatch_started`, mas um novo teste precisa de autorizacao
+e marcador exclusivo.
+
+No proximo E2E, use texto como `[AI-PRESENCE-E2E:<id>] continue`. Durante a
+janela do teste, o usuario usa `prossiga` para mensagens manuais e nao digita o
+marcador. Somente a aparicao do texto exato, combinada com hook posterior da
+mesma sessao, pode confirmar processamento. Hook isolado nao identifica a
+origem da mensagem.
 
 ## Rollback
 
