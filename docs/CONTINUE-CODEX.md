@@ -99,16 +99,19 @@ Quando as pre-condicoes forem satisfeitas, a IA deve:
 8. na sessao seguinte, verificar o status e os hooks antes de considerar que o
    Codex retomou o trabalho.
 
-`input_emitted` confirma apenas que o transporte aceitou o envio. A retomada
-deve ser confirmada por hook posterior, resultado visivel ou nova evidencia de
-trabalho. Resultado incerto exige inspecao, nao reenvio.
+`dispatch_started` confirma apenas que o processo destacado foi criado.
+`input_emitted` confirma que uma execucao sincrona do transporte terminou com
+sucesso. Nenhum dos dois estados prova processamento: a retomada deve ser
+confirmada por hook posterior, resultado visivel ou nova evidencia de trabalho.
+Resultado incerto exige inspecao, nao reenvio.
 
 ### Relacao com os protocolos de presenca
 
 No Protocolo 1, `continue` nunca substitui o heartbeat publico. No Protocolo 2,
-a emissao bem-sucedida reinicia temporariamente `last_activity_at`, mas nao
-prova execucao da tarefa. Se nao houver atividade posterior, os alertas devem
-retornar normalmente.
+somente uma emissao sincrona bem-sucedida pode reiniciar temporariamente
+`last_activity_at`. Um despacho destacado nao atualiza o relogio: o hook
+posterior registra a atividade real. Se nao houver atividade posterior, os
+alertas devem retornar normalmente.
 
 O AI-worker deve permanecer `active` entre sessoes somente quando continua
 responsavel por uma cadeia autorizada de tarefas. Quando a cadeia terminar, a
@@ -204,11 +207,28 @@ Para envio imediato:
 ai-presence continue --delay 0 --thread SESSAO_EXATA
 ```
 
+Ao enviar para a propria sessao Codex, identificada por `CODEX_SESSION_ID` ou
+`CODEX_THREAD_ID`, o modo nativo usa automaticamente um processo destacado e
+retorna `dispatch_started`. Isso evita que o turno atual espere pela mensagem
+que somente podera ser processada depois que ele terminar.
+
+O modo tambem pode ser escolhido explicitamente:
+
+```bash
+ai-presence continue --detach --thread SESSAO_EXATA
+ai-presence send-input --detach --thread SESSAO_EXATA --message 'continue'
+```
+
+`--no-detach` e uma opcao de diagnostico para processos que nao sejam o proprio
+turno de destino. Nao a use para forcar espera sincrona na sessao atual.
+
 O alias `continue-task` executa o mesmo comando.
 
 ## Execucao em segundo plano
 
-Para encerrar o terminal atual sem cancelar a espera:
+`--detach` destaca somente o processo `codex queue`, depois do delay. Para
+encerrar o terminal atual sem cancelar a propria espera, destaque o comando
+`ai-presence` inteiro:
 
 ```bash
 mkdir -p "$HOME/.local/state"
@@ -253,7 +273,7 @@ o texto Unicode e emitido por `SendInput`; a area de transferencia nao e usada.
 
 ## Sincronizacao com o Protocolo 2
 
-Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, o fluxo e:
+Com `PRESENCE_CONTINUE_SYNC_ACTIVITY=true`, o fluxo sincrono e:
 
 1. a sessao exata e resolvida, ou a janela e capturada no fallback;
 2. o programa aguarda o delay;
@@ -273,6 +293,11 @@ O sistema nao trata a automacao como prova de qualidade ou conclusao do
 trabalho. O evento informa que a entrada foi emitida; o hook posterior informa
 que houve atividade subsequente.
 
+No despacho destacado, o fluxo termina inicialmente em `dispatch_started` e
+nao executa os passos 5 e 6. O processo pode ainda falhar depois da criacao, e
+por isso o monitor nao antecipa atividade. Se a mensagem for processada, o hook
+posterior atualiza `last_activity_at` pela origem normal `codex:*`.
+
 ## Comportamento no Protocolo 1
 
 O evento de automacao preserva `last_signal_at`. Assim, executar `continue` nao
@@ -282,6 +307,7 @@ substitui o heartbeat publico esperado pelo Protocolo 1.
 
 - iniciar ou agendar o comando;
 - executar `--dry-run`;
+- obter apenas `dispatch_started` de um processo destacado;
 - cancelar durante a espera;
 - nao encontrar a sessao nativa;
 - falhar o Codex CLI ou o endpoint remoto;
@@ -341,6 +367,7 @@ mensagem, atraso, titulo, ID opcional e sincronizacao.
 
 - O programa nunca escolhe a primeira janela de uma lista ambigua.
 - A entrada nativa exige uma sessao exata e usa `subprocess` sem shell.
+- A propria sessao e despachada sem bloquear o turno nem antecipar atividade.
 - O texto nao passa por shell.
 - No Linux, o clipboard anterior e restaurado.
 - No Windows, a digitacao Unicode nao altera o clipboard.
@@ -361,9 +388,25 @@ Em 2026-09-11, uma execucao autorizada validou o fluxo instalado no Linux X11:
    `observation:codex:UserPromptSubmit` as `00:25:45` no mesmo worker.
 
 Essa verificacao confirma o fallback GUI anterior e o processamento inicial
-daquela execucao, sem ampliar a autorizacao para execucoes futuras. O
-transporte nativo da versao 0.6.0 possui testes automatizados; o E2E real requer
-uma autorizacao separada para uma mensagem e sessao especificas.
+daquela execucao, sem ampliar a autorizacao para execucoes futuras.
+
+## Evidencia E2E do transporte nativo
+
+Em 2026-09-11, outra autorizacao explicita permitiu uma unica mensagem
+`continue`, com delay zero, para a sessao local
+`019f5691-c118-7370-a205-94cfde0a93d7`:
+
+1. o dry-run confirmou destino, sessao, mensagem e transporte nativo;
+2. a chamada sincrona expirou depois de 15 segundos e nao foi repetida;
+3. a mensagem apareceu uma unica vez na sessao depois que o processo chamador
+   foi liberado;
+4. o SQLite registrou `SessionStart` as `16:00:10` e `UserPromptSubmit` as
+   `16:00:11` para a mesma sessao.
+
+O teste revelou que a propria sessao nao pode aguardar sincronicamente sua fila.
+A versao 0.6.1 passa a detectar esse caso, retornar `dispatch_started` e confiar
+no hook posterior sem criar atividade antecipada. A autorizacao foi consumida;
+nenhum novo envio real faz parte desta validacao.
 
 ## Rollback
 

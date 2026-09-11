@@ -130,12 +130,14 @@ class CliBehaviorTests(unittest.TestCase):
                 "Codex",
                 "--allow-title-change",
                 "--no-sync-activity",
+                "--detach",
             ]
         )
         self.assertEqual(continue_args.command, "continue")
         self.assertTrue(continue_args.allow_title_change)
         self.assertFalse(continue_args.sync_activity)
         self.assertIsNone(continue_args.destination)
+        self.assertTrue(continue_args.detach)
 
         control_args = parser.parse_args(
             ["control", "enable", "task-automation", "--json"]
@@ -151,9 +153,11 @@ class CliBehaviorTests(unittest.TestCase):
                 "continue",
                 "--thread",
                 "thread-1",
+                "--no-detach",
             ]
         )
         self.assertEqual(input_args.destination, "local")
+        self.assertFalse(input_args.detach)
 
         stop_alarm_args = parser.parse_args(
             ["--dry-run", "stop-alarm", "--timeout", "1", "--no-force"]

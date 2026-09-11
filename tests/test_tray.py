@@ -8,7 +8,7 @@ from ai_presence_monitor.codex_input import (
     send_native_message,
 )
 from ai_presence_monitor.control import ControlSettings
-from ai_presence_monitor.tray import build_parser
+from ai_presence_monitor.tray import build_parser, dispatch_tray_message
 
 
 class FakeClient:
@@ -22,6 +22,7 @@ class FakeClient:
         text: str,
         remote: str | None = None,
         remote_auth_token_env: str | None = None,
+        detached: bool = False,
     ) -> CodexInputResult:
         self.calls.append(
             {
@@ -29,9 +30,14 @@ class FakeClient:
                 "text": text,
                 "remote": remote,
                 "remote_auth_token_env": remote_auth_token_env,
+                "detached": str(detached),
             }
         )
-        return CodexInputResult(thread_id=thread_id, remote=remote)
+        return CodexInputResult(
+            thread_id=thread_id,
+            remote=remote,
+            state="dispatch_started" if detached else "input_emitted",
+        )
 
 
 class TrayMessageTests(unittest.TestCase):
@@ -59,6 +65,24 @@ class TrayMessageTests(unittest.TestCase):
 
         self.assertIsNone(result.remote)
         self.assertIsNone(client.calls[0]["remote"])
+
+    def test_tray_message_is_always_dispatched_without_blocking_ui(self) -> None:
+        client = FakeClient()
+        settings = ControlSettings(
+            native_input_enabled=True,
+            codex_thread_id="thread",
+        )
+
+        result = dispatch_tray_message(
+            settings=settings,
+            message="continue",
+            destination="local",
+            thread_id=None,
+            client=client,  # type: ignore[arg-type]
+        )
+
+        self.assertEqual(result.state, "dispatch_started")
+        self.assertEqual(client.calls[0]["detached"], "True")
 
     def test_remote_message_uses_configured_client(self) -> None:
         client = FakeClient()

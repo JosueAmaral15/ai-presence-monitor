@@ -124,10 +124,11 @@ usuario tiver autorizado `--authorize-once`, e depois de aplicar a
 resumo: a etapa atual deve estar concluida, a proxima tarefa precisa ser
 concreta e nao pode existir pergunta, bloqueio ou outra execucao pendente.
 
-Uma emissao bem-sucedida atualiza `last_activity_at` de um worker ativo no
-Protocolo 2. Falha, cancelamento, dry-run e worker inativo nao atualizam o
-monitor. O evento nao prova que o Codex processou a mensagem; verifique um hook
-posterior antes de considerar a retomada confirmada.
+Uma emissao sincrona bem-sucedida pode atualizar `last_activity_at` de um
+worker ativo no Protocolo 2. Ao enviar para a propria sessao, a CLI retorna
+`dispatch_started` sem atualizar o monitor; somente o hook posterior registra
+atividade. Falha, cancelamento, dry-run e worker inativo tambem nao atualizam o
+monitor. Nenhum estado inicial prova que o Codex processou a mensagem.
 
 Na ausencia de `PRESENCE_CODEX_THREAD_ID`, o comando real pode inferir a sessao
 do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
@@ -210,6 +211,10 @@ impede o monitor de alertas nem os hooks de funcionar.
 
 A IA deve verificar o codigo de saida e relatar o erro. Nao deve repetir
 automaticamente nenhum envio com resultado incerto.
+
+`dispatch_started` com codigo zero significa apenas que o processo destacado
+foi criado. A IA deve encerrar o turno e confiar no hook seguinte, sem executar
+novo envio nem `touch` para fabricar confirmacao.
 
 ## Linux e Windows
 

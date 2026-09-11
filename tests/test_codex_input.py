@@ -7,7 +7,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ai_presence_monitor.codex_input import CodexInputError, CodexQueueClient
+from ai_presence_monitor.codex_input import (
+    CodexInputError,
+    CodexQueueClient,
+    is_current_codex_session,
+)
 
 
 class FakeRunner:
@@ -20,6 +24,22 @@ class FakeRunner:
         command: list[str],
         **kwargs: object,
     ) -> subprocess.CompletedProcess[str]:
+        self.calls.append((command, kwargs))
+        if isinstance(self.result, Exception):
+            raise self.result
+        return self.result
+
+
+class FakeProcess:
+    pid = 4321
+
+
+class FakeLauncher:
+    def __init__(self, result: FakeProcess | Exception):
+        self.result = result
+        self.calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def __call__(self, command: list[str], **kwargs: object) -> FakeProcess:
         self.calls.append((command, kwargs))
         if isinstance(self.result, Exception):
             raise self.result
@@ -50,6 +70,71 @@ class CodexQueueClientTests(unittest.TestCase):
         self.assertNotIn("shell", kwargs)
         self.assertEqual(result.thread_id, "thread-1")
         self.assertIsNone(result.remote)
+        self.assertEqual(result.state, "input_emitted")
+
+    def test_detached_send_starts_one_background_process(self) -> None:
+        runner = FakeRunner(AssertionError("runner must not be called"))
+        launcher = FakeLauncher(FakeProcess())
+        with patch(
+            "ai_presence_monitor.codex_input.shutil.which",
+            return_value="/bin/codex",
+        ):
+            result = CodexQueueClient(
+                runner=runner,
+                launcher=launcher,  # type: ignore[arg-type]
+            ).send(
+                thread_id="thread-1",
+                text="continue",
+                detached=True,
+            )
+
+        command, kwargs = launcher.calls[0]
+        self.assertEqual(command[0:2], ["/bin/codex", "queue"])
+        self.assertNotIn("shell", kwargs)
+        self.assertEqual(kwargs["stdin"], subprocess.DEVNULL)
+        self.assertEqual(kwargs["stdout"], subprocess.DEVNULL)
+        self.assertEqual(kwargs["stderr"], subprocess.DEVNULL)
+        self.assertTrue(kwargs["close_fds"])
+        self.assertTrue(kwargs["start_new_session"])
+        self.assertEqual(result.state, "dispatch_started")
+        self.assertEqual(result.process_id, 4321)
+        self.assertEqual(runner.calls, [])
+
+    def test_detached_windows_send_uses_process_group_without_session_flag(self) -> None:
+        launcher = FakeLauncher(FakeProcess())
+        with patch(
+            "ai_presence_monitor.codex_input.shutil.which",
+            return_value=r"C:\\Codex\\codex.exe",
+        ), patch(
+            "ai_presence_monitor.codex_input.sys.platform",
+            "win32",
+        ), patch.object(
+            subprocess,
+            "CREATE_NO_WINDOW",
+            0x08000000,
+            create=True,
+        ), patch.object(
+            subprocess,
+            "CREATE_NEW_PROCESS_GROUP",
+            0x00000200,
+            create=True,
+        ):
+            CodexQueueClient(
+                launcher=launcher,  # type: ignore[arg-type]
+            ).send(thread_id="thread-1", text="continue", detached=True)
+
+        _, kwargs = launcher.calls[0]
+        self.assertEqual(kwargs["creationflags"], 0x08000200)
+        self.assertNotIn("start_new_session", kwargs)
+
+    def test_current_session_detection_uses_codex_environment(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"CODEX_SESSION_ID": "session-current"},
+            clear=True,
+        ):
+            self.assertTrue(is_current_codex_session("session-current"))
+            self.assertFalse(is_current_codex_session("session-other"))
 
     def test_remote_send_requires_defined_token_environment(self) -> None:
         runner = FakeRunner(subprocess.CompletedProcess([], 0, "", ""))
@@ -131,6 +216,22 @@ class CodexQueueClientTests(unittest.TestCase):
                         text="continue",
                     )
                 self.assertEqual(len(runner.calls), 1)
+
+    def test_detached_launch_failure_is_reported_without_retry(self) -> None:
+        launcher = FakeLauncher(OSError("denied"))
+        with patch(
+            "ai_presence_monitor.codex_input.shutil.which",
+            return_value="codex",
+        ), self.assertRaisesRegex(CodexInputError, "Falha ao iniciar"):
+            CodexQueueClient(
+                launcher=launcher,  # type: ignore[arg-type]
+            ).send(
+                thread_id="thread",
+                text="continue",
+                detached=True,
+            )
+
+        self.assertEqual(len(launcher.calls), 1)
 
     def test_cli_failure_redacts_message_from_error(self) -> None:
         runner = FakeRunner(

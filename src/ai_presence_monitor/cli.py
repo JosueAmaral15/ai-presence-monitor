@@ -369,6 +369,7 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
             thread_id=getattr(args, "thread", None),
             remote=getattr(args, "remote", None),
             remote_auth_token_env=getattr(args, "remote_auth_token_env", None),
+            native_detached=getattr(args, "detach", None),
             dry_run=args.dry_run,
             controls=controls,
         )
@@ -388,9 +389,18 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
             f"transporte={result.transport} "
             f"destino={result.destination} "
             f"sessao={result.thread_id or '-'} "
+            f"destacado={str(result.detached).lower()} "
             f"permitir_mudanca_titulo={str(args.allow_title_change).lower()} "
             f"sincronizar_atividade={str(sync).lower()}; "
             "espera, entrada e banco nao foram acessados."
+        )
+        return 0
+
+    if result.dispatch_state == "dispatch_started":
+        print(
+            "continue: dispatch_started transporte=native "
+            f"destino={result.destination} sessao={result.thread_id} "
+            f"worker={worker_id}; um hook posterior confirma o processamento"
         )
         return 0
 
@@ -511,12 +521,13 @@ def _send_input(args: argparse.Namespace, config: AppConfig) -> int:
             message=args.message,
             destination=destination,
             thread_id=thread_id,
+            detached=getattr(args, "detach", None),
         )
     except CodexInputError as exc:
         print(f"Falha ao enviar entrada: {exc}", file=sys.stderr)
         return 2
     print(
-        f"input_emitted transporte=native sessao={result.thread_id} "
+        f"{result.state} transporte=native sessao={result.thread_id} "
         f"destino={'cliente' if result.remote else 'local'}"
     )
     return 0
@@ -893,6 +904,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Autoriza somente esta execucao quando a automacao persistente esta desligada.",
     )
+    continue_parser.add_argument(
+        "--detach",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Executa codex queue em segundo plano. Padrao: automatico ao enviar "
+            "para a propria sessao Codex."
+        ),
+    )
     continue_parser.set_defaults(
         func=lambda args, config: _continue_task(args, config)
     )
@@ -944,6 +964,12 @@ def build_parser() -> argparse.ArgumentParser:
     input_parser.add_argument(
         "--thread",
         help="UUID ou nome exato; sobrescreve o alvo persistente.",
+    )
+    input_parser.add_argument(
+        "--detach",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Despacha em segundo plano; automatico para a propria sessao.",
     )
     input_parser.set_defaults(func=lambda args, config: _send_input(args, config))
 

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Literal
 
-from .codex_input import CodexInputError, CodexQueueClient
+from .codex_input import (
+    CodexInputError,
+    CodexQueueClient,
+    is_current_codex_session,
+)
 from .config import AppConfig
 from .control import ControlSettings
 from .gui_answer import GuiAnswerDispatcher, GuiDispatchError, WindowTarget
@@ -16,6 +20,9 @@ class ContinueTaskError(RuntimeError):
     pass
 
 
+ContinueDispatchState = Literal["dry_run", "dispatch_started", "input_emitted"]
+
+
 @dataclass(frozen=True)
 class ContinueTaskResult:
     worker_id: str
@@ -24,9 +31,11 @@ class ContinueTaskResult:
     input_emitted: bool
     activity_synced: bool
     sync_reason: str
+    dispatch_state: ContinueDispatchState
     transport: str
     destination: str
     thread_id: str | None
+    detached: bool
     target: WindowTarget | None
     worker: WorkerState | None
 
@@ -57,6 +66,7 @@ def execute_continue_task(
     thread_id: str | None = None,
     remote: str | None = None,
     remote_auth_token_env: str | None = None,
+    native_detached: bool | None = None,
     dry_run: bool = False,
     store: PresenceStore | None = None,
     dispatcher: GuiAnswerDispatcher | None = None,
@@ -127,6 +137,14 @@ def execute_continue_task(
     else:
         resolved_remote = None
         resolved_auth_env = None
+    detached = bool(
+        selected_transport == "native"
+        and (
+            is_current_codex_session(resolved_thread or "")
+            if native_detached is None
+            else native_detached
+        )
+    )
 
     pattern = title_pattern or config.codex_gui_window_title
     if selected_transport == "gui":
@@ -146,24 +164,29 @@ def execute_continue_task(
             input_emitted=False,
             activity_synced=False,
             sync_reason="dry_run",
+            dispatch_state="dry_run",
             transport=selected_transport,
             destination=destination,
             thread_id=resolved_thread,
+            detached=detached,
             target=None,
             worker=None,
         )
 
     target: WindowTarget | None = None
+    dispatch_state: ContinueDispatchState = "input_emitted"
     try:
         if selected_transport == "native":
             assert resolved_thread is not None
             wait(delay)
-            native_client.send(
+            native_result = native_client.send(
                 thread_id=resolved_thread,
                 text=text,
                 remote=resolved_remote,
                 remote_auth_token_env=resolved_auth_env,
+                detached=detached,
             )
+            dispatch_state = native_result.state
         else:
             assert pattern is not None
             actor = dispatcher or get_platform_factory().create_gui_dispatcher(
@@ -183,6 +206,23 @@ def execute_continue_task(
     except (CodexInputError, GuiDispatchError, UnsupportedPlatformError) as exc:
         raise ContinueTaskError(str(exc)) from exc
 
+    if dispatch_state == "dispatch_started":
+        return ContinueTaskResult(
+            worker_id=worker_id,
+            message=text,
+            delay_seconds=delay,
+            input_emitted=False,
+            activity_synced=False,
+            sync_reason="awaiting_hook",
+            dispatch_state=dispatch_state,
+            transport=selected_transport,
+            destination=destination,
+            thread_id=resolved_thread,
+            detached=True,
+            target=None,
+            worker=None,
+        )
+
     if not should_sync:
         return ContinueTaskResult(
             worker_id=worker_id,
@@ -191,9 +231,11 @@ def execute_continue_task(
             input_emitted=True,
             activity_synced=False,
             sync_reason="disabled",
+            dispatch_state=dispatch_state,
             transport=selected_transport,
             destination=destination,
             thread_id=resolved_thread,
+            detached=detached,
             target=target,
             worker=None,
         )
@@ -208,9 +250,11 @@ def execute_continue_task(
             input_emitted=True,
             activity_synced=False,
             sync_reason="worker_missing",
+            dispatch_state=dispatch_state,
             transport=selected_transport,
             destination=destination,
             thread_id=resolved_thread,
+            detached=detached,
             target=target,
             worker=None,
         )
@@ -222,9 +266,11 @@ def execute_continue_task(
             input_emitted=True,
             activity_synced=False,
             sync_reason="worker_idle",
+            dispatch_state=dispatch_state,
             transport=selected_transport,
             destination=destination,
             thread_id=resolved_thread,
+            detached=detached,
             target=target,
             worker=current_worker,
         )
@@ -251,9 +297,11 @@ def execute_continue_task(
             input_emitted=True,
             activity_synced=False,
             sync_reason="worker_inactive",
+            dispatch_state=dispatch_state,
             transport=selected_transport,
             destination=destination,
             thread_id=resolved_thread,
+            detached=detached,
             target=target,
             worker=current_worker,
         )
@@ -264,9 +312,11 @@ def execute_continue_task(
         input_emitted=True,
         activity_synced=True,
         sync_reason="synced",
+        dispatch_state=dispatch_state,
         transport=selected_transport,
         destination=destination,
         thread_id=resolved_thread,
+        detached=detached,
         target=target,
         worker=updated_worker,
     )

@@ -456,6 +456,12 @@ The default delay is 60 seconds. With no configured thread, the real command
 may infer the latest Codex session observed for the same worker. `auto` prefers
 native input. X11 and Win32 are explicit, disabled-by-default fallbacks.
 
+When the target is the calling Codex session, native input starts a detached
+queue process and reports `dispatch_started` so the current turn does not wait
+for itself. This state does not update presence; a later Codex hook is the
+processing evidence. Use `--detach` to request this mode explicitly and
+`--no-detach` only for diagnostics outside the target turn.
+
 For terminals that dynamically change the full title, combine an explicit
 window ID with a stable project title pattern:
 

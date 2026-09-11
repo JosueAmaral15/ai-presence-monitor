@@ -59,6 +59,8 @@
 - A mensagem padrao deve ser `continue`.
 - O delay padrao deve ser 60 segundos.
 - O transporte nativo deve usar `codex queue` sem shell, mouse ou teclado.
+- O envio para a propria sessao deve ser nao bloqueante e retornar
+  `dispatch_started` sem atualizar presenca antes de um hook posterior.
 - O alvo nativo deve ser uma sessao explicita ou inferida de hook do mesmo worker.
 - X11/Win32 deve permanecer fallback explicito, desativado por padrao, com
   janela unica capturada e revalidada.

@@ -64,7 +64,7 @@ python3 main.py
 
 O menu pergunta os dados no terminal e pode criar o `.env`, inicializar o banco, registrar ponto, registrar inicio/fim de tarefa e rodar o monitor.
 
-A versao 0.6.0 tambem oferece entrada direta por `codex queue`, sem controlar
+A versao 0.6.1 tambem oferece entrada direta por `codex queue`, sem controlar
 mouse ou teclado, e uma bandeja opcional. Instale e inicie com:
 
 ```bash
@@ -75,6 +75,10 @@ ai-presence tray
 
 O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
 local/remoto e a autorizacao do procedimento `continue`.
+
+Quando o alvo e a propria sessao Codex, o comando retorna `dispatch_started`
+sem bloquear o turno e sem antecipar atividade. Um hook posterior confirma o
+processamento e atualiza o Protocolo 2.
 
 Atalho equivalente no Linux:
 

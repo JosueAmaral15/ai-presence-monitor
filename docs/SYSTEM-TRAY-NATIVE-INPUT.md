@@ -2,7 +2,7 @@
 
 ## Resultado
 
-A versao 0.6.0 oferece duas formas de enviar texto ao Codex:
+A versao 0.6.1 oferece duas formas de enviar texto ao Codex:
 
 1. **entrada nativa**, por `codex queue`, sem mover mouse, usar teclado ou
    alterar clipboard;
@@ -35,10 +35,15 @@ O texto e passado como um item de uma lista de argumentos a `subprocess`, com
 `shell=False` implícito. Ele nao e digitado na janela e nao e interpretado por
 Bash, PowerShell ou `cmd.exe`.
 
-Uma saida `input_emitted` significa que o Codex CLI aceitou o comando. O hook
-posterior da mesma sessao continua sendo a confirmacao de que o agente iniciou
-o processamento. Timeout ou erro nao produz retry automatico nem troca de
-transporte.
+Uma saida `dispatch_started` significa somente que o processo destacado foi
+criado. `input_emitted` significa que uma chamada sincrona terminou com
+sucesso. O hook posterior da mesma sessao continua sendo a confirmacao de que o
+agente iniciou o processamento. Timeout ou erro nao produz retry automatico
+nem troca de transporte.
+
+Quando o alvo coincide com `CODEX_SESSION_ID` ou `CODEX_THREAD_ID`, a CLI usa
+automaticamente o despacho destacado para evitar espera circular. A bandeja
+sempre usa esse modo para manter seu event loop responsivo.
 
 ## Instalar a Bandeja
 
@@ -167,6 +172,15 @@ Envio local real:
 ai-presence send-input --message 'Resposta para o agente'
 ```
 
+Para escolher explicitamente o modo nao bloqueante:
+
+```bash
+ai-presence send-input --detach --message 'Resposta para o agente'
+```
+
+`--no-detach` preserva a chamada sincrona para diagnostico fora da sessao de
+destino. Ele nao deve ser usado pelo turno que recebera a propria mensagem.
+
 Envio ao computador cliente:
 
 ```bash
@@ -256,6 +270,8 @@ relativo explicito e resolvido a partir do diretorio do `.env`.
 - Ela nao e iniciada automaticamente no login nesta versao.
 - O envio nativo depende do comando experimental `codex queue` instalado no
   mesmo computador que executa `ai-presence`.
+- Um processo destacado pode falhar depois de `dispatch_started`; somente um
+  hook posterior comprova processamento e atualiza atividade.
 - O texto segue em `--message` para o processo Codex e pode aparecer
   temporariamente em ferramentas locais de inspecao; nao envie segredos.
 - O compositor manual nao correlaciona a mensagem com uma pergunta Discord;
