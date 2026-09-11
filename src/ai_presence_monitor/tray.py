@@ -4,7 +4,12 @@ import argparse
 import sys
 from typing import Any
 
-from .codex_input import CodexInputError, send_native_message
+from .codex_input import (
+    CodexInputError,
+    CodexInputResult,
+    CodexQueueClient,
+    send_native_message,
+)
 from .config import AppConfig, load_config
 from .control import ControlError, ControlSettings, ControlStore
 from .store import PresenceStore
@@ -12,6 +17,24 @@ from .store import PresenceStore
 
 class TrayUnavailableError(RuntimeError):
     pass
+
+
+def dispatch_tray_message(
+    *,
+    settings: ControlSettings,
+    message: str,
+    destination: str,
+    thread_id: str | None,
+    client: CodexQueueClient | None = None,
+) -> CodexInputResult:
+    return send_native_message(
+        settings=settings,
+        message=message,
+        destination=destination,
+        thread_id=thread_id,
+        client=client,
+        detached=True,
+    )
 
 
 def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
@@ -262,7 +285,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             dialog = MessageDialog(settings)
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
-            result = send_native_message(
+            result = dispatch_tray_message(
                 settings=settings,
                 message=dialog.message.toPlainText(),
                 destination=dialog.destination_name(),
@@ -271,8 +294,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             location = "client computer" if result.remote else "this computer"
             QMessageBox.information(
                 None,
-                "Message queued",
-                f"Input emitted to {location}. A later Codex hook confirms processing.",
+                "Dispatch started",
+                f"Dispatch started for {location}. A later Codex hook confirms processing.",
             )
         except (CodexInputError, ControlError) as exc:
             show_error("Message was not sent", exc)

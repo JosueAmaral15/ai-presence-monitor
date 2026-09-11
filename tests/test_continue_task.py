@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from test_cli import make_config
 
@@ -53,7 +54,7 @@ class FakeQueueClient:
     def __init__(self, *, available: bool = True, fail: bool = False):
         self.available = available
         self.fail = fail
-        self.sent: list[dict[str, str | None]] = []
+        self.sent: list[dict[str, object]] = []
 
     def is_available(self) -> bool:
         return self.available
@@ -65,6 +66,7 @@ class FakeQueueClient:
         text: str,
         remote: str | None = None,
         remote_auth_token_env: str | None = None,
+        detached: bool = False,
     ) -> CodexInputResult:
         if self.fail:
             raise CodexInputError("resultado incerto")
@@ -74,9 +76,15 @@ class FakeQueueClient:
                 "text": text,
                 "remote": remote,
                 "remote_auth_token_env": remote_auth_token_env,
+                "detached": detached,
             }
         )
-        return CodexInputResult(thread_id=thread_id, remote=remote)
+        return CodexInputResult(
+            thread_id=thread_id,
+            remote=remote,
+            state="dispatch_started" if detached else "input_emitted",
+            process_id=4321 if detached else None,
+        )
 
 
 def continue_config(root: Path):
@@ -203,6 +211,50 @@ class ContinueTaskTests(unittest.TestCase):
                 [session],
             )
             self.assertEqual(store.list_codex_sessions(limit=0), [])
+
+    def test_native_self_target_detaches_and_waits_for_hook(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            session = "019f5691-c118-7370-a205-94cfde0a93d7"
+            config = replace(
+                make_config(root),
+                continue_transport="native",
+                codex_thread_id=session,
+            )
+            store = PresenceStore(config.db_path)
+            worker = store.record_event(
+                worker_id="worker",
+                computer="computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+            set_worker_clock(store, worker.worker_id, timestamp=1000)
+            queue = FakeQueueClient()
+
+            with patch.dict(
+                "os.environ",
+                {"CODEX_SESSION_ID": session},
+                clear=False,
+            ):
+                result = execute_continue_task(
+                    config=config,
+                    worker_id=worker.worker_id,
+                    store=store,
+                    queue_client=queue,  # type: ignore[arg-type]
+                    wait=lambda _: None,
+                    now=2000,
+                )
+
+            self.assertTrue(result.detached)
+            self.assertEqual(result.dispatch_state, "dispatch_started")
+            self.assertFalse(result.input_emitted)
+            self.assertFalse(result.activity_synced)
+            self.assertEqual(result.sync_reason, "awaiting_hook")
+            self.assertTrue(queue.sent[0]["detached"])
+            unchanged = store.get_worker(worker.worker_id)
+            assert unchanged is not None
+            self.assertEqual(unchanged.last_activity_at, 1000)
 
     def test_native_failure_does_not_fall_back_to_gui(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

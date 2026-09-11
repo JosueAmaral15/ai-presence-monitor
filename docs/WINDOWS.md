@@ -15,6 +15,11 @@ A versao 0.6.0 acrescenta entrada nativa por `codex queue.exe` e bandeja
 PySide6 opcional. A entrada nativa nao precisa de desktop desbloqueado, nao usa
 mouse/teclado e deve ser preferida ao dispatcher Win32.
 
+A versao 0.6.1 evita bloqueio ao enviar para a propria sessao: o processo usa
+`CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`, retorna `dispatch_started` e
+aguarda um hook posterior como evidencia, sem atualizar atividade no momento do
+spawn.
+
 Nao e necessario executar como administrador. A automacao GUI exige a sessao do
 usuario desbloqueada e uma janela visivel.
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-11 - v0.6.1
+
+- Corrigido o bloqueio de `codex queue` quando um AI-worker envia entrada para
+  a propria sessao Codex ainda em execucao.
+- A propria sessao agora e detectada por `CODEX_SESSION_ID` ou
+  `CODEX_THREAD_ID` e despachada em processo destacado no Linux e Windows.
+- Adicionado o estado `dispatch_started`: ele confirma somente a criacao do
+  processo e nao atualiza `last_activity_at`; um hook posterior e a evidencia
+  de que o Codex processou a entrada.
+- A bandeja sempre usa despacho destacado para nao congelar a interface.
+- Adicionados `--detach` e `--no-detach` para diagnostico e controle explicito,
+  sem retry automatico depois de resultado incerto.
+- E2E nativo autorizado confirmou uma unica mensagem `continue` e hooks
+  `SessionStart`/`UserPromptSubmit` na sessao exata. O timeout sincrono
+  observado nesse teste originou esta correcao.
+
 ## 2026-09-11 - v0.6.0
 
 - Adicionado transporte nativo por `codex queue`, sem controle de mouse,

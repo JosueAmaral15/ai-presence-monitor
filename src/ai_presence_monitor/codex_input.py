@@ -7,7 +7,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from .control import ControlSettings
 
@@ -16,13 +16,19 @@ class CodexInputError(RuntimeError):
     pass
 
 
+CodexInputState = Literal["dispatch_started", "input_emitted"]
+
+
 @dataclass(frozen=True)
 class CodexInputResult:
     thread_id: str
     remote: str | None
+    state: CodexInputState
+    process_id: int | None = None
 
 
 ProcessRunner = Callable[..., subprocess.CompletedProcess[str]]
+ProcessLauncher = Callable[..., subprocess.Popen[str]]
 
 
 def _default_runner(
@@ -32,6 +38,13 @@ def _default_runner(
     return subprocess.run(command, **kwargs)
 
 
+def _default_launcher(
+    command: list[str],
+    **kwargs: Any,
+) -> subprocess.Popen[str]:
+    return subprocess.Popen(command, **kwargs)
+
+
 class CodexQueueClient:
     def __init__(
         self,
@@ -39,10 +52,12 @@ class CodexQueueClient:
         executable: str = "codex",
         timeout_seconds: int = 15,
         runner: ProcessRunner = _default_runner,
+        launcher: ProcessLauncher = _default_launcher,
     ):
         self.executable = executable
         self.timeout_seconds = timeout_seconds
         self.runner = runner
+        self.launcher = launcher
 
     def is_available(self) -> bool:
         return self._resolve_executable() is not None
@@ -54,6 +69,7 @@ class CodexQueueClient:
         text: str,
         remote: str | None = None,
         remote_auth_token_env: str | None = None,
+        detached: bool = False,
     ) -> CodexInputResult:
         clean_thread = _single_line(thread_id, "thread ID")
         clean_text = text.strip()
@@ -105,6 +121,13 @@ class CodexQueueClient:
             assert clean_auth_env is not None
             command.extend(["--remote-auth-token-env", clean_auth_env])
 
+        if detached:
+            return self._launch_detached(
+                command,
+                thread_id=clean_thread,
+                remote=clean_remote,
+            )
+
         kwargs: dict[str, object] = {
             "capture_output": True,
             "text": True,
@@ -130,7 +153,43 @@ class CodexQueueClient:
                 "O Codex CLI recusou o envio; o resultado e incerto e nao sera "
                 f"repetido. {detail}"
             )
-        return CodexInputResult(thread_id=clean_thread, remote=clean_remote)
+        return CodexInputResult(
+            thread_id=clean_thread,
+            remote=clean_remote,
+            state="input_emitted",
+        )
+
+    def _launch_detached(
+        self,
+        command: list[str],
+        *,
+        thread_id: str,
+        remote: str | None,
+    ) -> CodexInputResult:
+        kwargs: dict[str, object] = {
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "text": True,
+            "close_fds": True,
+        }
+        if sys.platform == "win32":
+            kwargs["creationflags"] = (
+                getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            )
+        else:
+            kwargs["start_new_session"] = True
+        try:
+            process = self.launcher(command, **kwargs)
+        except OSError as exc:
+            raise CodexInputError(f"Falha ao iniciar o Codex CLI: {exc}") from exc
+        return CodexInputResult(
+            thread_id=thread_id,
+            remote=remote,
+            state="dispatch_started",
+            process_id=process.pid,
+        )
 
     def _resolve_executable(self) -> str | None:
         candidate = Path(self.executable).expanduser()
@@ -181,6 +240,7 @@ def send_native_message(
     destination: str,
     thread_id: str | None = None,
     client: CodexQueueClient | None = None,
+    detached: bool | None = None,
 ) -> CodexInputResult:
     target_thread, remote, auth_env = resolve_native_destination(
         settings=settings,
@@ -192,7 +252,23 @@ def send_native_message(
         text=message,
         remote=remote,
         remote_auth_token_env=auth_env,
+        detached=(
+            is_current_codex_session(target_thread)
+            if detached is None
+            else detached
+        ),
     )
+
+
+def is_current_codex_session(thread_id: str) -> bool:
+    clean_thread = thread_id.strip()
+    if not clean_thread:
+        return False
+    return clean_thread in {
+        value.strip()
+        for name in ("CODEX_SESSION_ID", "CODEX_THREAD_ID")
+        if (value := os.environ.get(name)) and value.strip()
+    }
 
 
 def _single_line(value: str, label: str) -> str:

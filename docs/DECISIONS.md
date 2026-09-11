@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-09-11 - Despacho destacado para a propria sessao Codex
+
+**Decisao**: detectar quando o alvo de `codex queue` e a sessao do processo
+chamador e iniciar o CLI em segundo plano, retornando `dispatch_started` sem
+sincronizar presenca.
+
+**Motivo**:
+
+- o E2E demonstrou que a chamada sincrona pode esperar pelo turno que ela
+  propria precisa encerrar;
+- timeout e um resultado incerto: a mensagem chegou depois do limite e nao
+  poderia ser reenviada com seguranca;
+- criar atividade no momento do spawn produziria falso positivo no Protocolo 2;
+- a bandeja nao pode bloquear seu event loop aguardando uma sessao ocupada.
+
+**Alternativas consideradas**:
+
+- aumentar o timeout: descartado porque nao remove a dependencia circular;
+- marcar `input_emitted` no spawn: rejeitado porque criacao de processo nao
+  prova aceite ou processamento;
+- retry depois do timeout: rejeitado por risco de duplicacao;
+- sempre executar sincronicamente: preservado apenas via `--no-detach` para
+  diagnosticos que nao rodem dentro do proprio alvo.
+
+**Consequencia**:
+
+`CODEX_SESSION_ID` e `CODEX_THREAD_ID` ativam o modo automaticamente. POSIX usa
+uma nova sessao de processo e Windows usa um novo grupo sem janela. O hook
+posterior e a primeira evidencia de processamento e atualiza a atividade
+normalmente.
+
 ## 2026-09-11 - Entrada nativa antes do fallback GUI
 
 **Decisao**: usar `codex queue` como transporte preferencial para mensagens de

@@ -136,25 +136,32 @@ CLI/bandeja -> ControlStore -> resolve sessao/alvo -> delay
                      |                                 |
                      v                                 v
        CodexQueueClient (`codex queue`)      dispatcher GUI opt-in
-                     |                                 |
-                     +----------------+----------------+
-                                      |
-                                      v
-                               input_emitted
-                                      |
-                  worker active? -----+----- nao -> sem sync
-                        |
-                        v
-     observation:automation:continue -> last_activity_at
-                        |
-                        v
-               hook posterior do Codex
+              |                  |                      |
+      propria sessao       outra sessao                |
+              |                  |                      |
+              v                  +----------+-----------+
+     dispatch_started                       |
+              |                             v
+              |                      input_emitted
+              |                             |
+              |          worker active? ---+--- nao -> sem sync
+              |                 |
+              |                 v
+              |  observation:automation:continue -> last_activity_at
+              |                 |
+              +-----------------+----------------+
+                                                 |
+                                                 v
+                                      hook posterior do Codex
 ```
 
 `continue_task.py` coordena o caso de uso. `codex_input.py` encapsula o
 subprocesso nativo sem shell e o destino local/remoto. `gui_answer.py` permanece
-como fallback de despacho textual. A sincronizacao ocorre depois do despacho;
-falha ou cancelamento nao alteram o SQLite.
+como fallback de despacho textual. A propria sessao e detectada pelas variaveis
+do ambiente Codex e usa processo destacado. `dispatch_started` nao altera o
+SQLite; somente o hook posterior registra atividade. Emissoes sincronas podem
+sincronizar o worker depois do sucesso. Falha ou cancelamento nunca alteram o
+SQLite.
 
 ## Bandeja e Politica de Automacao
 

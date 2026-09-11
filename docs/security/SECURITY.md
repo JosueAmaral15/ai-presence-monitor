@@ -175,3 +175,22 @@ tarefas.
 O texto de `--message` e um argumento do processo `codex queue` e pode ficar
 temporariamente visivel a ferramentas locais de inspecao de processos. Nao use
 esse transporte para enviar senhas, tokens ou outros segredos.
+
+## Task 017 - Despacho destacado na propria sessao
+
+- [x] A deteccao compara somente o alvo exato com `CODEX_SESSION_ID` e
+      `CODEX_THREAD_ID`.
+- [x] O subprocesso continua usando lista de argumentos e nunca usa shell.
+- [x] Entrada e saidas do processo destacado sao isoladas em `DEVNULL`.
+- [x] POSIX cria nova sessao; Windows cria novo grupo sem janela.
+- [x] `dispatch_started` nao grava atividade nem simula trabalho no Protocolo 2.
+- [x] Falha ao criar o processo e reportada sem retry.
+- [x] Falha posterior, ausencia de hook ou resultado incerto nao causa retry.
+- [x] A bandeja sempre usa despacho destacado e permanece responsiva.
+
+### Risco residual
+
+Depois que o processo destacado e criado, seu erro de saida nao retorna ao
+chamador. Isso e intencional para romper a espera circular. A ausencia de hook
+mantem o relogio de atividade inalterado e permite que o monitor alerte; o
+operador deve diagnosticar antes de autorizar um novo envio.

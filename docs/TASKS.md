@@ -2,6 +2,27 @@
 
 ## Concluida em 2026-09-11
 
+### Task 017 - Despacho nativo nao bloqueante na propria sessao
+
+**Prioridade**: Critica
+**Status**: validada na branch da tarefa; integracao local pendente
+**Objetivo**: impedir que `codex queue` bloqueie o turno ativo ao enviar para a
+propria sessao e evitar falso positivo de atividade antes do hook.
+
+**Criterios de aceite**:
+
+- [x] E2E autorizado envia `continue` uma unica vez para a sessao exata.
+- [x] Um hook posterior confirma `SessionStart` e `UserPromptSubmit` no alvo.
+- [x] A propria sessao usa processo destacado no Linux e no Windows.
+- [x] `dispatch_started` nao grava `observation:automation:continue` nem altera
+      `last_activity_at`.
+- [x] Bandeja nao bloqueia enquanto o Codex recebe a mensagem.
+- [x] CLI oferece `--detach` e `--no-detach` para diagnostico.
+- [x] Gate completo, wheel e instalacao isolada passam.
+- [ ] Trabalho funcional e integrado localmente em `develop`.
+
+**Plano**: `docs/planning/TASK-017-native-self-queue.md`.
+
 ### Task 016 - Bandeja do sistema e entrada nativa do Codex
 
 **Prioridade**: Alta

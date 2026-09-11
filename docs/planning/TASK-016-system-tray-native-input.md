@@ -71,7 +71,12 @@ not take over the user's mouse or keyboard.
 
 ## External Validation Remaining
 
-A real `codex queue` message has not been sent in this task because it requires
-separate explicit authorization for the exact message and destination session.
-This does not block `develop`, but it remains a release gate for promotion to
-`main`. The external Windows CI gate recorded by Task 012 also remains open.
+A separately authorized native E2E was performed on 2026-09-11 against session
+`019f5691-c118-7370-a205-94cfde0a93d7`. Exactly one `continue` message arrived,
+and the same session produced subsequent `SessionStart` and `UserPromptSubmit`
+hooks. The synchronous client timed out before that late delivery, exposing a
+same-session blocking condition rather than a delivery failure. Task 017
+contains the non-blocking correction and its validation evidence.
+
+The external Windows CI gate recorded by Task 012 remains open, so `main`
+promotion is still blocked even after the local native E2E succeeds.

@@ -83,6 +83,11 @@ python -m pip install '/caminho/para/ai-presence-monitor[tray]'
 ai-presence tray --check
 ```
 
+Na versao 0.6.1, o envio para a propria sessao inicia um subprocesso destacado:
+POSIX usa `start_new_session` e Windows usa um novo grupo de processo sem abrir
+janela. O retorno `dispatch_started` nao atualiza presenca; o hook posterior e
+a evidencia portatil de processamento.
+
 Consulte [WINDOWS.md](WINDOWS.md) para o passo a passo.
 
 ## Onde Fica o `.env`

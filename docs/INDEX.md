@@ -21,6 +21,7 @@
 - [Plano de orientacao para respostas Discord invalidas](planning/TASK-014-discord-reply-guidance.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
+- [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)
 
 ## Controle
 
