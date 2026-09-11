@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-11 - Verificacao E2E do comando continue
+
+- Validado o comando instalado com uma unica janela X11 `ChatGPT`, mensagem
+  padrao `continue` e delay padrao de 60 segundos.
+- Confirmados `input_emitted`, sincronizacao de atividade e aparecimento da
+  mensagem como nova entrada no Codex GUI.
+- Confirmado um hook `UserPromptSubmit` um segundo depois da observacao
+  `automation:continue`, sem retry automatico.
+
 ## 2026-09-10 - Verificacao operacional da v0.5.2
 
 - Confirmado `Message Content Intent` pela flag da aplicacao

@@ -36,6 +36,30 @@ real em `windows-latest` passar.
 
 ## Concluidas
 
+### Task 015 - E2E local do comando continue
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: validar, com autorizacao explicita, que o comando integrado
+captura uma unica janela do Codex, aguarda o delay padrao, envia `continue` e
+registra evidencia posterior de atividade.
+
+**Criterios de aceite**:
+
+- [x] Nao existe pergunta remota nem outra execucao de continuidade pendente.
+- [x] O dry-run confirma mensagem, delay, worker, projeto e alvo esperados.
+- [x] A janela configurada possui uma unica correspondencia visivel.
+- [x] A execucao real termina com `input_emitted` sem retry automatico.
+- [x] `continue` aparece como nova entrada no Codex GUI.
+- [x] Um hook posterior confirma atividade do mesmo worker.
+- [x] Evidencias e resultado final ficam registrados nesta tarefa.
+
+**Conclusao (2026-09-11)**: a janela unica `ChatGPT` foi capturada no X11, o
+delay padrao de 60 segundos terminou e `continue` apareceu nesta tarefa. O
+banco registrou `observation:automation:continue` as `00:25:44` e
+`observation:codex:UserPromptSubmit` as `00:25:45`, no mesmo worker, confirmando
+a retomada sem retry automatico.
+
 ### Task 014 - Orientacao para respostas Discord invalidas
 
 **Prioridade**: Alta
