@@ -1,11 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento
+## Concluida em 2026-09-11
 
 ### Task 016 - Bandeja do sistema e entrada nativa do Codex
 
 **Prioridade**: Alta
-**Status**: em andamento
+**Status**: concluida em `develop`; promocao para `main` aguarda os gates
+externos registrados no plano da tarefa
 **Objetivo**: permitir que usuario e AI-worker controlem autorizacoes de
 automacao em uma bandeja e enviem texto para uma sessao exata do Codex sem
 ocupar mouse ou teclado.

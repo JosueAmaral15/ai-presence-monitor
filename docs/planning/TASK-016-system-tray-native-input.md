@@ -42,7 +42,7 @@ not take over the user's mouse or keyboard.
 - [x] Base CLI installation does not require a GUI toolkit.
 - [x] Tests, coverage, lint, types, build, documentation, and package install
       checks pass.
-- [ ] Functional work is committed on the task branch and promoted to
+- [x] Functional work is committed on the task branch and promoted to
       `develop`; `main` remains subject to the complete release gate.
 
 ## Validation Plan
@@ -55,3 +55,23 @@ not take over the user's mouse or keyboard.
 4. Run a tray availability smoke test without sending input.
 5. Perform a real local `codex queue` test only with separate explicit user
    authorization for the message and target session.
+
+## Validation Result
+
+- Task commit: `6f6b500` on `codex/tray-native-input-20260911`.
+- Functional merge: local `develop` branch.
+- Automated suite: 146 tests passed.
+- Total coverage: 86%, above the 80% gate.
+- Ruff, mypy, source compilation, `git diff --check`, sdist, and wheel passed.
+- The 0.6.0 wheel was installed in an isolated environment and both CLI entry
+  points were loaded without installing the optional GUI dependency.
+- System tray availability and real Qt construction passed on the current
+  Linux desktop; the construction smoke was terminated after three seconds.
+- Native `continue` dry-run passed without creating state or emitting input.
+
+## External Validation Remaining
+
+A real `codex queue` message has not been sent in this task because it requires
+separate explicit authorization for the exact message and destination session.
+This does not block `develop`, but it remains a release gate for promotion to
+`main`. The external Windows CI gate recorded by Task 012 also remains open.
