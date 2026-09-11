@@ -5,7 +5,8 @@
 ### Task 017 - Despacho nativo nao bloqueante na propria sessao
 
 **Prioridade**: Critica
-**Status**: validada na branch da tarefa; integracao local pendente
+**Status**: concluida e integrada localmente em `develop`; `main` aguarda o
+gate externo Windows da Task 012
 **Objetivo**: impedir que `codex queue` bloqueie o turno ativo ao enviar para a
 propria sessao e evitar falso positivo de atividade antes do hook.
 
@@ -19,7 +20,7 @@ propria sessao e evitar falso positivo de atividade antes do hook.
 - [x] Bandeja nao bloqueia enquanto o Codex recebe a mensagem.
 - [x] CLI oferece `--detach` e `--no-detach` para diagnostico.
 - [x] Gate completo, wheel e instalacao isolada passam.
-- [ ] Trabalho funcional e integrado localmente em `develop`.
+- [x] Trabalho funcional e integrado localmente em `develop`.
 
 **Plano**: `docs/planning/TASK-017-native-self-queue.md`.
 

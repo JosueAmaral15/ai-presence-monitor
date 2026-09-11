@@ -60,7 +60,7 @@ otherwise credit work before the target session actually receives the input.
 - [x] Tray dispatch is always non-blocking.
 - [x] CLI supports automatic, forced, and explicitly synchronous modes.
 - [x] Full quality gate, package build, and isolated installation pass.
-- [ ] Task branch is committed and merged locally into `develop`.
+- [x] Task branch is committed and merged locally into `develop`.
 
 ## Validation Result
 
@@ -72,6 +72,8 @@ otherwise credit work before the target session actually receives the input.
   `--no-detach`; the tray entrypoint loads without importing PySide6.
 - An installed dry-run against the current exact session reported
   `destacado=true` without waiting, emitting input, or accessing SQLite.
+- Task commit: `89992de` on `codex/native-input-e2e-20260911`.
+- Local `develop` merge: `81e07fb`.
 
 ## Release Boundary
 
