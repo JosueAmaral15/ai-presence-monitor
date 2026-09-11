@@ -8,7 +8,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ai_presence_monitor.config import load_config, resolve_env_path, user_config_dir
+from ai_presence_monitor.config import (
+    load_config,
+    resolve_env_path,
+    user_config_dir,
+    user_state_dir,
+)
 from ai_presence_monitor.identity import scoped_worker_id
 from ai_presence_monitor.systemd_service import (
     install_reply_observer_service,
@@ -22,6 +27,36 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ConfigPortabilityTests(unittest.TestCase):
+    def test_default_control_file_uses_user_state_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / "project" / ".env"
+            env_path.parent.mkdir()
+            env_path.touch()
+            state_home = root / "state"
+            with patch.dict(
+                os.environ,
+                {"XDG_STATE_HOME": str(state_home)},
+                clear=True,
+            ):
+                config = load_config(env_path, override_env=True)
+
+            self.assertEqual(
+                config.control_path,
+                state_home / "ai-presence-monitor" / "control.json",
+            )
+
+    def test_user_state_directory_is_portable(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"LOCALAPPDATA": r"C:\Users\test\AppData\Local"},
+            clear=True,
+        ):
+            self.assertEqual(
+                user_state_dir("win32"),
+                Path(r"C:\Users\test\AppData\Local") / "ai-presence-monitor",
+            )
+
     def test_windows_launchers_preserve_failures_and_have_python_fallback(self) -> None:
         batch = (PROJECT_ROOT / "run_interactive.bat").read_text(encoding="utf-8")
         installer = (PROJECT_ROOT / "scripts" / "install-user-command.ps1").read_text(
@@ -40,7 +75,17 @@ class ConfigPortabilityTests(unittest.TestCase):
             env_path = config_dir / ".env"
             env_path.write_text(
                 "PRESENCE_DB_PATH=./data/presence.db\n"
-                "PRESENCE_CODEX_WORKER_SCOPE=project\n",
+                "PRESENCE_CONTROL_PATH=./state/control.json\n"
+                "PRESENCE_CODEX_WORKER_SCOPE=project\n"
+                "PRESENCE_TASK_AUTOMATION_ENABLED=true\n"
+                "PRESENCE_NATIVE_INPUT_ENABLED=false\n"
+                "PRESENCE_GUI_FALLBACK_ENABLED=true\n"
+                "PRESENCE_REMOTE_INPUT_ENABLED=true\n"
+                "PRESENCE_CONTINUE_TRANSPORT=native\n"
+                "PRESENCE_CONTINUE_DESTINATION=client\n"
+                "PRESENCE_CODEX_THREAD_ID=thread-1\n"
+                "PRESENCE_CODEX_REMOTE=wss://client.example/app-server\n"
+                "PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV=REMOTE_TOKEN\n",
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {}, clear=True):
@@ -52,6 +97,19 @@ class ConfigPortabilityTests(unittest.TestCase):
                 (config_dir / "data" / "presence.db").resolve(),
             )
             self.assertEqual(config.codex_worker_scope, "project")
+            self.assertEqual(
+                config.control_path,
+                (config_dir / "state" / "control.json").resolve(),
+            )
+            self.assertTrue(config.task_automation_enabled)
+            self.assertFalse(config.native_input_enabled)
+            self.assertTrue(config.gui_fallback_enabled)
+            self.assertTrue(config.remote_input_enabled)
+            self.assertEqual(config.continue_transport, "native")
+            self.assertEqual(config.continue_destination, "client")
+            self.assertEqual(config.codex_thread_id, "thread-1")
+            self.assertEqual(config.codex_remote, "wss://client.example/app-server")
+            self.assertEqual(config.codex_remote_auth_token_env, "REMOTE_TOKEN")
 
     def test_env_resolution_prefers_existing_local_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

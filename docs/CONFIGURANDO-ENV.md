@@ -154,21 +154,59 @@ resposta autorizada chega ao estado `answered` sem controlar mouse ou teclado.
 
 ## Continue Integrado
 
-O envio local de continuidade reutiliza o mesmo titulo e as mesmas proporcoes
-da GUI:
+O envio de continuidade prefere a sessao nativa do Codex e deixa a GUI como
+fallback opcional:
 
 ```env
-PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
-PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
-PRESENCE_CODEX_GUI_CLICK_Y_RATIO=0.90
 PRESENCE_CONTINUE_MESSAGE=continue
 PRESENCE_CONTINUE_DELAY_SECONDS=60
 PRESENCE_CONTINUE_SYNC_ACTIVITY=true
+PRESENCE_CONTROL_PATH=
+PRESENCE_TASK_AUTOMATION_ENABLED=false
+PRESENCE_NATIVE_INPUT_ENABLED=true
+PRESENCE_GUI_FALLBACK_ENABLED=false
+PRESENCE_REMOTE_INPUT_ENABLED=false
+PRESENCE_CONTINUE_TRANSPORT=auto
+PRESENCE_CONTINUE_DESTINATION=local
+PRESENCE_CODEX_THREAD_ID=
+PRESENCE_CODEX_REMOTE=
+PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV=CODEX_REMOTE_AUTH_TOKEN
+CODEX_REMOTE_AUTH_TOKEN=
 ```
 
-Com sincronizacao ativa, somente clique, escrita e Enter bem-sucedidos
-atualizam `last_activity_at` de um worker ja ativo. O Protocolo 1 preserva
-`last_signal_at`. Consulte `docs/CONTINUE-CODEX.md`.
+`PRESENCE_CONTROL_PATH` aponta para o estado alterado pela bandeja/CLI. Vazio,
+usa `~/.local/state/ai-presence-monitor/control.json` no Linux ou
+`%LOCALAPPDATA%\ai-presence-monitor\control.json` no Windows, sempre fora do
+checkout. Um caminho relativo explicito e resolvido a partir do `.env`. Quando
+esse JSON existe, ele prevalece sobre os defaults do `.env`.
+
+`PRESENCE_TASK_AUTOMATION_ENABLED=false` bloqueia `continue` real ate o usuario
+habilitar a opcao ou autorizar uma execucao com `--authorize-once`. Habilitar
+nao cria timer e nao autoriza presenca artificial.
+
+`PRESENCE_NATIVE_INPUT_ENABLED=true` permite `codex queue`.
+`PRESENCE_GUI_FALLBACK_ENABLED=false` impede uso acidental de mouse/teclado.
+`PRESENCE_REMOTE_INPUT_ENABLED=false` bloqueia o computador cliente.
+
+`PRESENCE_CONTINUE_TRANSPORT=auto` prefere o nativo. `native` ou `gui` forcam
+uma familia, desde que o respectivo gate esteja habilitado.
+
+`PRESENCE_CONTINUE_DESTINATION=local` impede que apenas salvar um endpoint
+remoto mude o destino. Use `client` somente quando quiser enviar ao computador
+cliente e o gate remoto estiver ativo.
+
+`PRESENCE_CODEX_THREAD_ID` recebe UUID ou nome exato da sessao. `continue` pode
+inferir esse valor do hook do mesmo worker; `send-input` e o compositor exigem
+um valor explicito ou persistido.
+
+`PRESENCE_CODEX_REMOTE` recebe o endpoint autenticado do app-server.
+`PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV` guarda apenas o nome da variavel, e
+`CODEX_REMOTE_AUTH_TOKEN` guarda o valor secreto no `.env` real.
+
+Com sincronizacao ativa, somente um transporte bem-sucedido atualiza
+`last_activity_at` de um worker ja ativo. O Protocolo 1 preserva
+`last_signal_at`. Consulte `docs/CONTINUE-CODEX.md` e
+`docs/SYSTEM-TRAY-NATIVE-INPUT.md`.
 
 ## Alerta Vermelho
 

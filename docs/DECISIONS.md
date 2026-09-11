@@ -1,5 +1,52 @@
 # Decisions
 
+## 2026-09-11 - Entrada nativa antes do fallback GUI
+
+**Decisao**: usar `codex queue` como transporte preferencial para mensagens de
+continuidade e composicao manual. Manter X11/Win32 como fallback opt-in.
+
+**Motivo**:
+
+- a entrada nativa nao ocupa mouse, teclado ou clipboard do usuario;
+- uma sessao UUID/nome exato e um alvo mais estavel que coordenadas visuais;
+- o mesmo comando funciona no Linux e Windows quando o Codex CLI esta presente;
+- `--remote` permite direcionar um app-server autenticado no computador cliente.
+
+**Alternativas consideradas**:
+
+- PyAutoGUI global: descartado por interferir no desktop e depender de foco;
+- acessibilidade/seletores graficos: mantidos fora desta fase porque a interface
+  do Codex nao publica um contrato estavel de elementos para terceiros;
+- timer periodico de `continue`: rejeitado porque pode simular trabalho e
+  esconder inatividade real;
+- fallback automatico depois de falha nativa: rejeitado por risco de duplicar
+  uma entrada cujo resultado e incerto.
+
+**Consequencia**:
+
+`auto` usa nativo quando existe sessao do mesmo worker e somente considera GUI
+quando o usuario habilita o fallback. `input_emitted` ainda exige hook posterior
+para confirmar processamento. Como `queue`/`app-server` sao experimentais no
+Codex CLI atual, a integracao deve ser revalidada apos atualizacoes.
+
+## 2026-09-11 - Bandeja como painel de autorizacao
+
+**Decisao**: compartilhar um `control.json` entre CLI e bandeja e manter PySide6
+como extra opcional.
+
+**Motivo**:
+
+- o usuario precisa alterar permissoes sem editar `.env` ou reiniciar o app;
+- outro AI-worker precisa consultar exatamente as mesmas decisoes pela CLI;
+- a instalacao base nao deve carregar toolkit grafico em servidores;
+- tokens nao devem ser duplicados em estado de interface.
+
+**Consequencia**:
+
+O arquivo e atomico, privado em POSIX e guarda flags, sessao, endpoint e nome da
+variavel de token. A bandeja nao inicia automaticamente no login e nao agenda
+mensagens por tempo; esses limites permanecem explicitos.
+
 ## 2026-08-11 - Abstract Factory para integracoes Linux e Windows
 
 **Decisao**: selecionar dispatcher GUI, backend de alarme e gerenciador de

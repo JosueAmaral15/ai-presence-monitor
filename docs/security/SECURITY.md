@@ -149,3 +149,29 @@ Um usuario permitido que converse normalmente no canal dedicado enquanto
 existir pergunta pendente recebera orientacao. O canal deve permanecer dedicado
 ao fluxo de perguntas. Falha do webhook pode impedir um aviso; por seguranca,
 o sistema nao repete uma entrega cujo resultado externo seja incerto.
+
+## Task 016 - Bandeja e entrada nativa
+
+- [x] `codex queue` recebe lista de argumentos e nunca usa shell.
+- [x] Sessao, endpoint e nomes de variavel rejeitam quebras de linha e NUL.
+- [x] Endpoint remoto aceita somente `ws://`, `wss://` ou `unix://`.
+- [x] Entrada remota exige nome de variavel e token presente no ambiente.
+- [x] Valor do token nao entra em argumentos, `control.json` ou logs.
+- [x] `control.json` usa gravacao atomica e modo `600` em POSIX.
+- [x] Automacao de tarefas, entrada nativa, fallback GUI, destino remoto e sync
+      possuem gates independentes.
+- [x] Uma falha nativa nao inicia fallback nem retry automatico.
+- [x] Sessao inferida vem somente de hook do mesmo worker.
+- [x] PySide6 e importado somente quando a bandeja e iniciada.
+
+### Risco residual
+
+Quem controla a sessao local do usuario pode alterar `control.json` ou a
+variavel de token. O app-server remoto do Codex e experimental e precisa de
+TLS/tunel, autenticacao, firewall e revisao depois de atualizacoes. Habilitar
+automacao e uma autorizacao persistente: desabilite-a ao terminar a cadeia de
+tarefas.
+
+O texto de `--message` e um argumento do processo `codex queue` e pode ficar
+temporariamente visivel a ferramentas locais de inspecao de processos. Nao use
+esse transporte para enviar senhas, tokens ou outros segredos.

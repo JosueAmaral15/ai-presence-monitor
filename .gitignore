@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 venv/
 .env
+control.json
 .ai-presence-monitor.env
 presence.db
 *.sqlite

@@ -108,15 +108,18 @@ estiver correlacionada com a pergunta e vier de um usuario permitido.
 
 ### 4. Continuidade
 
-`continue` controla uma janela grafica. Ele nao e necessario para registrar
-atividade comum:
+`continue` envia entrada a uma sessao Codex. Por padrao, usa `codex queue` sem
+controlar mouse ou teclado; X11/Win32 e apenas fallback. Ele nao e necessario
+para registrar atividade comum:
 
 ```bash
-ai-presence --dry-run continue --project "$PROJECT"
+ai-presence control show
+ai-presence --dry-run continue --project "$PROJECT" --thread SESSAO_EXATA
 ai-presence continue --project "$PROJECT"
 ```
 
-Use o segundo comando somente com autorizacao explicita e depois de aplicar a
+Use o comando real somente quando `task-automation` estiver habilitado ou o
+usuario tiver autorizado `--authorize-once`, e depois de aplicar a
 [norma de acionamento](CONTINUE-CODEX.md#norma-de-acionamento-pela-ia). Em
 resumo: a etapa atual deve estar concluida, a proxima tarefa precisa ser
 concreta e nao pode existir pergunta, bloqueio ou outra execucao pendente.
@@ -126,7 +129,11 @@ Protocolo 2. Falha, cancelamento, dry-run e worker inativo nao atualizam o
 monitor. O evento nao prova que o Codex processou a mensagem; verifique um hook
 posterior antes de considerar a retomada confirmada.
 
-Uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
+Na ausencia de `PRESENCE_CODEX_THREAD_ID`, o comando real pode inferir a sessao
+do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
+uma falha. Consulte [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md).
+
+No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para
 `xdotool`.
 
@@ -189,6 +196,7 @@ O monitor e o observer de respostas sao componentes diferentes:
 | hooks do Codex | registram evidencia local de atividade |
 | monitor | avalia atrasos e envia alertas |
 | observer de respostas | consulta o Discord e processa respostas |
+| transporte nativo | enfileira texto em uma sessao exata com `codex queue` |
 | dispatcher GUI | fallback opcional de mouse e teclado |
 
 `observer nao instalado` significa que a unidade systemd do Linux ou a tarefa
@@ -201,7 +209,7 @@ impede o monitor de alertas nem os hooks de funcionar.
 - valor diferente de zero: falha de configuracao, transporte ou operacao.
 
 A IA deve verificar o codigo de saida e relatar o erro. Nao deve repetir
-automaticamente um envio GUI com resultado incerto.
+automaticamente nenhum envio com resultado incerto.
 
 ## Linux e Windows
 
@@ -217,6 +225,7 @@ de uso:
 | Capacidade | Linux atual | Windows |
 |---|---|---|
 | processo continuo | systemd de usuario | Task Scheduler do usuario |
+| entrada nativa Codex | `codex queue` | `codex queue.exe` |
 | controle GUI | X11, `xdotool`, `xclip` | API Win32 e `SendInput` |
 | alarme limitado | GNU `timeout` e `/proc` | runner e `taskkill /T /F` |
 | CLI e banco | suportado | suportado |
@@ -233,5 +242,6 @@ Use esta orientacao no prompt inicial:
 Leia AGENTS.md e docs/AI-WORKER-COMMAND-PROTOCOL.md do projeto
 ai-presence-monitor. Use ai-presence com --project apontando para a raiz deste
 projeto. Registre start ao iniciar, confie nos hooks durante o trabalho e
-registre finish somente ao concluir. Nao execute automacao GUI sem autorizacao.
+registre finish somente ao concluir. Prefira entrada nativa e nao execute
+automacao de continuidade ou fallback GUI sem autorizacao.
 ```

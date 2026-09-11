@@ -205,3 +205,23 @@ schtasks.exe /Delete /TN "AI Presence Reply Observer" /F
 
 Depois, reinstale um wheel 0.4.3 conhecido. Nao remova o `.env` nem o SQLite:
 nao houve migracao de esquema e as chaves novas preservam defaults compativeis.
+
+## Task 016 - Bandeja e entrada nativa
+
+Desabilite primeiro todas as autorizacoes:
+
+```bash
+ai-presence control disable task-automation
+ai-presence control disable remote-input
+ai-presence control disable gui-fallback
+ai-presence control disable native-input
+```
+
+Encerre a bandeja pelo menu **Exit**. Isso nao encerra monitor nem observer.
+Para restaurar os defaults do `.env`, remova somente o arquivo apontado por
+`PRESENCE_CONTROL_PATH`; nao remova `.env` nem o banco SQLite.
+
+O recurso nao altera o esquema do banco. Reinstalar o wheel anterior faz o
+pacote ignorar `control.json` e as novas chaves. Um fallback GUI antigo pode
+voltar a ser usado pela versao anterior, portanto mantenha a configuracao de
+janela desativada quando o objetivo for impedir toda entrada automatizada.

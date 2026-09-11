@@ -2,6 +2,26 @@
 
 ## Em andamento
 
+### Task 016 - Bandeja do sistema e entrada nativa do Codex
+
+**Prioridade**: Alta
+**Status**: em andamento
+**Objetivo**: permitir que usuario e AI-worker controlem autorizacoes de
+automacao em uma bandeja e enviem texto para uma sessao exata do Codex sem
+ocupar mouse ou teclado.
+
+**Criterios de aceite**:
+
+- [x] Transporte nativo usa `codex queue` sem shell ou automacao fisica.
+- [x] `continue` seleciona transporte nativo ou fallback GUI explicitamente.
+- [x] CLI e bandeja compartilham uma politica persistente fora do repositorio.
+- [x] Menu da bandeja oferece habilitar automacao, responder mensagem e sair.
+- [x] Preferencias permitem habilitar ou desabilitar cada ferramenta.
+- [x] O compositor envia localmente ou a endpoint remoto autenticado.
+- [x] Testes e documentacao cobrem seguranca, portabilidade e operacao.
+
+**Plano**: `docs/planning/TASK-016-system-tray-native-input.md`.
+
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta

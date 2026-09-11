@@ -22,6 +22,24 @@ def user_config_dir(platform_name: str | None = None) -> Path:
     return base / APP_DIR_NAME
 
 
+def user_state_dir(platform_name: str | None = None) -> Path:
+    if (platform_name or sys.platform).lower() in {"win32", "windows"}:
+        windows_state = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        base = (
+            Path(windows_state)
+            if windows_state
+            else Path.home() / "AppData" / "Local"
+        )
+        return base / APP_DIR_NAME
+    xdg_state_home = os.environ.get("XDG_STATE_HOME")
+    base = (
+        Path(xdg_state_home).expanduser()
+        if xdg_state_home
+        else Path.home() / ".local" / "state"
+    )
+    return base / APP_DIR_NAME
+
+
 def resolve_env_path(env_file: str | Path | None = None, cwd: Path | None = None) -> Path:
     explicit = env_file or os.environ.get("PRESENCE_ENV_FILE")
     if explicit:
@@ -160,6 +178,16 @@ class AppConfig:
     continue_delay_seconds: int = 60
     continue_sync_activity: bool = True
     red_alert_max_duration_seconds: int = 15
+    control_path: Path | None = None
+    task_automation_enabled: bool = False
+    native_input_enabled: bool = True
+    gui_fallback_enabled: bool = False
+    remote_input_enabled: bool = False
+    codex_thread_id: str | None = None
+    codex_remote: str | None = None
+    codex_remote_auth_token_env: str | None = None
+    continue_transport: str = "auto"
+    continue_destination: str = "local"
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -249,4 +277,38 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
             "PRESENCE_CONTINUE_SYNC_ACTIVITY",
             True,
         ),
+        control_path=(
+            resolve_data_path(os.environ["PRESENCE_CONTROL_PATH"], env_path)
+            if os.environ.get("PRESENCE_CONTROL_PATH")
+            else user_state_dir() / "control.json"
+        ),
+        task_automation_enabled=_env_bool(
+            "PRESENCE_TASK_AUTOMATION_ENABLED",
+            False,
+        ),
+        native_input_enabled=_env_bool(
+            "PRESENCE_NATIVE_INPUT_ENABLED",
+            True,
+        ),
+        gui_fallback_enabled=_env_bool(
+            "PRESENCE_GUI_FALLBACK_ENABLED",
+            False,
+        ),
+        remote_input_enabled=_env_bool(
+            "PRESENCE_REMOTE_INPUT_ENABLED",
+            False,
+        ),
+        codex_thread_id=os.environ.get("PRESENCE_CODEX_THREAD_ID") or None,
+        codex_remote=os.environ.get("PRESENCE_CODEX_REMOTE") or None,
+        codex_remote_auth_token_env=(
+            os.environ.get("PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV") or None
+        ),
+        continue_transport=_env_str(
+            "PRESENCE_CONTINUE_TRANSPORT",
+            "auto",
+        ).lower(),
+        continue_destination=_env_str(
+            "PRESENCE_CONTINUE_DESTINATION",
+            "local",
+        ).lower(),
     )

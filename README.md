@@ -12,7 +12,10 @@ The project also provides:
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions with an optional guarded GUI fallback;
-- scheduled `continue` input for the Codex GUI;
+- direct Codex session input through `codex queue`, without taking over the
+  user's mouse or keyboard;
+- an optional system tray for automation permissions and local/remote input;
+- scheduled `continue` input with native-first transport and guarded GUI fallback;
 - one-shot red alerts with a bounded local alarm;
 - native operational adapters for Linux and Windows.
 
@@ -53,6 +56,7 @@ Detailed operational documentation is currently available in Portuguese:
 - [Environment setup](docs/CONFIGURANDO-ENV.md)
 - [Environment and architecture guide](docs/ENVIRONMENT-GUIDE.md)
 - [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
+- [System tray and native Codex input](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md)
 - [Portability](docs/PORTABILIDADE.md)
 - [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
@@ -74,6 +78,9 @@ Linux has no third-party runtime Python dependency. On Windows, `pip` installs
 the platform-neutral `tzdata` package because the standard library does not
 ship the IANA time-zone database there.
 
+The system tray is optional on both platforms and uses PySide6. Native Codex
+input requires an installed Codex CLI that provides `codex queue`.
+
 ## Installation
 
 Recommended isolated installation:
@@ -82,6 +89,14 @@ Recommended isolated installation:
 python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
 "$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /path/to/ai-presence-monitor
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
+```
+
+Install the optional tray extra when desktop controls are needed:
+
+```bash
+"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install '/path/to/ai-presence-monitor[tray]'
+"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray --check
+"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray
 ```
 
 To expose the installed command in the current user's `PATH`:
@@ -423,27 +438,30 @@ keeps its independent restart policy.
 
 ## Integrated Codex Continue Command
 
-The package can schedule the default `continue` message for the Codex GUI:
+The package can schedule the default `continue` message for an exact Codex
+session. Native input uses `codex queue` and does not take over the mouse,
+keyboard, or clipboard:
 
 ```bash
+ai-presence control enable task-automation
 ai-presence --dry-run continue \
   --worker EXACT_WORKER_ID \
-  --window-title 'Codex'
+  --thread EXACT_SESSION_ID
 
 ai-presence continue \
-  --worker EXACT_WORKER_ID \
-  --window-title 'Codex'
+  --worker EXACT_WORKER_ID
 ```
 
-The default delay is 60 seconds. The target must resolve to exactly one visible
-window and is validated again after the wait. Linux uses X11; Windows uses the
-native Win32 window API and Unicode `SendInput` without replacing the clipboard.
+The default delay is 60 seconds. With no configured thread, the real command
+may infer the latest Codex session observed for the same worker. `auto` prefers
+native input. X11 and Win32 are explicit, disabled-by-default fallbacks.
 
 For terminals that dynamically change the full title, combine an explicit
 window ID with a stable project title pattern:
 
 ```bash
 ai-presence continue \
+  --transport gui \
   --window-id EXACT_WINDOW_ID \
   --window-title 'stable project name' \
   --allow-title-change
@@ -457,10 +475,12 @@ After successful input emission, an already active Protocol 2 worker may record
 hook remains the confirmation that the session actually resumed.
 
 Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
-GUI failure, and inactive workers do not count as activity.
+transport failure, and inactive workers do not count as activity. Enabling task
+automation grants permission; it does not start a periodic timer.
 
-See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) for background execution,
-synchronization, safety checks, and rollback.
+See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) and the
+[system tray guide](docs/SYSTEM-TRAY-NATIVE-INPUT.md) for controls, background
+execution, synchronization, safety checks, and rollback.
 
 ## Red Alert Escalation
 

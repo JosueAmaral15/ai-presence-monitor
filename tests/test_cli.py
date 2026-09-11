@@ -16,6 +16,7 @@ from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
     _ask_user,
     _continue_task,
+    _control,
     _dispatch_answer,
     _identity,
     _install_background_service,
@@ -27,6 +28,7 @@ from ai_presence_monitor.cli import (
     _run_codex_hook,
     _run_monitor,
     _run_reply_observer,
+    _send_input,
     _show_protocols,
     _show_questions,
     _show_status,
@@ -40,6 +42,7 @@ from ai_presence_monitor.cli import (
     main,
 )
 from ai_presence_monitor.config import AppConfig
+from ai_presence_monitor.control import ControlSettings, ControlStore
 from ai_presence_monitor.notify import NotificationError
 from ai_presence_monitor.store import PresenceStore
 
@@ -132,6 +135,25 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertEqual(continue_args.command, "continue")
         self.assertTrue(continue_args.allow_title_change)
         self.assertFalse(continue_args.sync_activity)
+        self.assertIsNone(continue_args.destination)
+
+        control_args = parser.parse_args(
+            ["control", "enable", "task-automation", "--json"]
+        )
+        self.assertEqual(control_args.action, "enable")
+        self.assertEqual(control_args.control_name, "task-automation")
+
+        input_args = parser.parse_args(
+            [
+                "--dry-run",
+                "send-input",
+                "--message",
+                "continue",
+                "--thread",
+                "thread-1",
+            ]
+        )
+        self.assertEqual(input_args.destination, "local")
 
         stop_alarm_args = parser.parse_args(
             ["--dry-run", "stop-alarm", "--timeout", "1", "--no-force"]
@@ -364,7 +386,11 @@ class CliBehaviorTests(unittest.TestCase):
     def test_continue_cli_dry_run_does_not_use_gui_or_database(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            config = make_config(root)
+            config = replace(
+                make_config(root),
+                continue_transport="gui",
+                gui_fallback_enabled=True,
+            )
             args = event_args(
                 root,
                 message=None,
@@ -381,6 +407,96 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertIn("[dry-run:continue]", output.getvalue())
             self.assertIn("atraso=60s", output.getvalue())
             self.assertFalse(config.db_path.exists())
+
+    def test_continue_cli_fails_closed_when_automation_is_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                make_config(root),
+                control_path=root / "control.json",
+                continue_transport="native",
+                codex_thread_id="thread",
+            )
+            args = event_args(
+                root,
+                dry_run=False,
+                message=None,
+                delay=0,
+                window_id=None,
+                window_title=None,
+                allow_title_change=False,
+                sync_activity=None,
+                transport=None,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                destination=None,
+                authorize_once=False,
+            )
+
+            with redirect_stderr(StringIO()) as error:
+                self.assertEqual(_continue_task(args, config), 2)
+
+            self.assertIn("automacao de tarefas desativada", error.getvalue())
+
+    def test_control_and_send_input_dry_run_share_runtime_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(make_config(root), control_path=root / "control.json")
+            enable_args = argparse.Namespace(
+                action="enable",
+                control_name="task-automation",
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=False,
+            )
+            with redirect_stdout(StringIO()):
+                self.assertEqual(_control(enable_args, config), 0)
+            saved = ControlStore.from_config(config).load()
+            self.assertTrue(saved.task_automation_enabled)
+
+            ControlStore.from_config(config).save(
+                ControlSettings(
+                    task_automation_enabled=True,
+                    native_input_enabled=True,
+                    codex_thread_id="thread-1",
+                )
+            )
+            input_args = argparse.Namespace(
+                destination="local",
+                thread=None,
+                message="answer",
+                dry_run=True,
+            )
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_send_input(input_args, config), 0)
+            self.assertIn("sessao=thread-1", output.getvalue())
+
+            dry_control = argparse.Namespace(
+                action="disable",
+                control_name="task-automation",
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=False,
+                dry_run=True,
+            )
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_control(dry_control, config), 0)
+            self.assertIn("alteracao nao persistida", output.getvalue())
+            self.assertTrue(
+                ControlStore.from_config(config).load().task_automation_enabled
+            )
+
+            input_args.message = " "
+            with redirect_stderr(StringIO()) as error:
+                self.assertEqual(_send_input(input_args, config), 2)
+            self.assertIn("nao pode ficar vazia", error.getvalue())
 
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
