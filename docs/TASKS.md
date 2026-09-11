@@ -2,31 +2,6 @@
 
 ## Em validacao
 
-### Task 018 - Guia de uso para humanos e AI-workers
-
-**Prioridade**: Alta
-**Status**: validada na branch da tarefa; integracao local pendente
-**Objetivo**: oferecer uma referencia unica para seres humanos, AI-workers e
-adaptadores utilizarem o monitor como ferramenta sem superestimar evidencias.
-
-**Criterios de aceite**:
-
-- [x] Guia cobre instalacao, controles, bandeja e fluxos humanos.
-- [x] Guia cobre `start`, hooks, `touch`, perguntas, `continue` e `finish` para
-      AI-workers.
-- [x] Existe contrato para wrappers, MCP e function calling.
-- [x] Estados `dry-run`, `dispatch_started`, `input_emitted`, hook e
-      `delivery_confirmed` possuem limites explicitos.
-- [x] E2E nativo exige marcador exclusivo e distingue `prossiga` manual de
-      `continue` automatizado.
-- [x] Registro anterior foi corrigido para tentativa inconclusiva.
-- [x] AGENTS, READMEs, indice, seguranca e guias relacionados apontam para a
-      nova norma.
-- [x] Gate completo passa com 152 testes e 86% de cobertura.
-- [ ] Trabalho documentado e integrado localmente em `develop`.
-
-**Guia**: `docs/USO-COMO-FERRAMENTA.md`.
-
 ### Task 017 - Despacho nativo nao bloqueante na propria sessao
 
 **Prioridade**: Critica
@@ -52,6 +27,31 @@ propria sessao e evitar falso positivo de atividade antes do hook.
 **Plano**: `docs/planning/TASK-017-native-self-queue.md`.
 
 ## Concluida em 2026-09-11
+
+### Task 018 - Guia de uso para humanos e AI-workers
+
+**Prioridade**: Alta
+**Status**: concluida e integrada localmente em `develop`
+**Objetivo**: oferecer uma referencia unica para seres humanos, AI-workers e
+adaptadores utilizarem o monitor como ferramenta sem superestimar evidencias.
+
+**Criterios de aceite**:
+
+- [x] Guia cobre instalacao, controles, bandeja e fluxos humanos.
+- [x] Guia cobre `start`, hooks, `touch`, perguntas, `continue` e `finish` para
+      AI-workers.
+- [x] Existe contrato para wrappers, MCP e function calling.
+- [x] Estados `dry-run`, `dispatch_started`, `input_emitted`, hook e
+      `delivery_confirmed` possuem limites explicitos.
+- [x] E2E nativo exige marcador exclusivo e distingue `prossiga` manual de
+      `continue` automatizado.
+- [x] Registro anterior foi corrigido para tentativa inconclusiva.
+- [x] AGENTS, READMEs, indice, seguranca e guias relacionados apontam para a
+      nova norma.
+- [x] Gate completo passa com 152 testes e 86% de cobertura.
+- [x] Commit `c4197fe` foi integrado em `develop` pelo merge `aab9f4c`.
+
+**Guia**: `docs/USO-COMO-FERRAMENTA.md`.
 
 ### Task 016 - Bandeja do sistema e entrada nativa do Codex
 
