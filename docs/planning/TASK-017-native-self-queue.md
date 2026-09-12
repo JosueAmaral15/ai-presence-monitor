@@ -55,9 +55,9 @@ session actually receives any input.
 
 ## Acceptance Criteria
 
-- [ ] One authorized native E2E with a unique marker reaches the exact target
+- [x] One authorized native E2E with a unique marker reaches the exact target
       once.
-- [ ] The identifiable message and a later hook confirm processing in the same
+- [x] The identifiable message and a later hook confirm processing in the same
       session.
 - [x] The previous manual `continue` was removed from the native E2E evidence.
 - [x] Current-session detection covers both Codex environment variables.
@@ -80,14 +80,23 @@ session actually receives any input.
   `destacado=true` without waiting, emitting input, or accessing SQLite.
 - Task commit: `89992de` on `codex/native-input-e2e-20260911`.
 - Local `develop` merge: `81e07fb`.
+- On 2026-09-12, one newly authorized dispatch targeted session
+  `019f5691-c118-7370-a205-94cfde0a93d7` with zero delay and a unique marker.
+- The dry-run selected native detached input without accessing input or SQLite;
+  the real invocation returned `dispatch_started` with exit code zero.
+- The exact marker appeared once as a user message in the target session. The
+  user had committed not to type or paste it manually.
+- Hook event 2607, `observation:codex:UserPromptSubmit`, was recorded next for
+  the same session at 2026-09-12 06:02:40 local time.
+- No retry occurred and no matching `codex queue` process remained afterward.
 
 ## Release Boundary
 
-The previous authorization was consumed by the inconclusive attempt. No second
-real message may be sent without new explicit authorization. The retest must
-use a unique marker such as `[AI-PRESENCE-E2E:<id>] continue`; the human must
-not type that marker, and manual continuation should use `prossiga` during the
-test window.
+The authorization granted on 2026-09-12 was consumed by the successful E2E
+above. No additional real message may be sent without new explicit
+authorization. Future regression tests must use a new marker such as
+`[AI-PRESENCE-E2E:<id>] continue`; the human must not type that marker, and
+manual continuation should use `prossiga` during the test window.
 
 Automated tests and dry-runs validate the implementation without proving a
 real queue delivery. The E2E result requires all of the following:
@@ -98,8 +107,9 @@ real queue delivery. The E2E result requires all of the following:
 4. a later hook from the same session;
 5. no retry after timeout or another uncertain result.
 
-`main` promotion remains blocked by the external Windows CI gate documented in
-Task 012. Local Linux validation does not replace that platform evidence.
+The native queue E2E gate is complete. `main` promotion remains blocked only by
+the external Windows CI gate documented in Task 012. Local Linux validation
+does not replace that platform evidence.
 
 ## Rollback
 

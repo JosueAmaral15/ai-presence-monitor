@@ -147,6 +147,7 @@ nome do player.
 - [x] CLI e menu integrados.
 - [x] Testes locais Linux e runtime Windows em Wine aprovados dentro dos
       limites documentados.
-- [ ] GitHub Actions em `windows-latest` aprovado; run `31540396474` bloqueado
-      antes dos jobs por problema de cobranca da conta.
+- [ ] GitHub Actions em `windows-latest` aprovado; runs `31540396474` e
+      `34660530783` bloqueados antes dos jobs por problema de cobranca da
+      conta.
 - [x] Documentacao final atualizada.

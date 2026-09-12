@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-12 - E2E nativo do Codex concluido
+
+- Validada uma unica execucao autorizada de `codex queue` para a propria
+  sessao, em processo destacado e com atraso zero.
+- O marcador exclusivo apareceu exatamente uma vez como mensagem de usuario e
+  foi seguido por `UserPromptSubmit` da mesma sessao.
+- Nao houve digitacao humana do marcador, retry automatico, atualizacao falsa
+  de atividade em `dispatch_started` ou processo de fila remanescente.
+- O gate E2E nativo foi concluido; a promocao para `main` continua bloqueada
+  somente pela CI real em Windows.
+
 ## 2026-09-11 - Guia de uso e correcao da evidencia E2E
 
 - Adicionado guia operacional para seres humanos e AI-workers utilizarem o
