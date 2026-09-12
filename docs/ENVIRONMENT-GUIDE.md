@@ -27,6 +27,20 @@ O `.env` comum no diretorio atual e reconhecido automaticamente apenas dentro
 do checkout do proprio AI Presence Monitor. Essa compatibilidade evita que a
 ferramenta leia por engano o `.env` de outra aplicacao.
 
+## Politica de Plataforma
+
+Linux e a plataforma operacional suportada na versao 0.6.2. O codigo Windows
+permanece instalado, mas o runtime e desabilitado por padrao:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false
+```
+
+Use `true` somente para desenvolvimento controlado no Windows. O opt-in libera
+os adaptadores existentes, sem declarar suporte estavel. `--dry-run` nao
+contorna essa politica. Ajuda, diagnostico, encerramento de worker, parada de
+alarme e desinstalacao continuam disponiveis com o valor `false`.
+
 Para instalar e reutilizar em outros projetos ou computadores, consulte
 `docs/PORTABILIDADE.md`.
 

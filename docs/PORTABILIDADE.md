@@ -6,6 +6,10 @@ Desde a versao 0.2.0, o AI Presence Monitor pode ser instalado como pacote
 Python e usado fora do diretorio do codigo-fonte. Os hooks do Codex e o servico
 systemd gerado usam o mesmo Python da instalacao.
 
+Na versao 0.6.2, Linux e o runtime suportado para publicacao. Os adaptadores
+Windows continuam no pacote e nos testes, mas sua execucao fica desabilitada
+por padrao e exige opt-in experimental explicito.
+
 ## Instalacao Recomendada
 
 Use um ambiente virtual dedicado:
@@ -49,6 +53,18 @@ continuo.
 
 ### Windows
 
+Instalar o pacote e consultar `--help` continuam permitidos. Qualquer operacao
+Windows que possa criar estado, instalar componentes, enviar entrada ou iniciar
+monitoramento exige esta configuracao no `.env` selecionado:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
+Mantenha `false` em distribuicoes normais. Diagnostico e recuperacao continuam
+disponiveis com o runtime desabilitado para que alarmes, hooks e tarefas antigas
+nao fiquem presos.
+
 O mesmo `pyproject.toml` gera um launcher `ai-presence.exe` no ambiente virtual:
 
 ```powershell
@@ -65,7 +81,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 & .\scripts\install-user-command.ps1
 ```
 
-Desde a versao 0.5.0, Windows possui familia operacional completa:
+Desde a versao 0.5.0, o codigo Windows possui uma familia operacional completa:
 
 - dispatcher Win32 por `ctypes` e `SendInput`;
 - backend de alarme com identidade por horario de criacao do processo;

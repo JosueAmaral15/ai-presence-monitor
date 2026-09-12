@@ -226,6 +226,11 @@ para cada sistema:
 - Linux: `venv/bin/ai-presence`;
 - Windows: `venv\Scripts\ai-presence.exe`.
 
+Na versao 0.6.2, somente Linux e um runtime suportado. A implementacao Windows
+foi preservada, mas fica desabilitada por padrao. Um AI-worker nao deve ativar
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` sem autorizacao explicita para uma
+validacao controlada.
+
 Uma Abstract Factory seleciona os adaptadores operacionais sem alterar os casos
 de uso:
 
@@ -235,11 +240,12 @@ de uso:
 | entrada nativa Codex | `codex queue` | `codex queue.exe` |
 | controle GUI | X11, `xdotool`, `xclip` | API Win32 e `SendInput` |
 | alarme limitado | GNU `timeout` e `/proc` | runner e `taskkill /T /F` |
-| CLI e banco | suportado | suportado |
+| CLI e banco | suportado | experimental com opt-in |
 
 Use os comandos portateis `install-background-service` e
 `uninstall-background-service`; a factory escolhe systemd ou Task Scheduler. A
-logica dos Protocolos 1 e 2 permanece compartilhada.
+logica dos Protocolos 1 e 2 permanece compartilhada. No Windows, instalacao e
+operacao exigem o opt-in; ajuda e recuperacao permanecem acessiveis sem ele.
 
 ## Instrucao para Outro Codex
 

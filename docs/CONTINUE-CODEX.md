@@ -31,6 +31,8 @@ printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. O
 adaptador usa a API Win32 nativa e nao requer dependencia GUI externa. Wayland
 e macOS ainda nao possuem adaptador.
+Na versao 0.6.2, o caminho Windows e experimental e requer
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
 
 ## Norma de Acionamento pela IA
 

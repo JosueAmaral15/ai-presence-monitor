@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_presence_monitor.codex_hook_installer import (
     count_presence_hooks,
     default_hook_script_path,
     install_codex_hook,
     uninstall_codex_hook,
+)
+from ai_presence_monitor.codex_hook_installer import (
+    main as installer_main,
 )
 
 
@@ -144,6 +151,35 @@ class CodexHookInstallerTests(unittest.TestCase):
             rendered = target.read_text(encoding="utf-8")
             self.assertNotIn("/tmp/codex_presence_hook.py", rendered)
             self.assertIn("ai_presence_monitor.codex_hook", rendered)
+
+    def test_direct_installer_blocks_windows_without_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "hooks.json"
+            env_path = root / ".env"
+            env_path.write_text(
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stderr(StringIO()) as error, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                installer_main(
+                    [
+                        "install",
+                        "--target",
+                        str(target),
+                        "--env-file",
+                        str(env_path),
+                    ]
+                )
+
+            self.assertEqual(exit_context.exception.code, 2)
+            self.assertIn("Windows e experimental", error.getvalue())
+            self.assertFalse(target.exists())
 
 
 if __name__ == "__main__":

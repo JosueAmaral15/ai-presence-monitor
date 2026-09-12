@@ -1,8 +1,30 @@
 # Guia Operacional do Windows
 
+## Estado Nesta Release
+
+A versao 0.6.2 preserva todo o codigo Windows, mas desabilita sua execucao
+operacional por padrao. Linux e a unica plataforma suportada para publicacao
+nesta release. O Windows permanece disponivel somente para desenvolvimento e
+validacao experimental controlada.
+
+Para liberar os adaptadores existentes, defina no `.env` selecionado:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
+O opt-in nao transforma a integracao em suporte de producao. Sem ele, comandos
+operacionais encerram antes de criar banco, instalar hooks, iniciar servicos,
+controlar GUI ou disparar notificacoes. `--dry-run` tambem respeita o bloqueio,
+pois alguns comandos historicos de teste ainda podem criar estado local.
+
+Continuam disponiveis sem opt-in os comandos de ajuda, diagnostico e
+recuperacao: `status`, `protocols`, `questions`, `finish`, `stop-alarm`,
+`control show`, `control disable` e os desinstaladores de hook e servico.
+
 ## Capacidades
 
-A versao 0.5.0 oferece no Windows:
+A versao 0.5.0 implementou no Windows:
 
 - CLI, menu, SQLite, protocolos, hooks e notificacoes;
 - automacao da janela do Codex pela API Win32;
@@ -83,10 +105,16 @@ Copy-Item .env.example "$ConfigDir\.env"
 notepad "$ConfigDir\.env"
 ```
 
+Para uma validacao experimental, altere somente a copia local:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
 Tambem e permitido usar `.ai-presence-monitor.env` na raiz de cada projeto ou
 passar `--env-file` explicitamente.
 
-Primeiro teste sem rede, banco ou GUI:
+Primeiro teste com o opt-in ativo e sem rede, banco ou GUI:
 
 ```powershell
 & $AiPresence --dry-run protocols
@@ -238,4 +266,6 @@ py -3 scripts\quality_check.py
 ```
 
 O gate executa compilacao, testes, cobertura, Ruff, mypy, build do wheel e
-`git diff --check` sem depender de Bash.
+`git diff --check` sem depender de Bash. Na CI, Windows e executado apenas por
+`workflow_dispatch`, com resultado experimental e nao bloqueante. O gate de
+publicacao obrigatorio permanece em Linux.

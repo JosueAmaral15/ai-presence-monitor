@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-09-12 - Linux estavel e Windows com opt-in experimental
+
+**Decisao**: publicar a versao 0.6.2 com Linux habilitado e suportado por
+padrao, preservando integralmente os adaptadores Windows atras de
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
+
+**Motivo**:
+
+- a implementacao Windows existe, mas o gate externo real ainda nao foi
+  executado por bloqueio da conta GitHub;
+- remover o codigo perderia trabalho reutilizavel e dificultaria a validacao
+  futura;
+- permitir o runtime por padrao faria a release prometer um suporte ainda nao
+  comprovado;
+- um gate central e reversivel evita condicionais espalhadas nos casos de uso.
+
+**Alternativas consideradas**:
+
+- apagar Windows: rejeitado porque o problema e de maturidade, nao de desenho;
+- manter Windows como gate obrigatorio: rejeitado para esta release porque
+  impediria a publicacao Linux por uma integracao externa nao validada;
+- tratar `--dry-run` como excecao: rejeitado porque comandos historicos podem
+  criar estado local mesmo sem rede ou GUI.
+
+**Consequencia**:
+
+A Abstract Factory continua contendo as familias Linux e Windows. O guard
+central bloqueia efeitos operacionais no Windows, enquanto ajuda, diagnostico,
+`finish`, `stop-alarm`, desabilitacao de controles e desinstaladores permanecem
+disponiveis. A CI Linux e obrigatoria; a matriz Windows permanece manual,
+experimental e nao bloqueante.
+
 ## 2026-09-11 - Despacho destacado para a propria sessao Codex
 
 **Decisao**: detectar quando o alvo de `codex queue` e a sessao do processo

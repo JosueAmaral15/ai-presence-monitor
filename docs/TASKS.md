@@ -2,6 +2,32 @@
 
 ## Concluida em 2026-09-12
 
+### Task 019 - Release Linux com Windows experimental desabilitado
+
+**Prioridade**: Critica
+**Status**: concluida e integrada localmente em `develop`
+**Objetivo**: habilitar oficialmente apenas Linux nesta release, preservando
+todo o codigo Windows atras de opt-in experimental desabilitado por padrao.
+
+**Criterios de aceite**:
+
+- [x] Linux continua habilitado sem configuracao adicional.
+- [x] Windows operacional falha antes de efeitos colaterais por padrao.
+- [x] `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` libera os adaptadores
+      preservados somente para validacao controlada.
+- [x] Diagnostico, encerramento e rollback continuam disponiveis no Windows.
+- [x] CI obrigatoria cobre Linux; Windows permanece manual e nao bloqueante.
+- [x] Testes, seguranca, portabilidade, ambiente e rollback estao documentados.
+- [x] Gate local completo, build e instalacao isolada passam.
+
+**Plano**: `docs/planning/TASK-019-linux-stable-runtime-gate.md`.
+
+**Conclusao (2026-09-12)**: 162 testes passaram em Python 3.10, 3.11 e
+3.12; cobertura ficou em 87%; Ruff, mypy, build 0.6.2, instalacao isolada,
+factory Linux, bandeja e servicos locais foram validados. O wheel preserva os
+modulos Windows. A CI remota Linux continua indisponivel pelo bloqueio de
+cobranca da conta GitHub e deve ser tratada na decisao de promocao para `main`.
+
 ### Task 017 - Despacho nativo nao bloqueante na propria sessao
 
 **Prioridade**: Critica
@@ -61,8 +87,8 @@ adaptadores utilizarem o monitor como ferramenta sem superestimar evidencias.
 ### Task 016 - Bandeja do sistema e entrada nativa do Codex
 
 **Prioridade**: Alta
-**Status**: concluida em `develop`; promocao para `main` aguarda os gates
-externos registrados no plano da tarefa
+**Status**: concluida em `develop`; promocao para `main` aguarda os gates Linux
+da Task 019; a validacao Windows foi reclassificada como experimental
 **Objetivo**: permitir que usuario e AI-worker controlem autorizacoes de
 automacao em uma bandeja e enviem texto para uma sessao exata do Codex sem
 ocupar mouse ou teclado.
@@ -82,7 +108,8 @@ ocupar mouse ou teclado.
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta
-**Status**: em andamento - CI externa bloqueada por cobranca da conta GitHub
+**Status**: implementacao preservada como experimental; CI real pendente e
+nao bloqueante para a release Linux da Task 019
 **Objetivo**: oferecer no Windows as integracoes locais que antes existiam
 somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
@@ -106,11 +133,11 @@ somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
 **Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
 
-**Checkpoint externo**: os runs `31540396474` e `34660530783` nao iniciaram
+**Checkpoint experimental**: os runs `31540396474` e `34660530783` nao iniciaram
 nenhum job porque a conta GitHub esta bloqueada por problema de cobranca. O
 segundo run foi criado pelo push de `develop` em 2026-09-11 e repetiu o mesmo
-resultado nos seis jobs. A tarefa nao sera movida para concluidas ate um run
-real em `windows-latest` passar.
+resultado nos seis jobs. A validacao Windows permanece pendente ate um run real
+em `windows-latest` passar, mas nao bloqueia a release Linux 0.6.2.
 
 ## Concluidas
 

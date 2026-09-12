@@ -4,6 +4,10 @@
 
 Monitor local para presencas artificiais de trabalho. Ele registra atividade de uma IA/agente, mantém estado em SQLite e envia notificacoes automáticas por Discord e, opcionalmente, Telegram.
 
+Esta release possui suporte operacional oficial somente para Linux. O codigo
+Windows foi preservado, mas fica experimental e desabilitado por padrao. Testes
+controlados no Windows exigem `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
+
 ## Protocolos
 
 ### Protocolo 1
@@ -54,6 +58,13 @@ No Windows PowerShell, sem privilegios administrativos:
 Set-ExecutionPolicy -Scope Process Bypass
 & .\scripts\install-user-command.ps1
 & "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
+```
+
+A instalacao preserva os adaptadores, mas comandos operacionais Windows ficam
+bloqueados. Ative-os somente para desenvolvimento controlado no `.env`:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
 ```
 
 Durante o desenvolvimento no proprio checkout:

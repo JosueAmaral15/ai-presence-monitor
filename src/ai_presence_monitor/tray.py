@@ -12,6 +12,7 @@ from .codex_input import (
 )
 from .config import AppConfig, load_config
 from .control import ControlError, ControlSettings, ControlStore
+from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .store import PresenceStore
 
 
@@ -42,6 +43,9 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     *,
     check_only: bool = False,
 ) -> int:
+    ensure_runtime_enabled(
+        experimental_windows_enabled=config.experimental_windows_enabled,
+    )
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
@@ -323,7 +327,12 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     try:
         result = run_tray(load_config(args.env_file), check_only=args.check)
-    except (ControlError, TrayUnavailableError, ValueError) as exc:
+    except (
+        ControlError,
+        TrayUnavailableError,
+        UnsupportedPlatformError,
+        ValueError,
+    ) as exc:
         print(str(exc), file=sys.stderr)
         result = 2
     raise SystemExit(result)

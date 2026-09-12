@@ -25,12 +25,17 @@
 - Workers devem poder ser isolados por projeto e sessao.
 - O servico de monitoramento continuo deve ser gerado sem caminhos fixos da
   maquina de desenvolvimento.
-- Linux e Windows devem selecionar adaptadores operacionais por uma factory de
-  plataforma, sem duplicar a logica dos protocolos.
-- A execucao continua deve usar systemd de usuario no Linux e Task Scheduler do
-  usuario no Windows.
+- Linux deve permanecer habilitado e suportado sem configuracao adicional.
+- Windows deve preservar seus adaptadores e testes, mas sua execucao
+  operacional deve exigir opt-in experimental desabilitado por padrao.
+- A selecao deve usar uma factory de plataforma, sem duplicar a logica dos
+  protocolos.
+- A execucao continua usa systemd de usuario no Linux; o Task Scheduler do
+  usuario permanece disponivel somente no runtime Windows experimental.
 - A distribuicao Windows deve instalar uma base IANA de timezones para
   `ZoneInfo` e fechar conexoes SQLite antes de liberar arquivos.
+- O bloqueio Windows deve ocorrer antes de efeitos operacionais, inclusive em
+  `--dry-run`, mas deve preservar diagnostico, encerramento e rollback.
 
 ## Respostas Remotas
 

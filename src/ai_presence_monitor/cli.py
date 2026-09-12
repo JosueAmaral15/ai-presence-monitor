@@ -32,7 +32,11 @@ from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .notify import NotificationError, Notifier
-from .platform_integration import UnsupportedPlatformError, get_platform_factory
+from .platform_integration import (
+    UnsupportedPlatformError,
+    ensure_runtime_enabled,
+    get_platform_factory,
+)
 from .protocols import (
     PROTOCOLS,
     choose_threshold,
@@ -64,6 +68,34 @@ DEFAULT_EVENT_MESSAGES = {
     "touch": "atividade interna registrada",
     "finish": "tarefa concluida",
 }
+
+DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
+    {
+        "finish",
+        "protocols",
+        "questions",
+        "status",
+        "stop-alarm",
+        "uninstall-background-service",
+        "uninstall-codex-hook",
+        "uninstall-reply-observer-service",
+        "uninstall-systemd-service",
+    }
+)
+
+
+def _command_allowed_while_runtime_disabled(args: argparse.Namespace) -> bool:
+    if args.command in DISABLED_RUNTIME_SAFE_COMMANDS:
+        return True
+    return args.command == "control" and args.action in {"show", "disable"}
+
+
+def _enforce_runtime_policy(args: argparse.Namespace, config: AppConfig) -> None:
+    if _command_allowed_while_runtime_disabled(args):
+        return
+    ensure_runtime_enabled(
+        experimental_windows_enabled=config.experimental_windows_enabled,
+    )
 
 
 def _timestamp(value: float | None) -> str:
@@ -622,7 +654,9 @@ def _uninstall_reply_observer_service(
 
 def _install_background_service(args: argparse.Namespace, config: AppConfig) -> int:
     try:
-        manager = get_platform_factory().create_background_service_manager()
+        manager = get_platform_factory(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        ).create_background_service_manager()
         result = manager.install(
             component=args.component,
             env_file=config.env_path,
@@ -640,7 +674,9 @@ def _install_background_service(args: argparse.Namespace, config: AppConfig) -> 
 
 def _uninstall_background_service(args: argparse.Namespace, config: AppConfig) -> int:
     try:
-        manager = get_platform_factory().create_background_service_manager()
+        manager = get_platform_factory(
+            experimental_windows_enabled=True,
+        ).create_background_service_manager()
         result = manager.uninstall(
             component=args.component,
             target_path=args.target,
@@ -687,7 +723,7 @@ def _show_protocols() -> int:
 
 def _stop_alarm(args: argparse.Namespace) -> int:
     try:
-        result = AlarmController().stop(
+        result = AlarmController(experimental_windows_enabled=True).stop(
             timeout_seconds=args.timeout,
             force=not args.no_force,
             dry_run=args.dry_run,
@@ -1152,8 +1188,14 @@ def main(argv: list[str] | None = None) -> None:
         config = load_config(args.env_file)
         if args.db:
             config = replace(config, db_path=Path(args.db).expanduser())
+        _enforce_runtime_policy(args, config)
         raise_code = args.func(args, config)
-    except (ControlError, ValueError, KeyboardInterrupt) as exc:
+    except (
+        ControlError,
+        UnsupportedPlatformError,
+        ValueError,
+        KeyboardInterrupt,
+    ) as exc:
         print(str(exc), file=sys.stderr)
         raise_code = 1
     raise SystemExit(raise_code)

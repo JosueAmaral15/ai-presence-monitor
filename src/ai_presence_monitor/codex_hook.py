@@ -9,6 +9,7 @@ from typing import Any
 
 from .config import AppConfig, load_config
 from .identity import scoped_worker_id
+from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .protocols import get_protocol
 from .store import PresenceStore, WorkerState
 
@@ -232,6 +233,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     config = load_config(args.env_file, override_env=True)
+    try:
+        ensure_runtime_enabled(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        )
+    except UnsupportedPlatformError as exc:
+        if args.verbose:
+            print(f"codex-hook: observacao ignorada: {exc}")
+        raise SystemExit(0) from None
     raise SystemExit(
         run_from_stdin(
             config=config,

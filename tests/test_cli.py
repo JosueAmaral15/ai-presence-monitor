@@ -15,6 +15,7 @@ from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
     _ask_user,
+    _command_allowed_while_runtime_disabled,
     _continue_task,
     _control,
     _dispatch_answer,
@@ -558,7 +559,11 @@ class CliBehaviorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             env_path = root / ".env"
-            env_path.write_text("PRESENCE_DB_PATH=./presence.db\n", encoding="utf-8")
+            env_path.write_text(
+                "PRESENCE_DB_PATH=./presence.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n",
+                encoding="utf-8",
+            )
 
             with redirect_stdout(StringIO()), self.assertRaises(SystemExit) as exit_context:
                 main(["--env-file", str(env_path), "protocols"])
@@ -586,6 +591,119 @@ class CliBehaviorTests(unittest.TestCase):
                 main(["--env-file", str(invalid_env), "status"])
             self.assertEqual(exit_context.exception.code, 1)
             self.assertIn("Escopo de worker invalido", stderr.getvalue())
+
+    def test_main_blocks_windows_operations_without_explicit_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / ".env"
+            env_path.write_text(
+                "PRESENCE_DB_PATH=./presence.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stderr(StringIO()) as error, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                main(["--env-file", str(env_path), "init"])
+
+            self.assertEqual(exit_context.exception.code, 1)
+            self.assertIn("Windows e experimental", error.getvalue())
+            self.assertFalse((root / "presence.db").exists())
+
+    def test_main_allows_explicit_windows_opt_in_and_safe_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            enabled_env = root / "enabled.env"
+            enabled_env.write_text(
+                "PRESENCE_DB_PATH=./enabled.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n",
+                encoding="utf-8",
+            )
+            disabled_env = root / "disabled.env"
+            disabled_env.write_text(
+                "PRESENCE_DB_PATH=./disabled.db\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ):
+                with redirect_stdout(StringIO()), self.assertRaises(
+                    SystemExit
+                ) as enabled_exit:
+                    main(["--env-file", str(enabled_env), "init"])
+                with redirect_stdout(StringIO()), self.assertRaises(
+                    SystemExit
+                ) as status_exit:
+                    main(["--env-file", str(disabled_env), "status"])
+
+            self.assertEqual(enabled_exit.exception.code, 0)
+            self.assertEqual(status_exit.exception.code, 0)
+            self.assertTrue((root / "enabled.db").exists())
+
+    def test_main_does_not_let_dry_run_bypass_windows_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / ".env"
+            env_path.write_text("PRESENCE_DB_PATH=./presence.db\n", encoding="utf-8")
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stderr(StringIO()) as error, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                main(
+                    [
+                        "--env-file",
+                        str(env_path),
+                        "--dry-run",
+                        "start",
+                        "--project",
+                        str(root),
+                    ]
+                )
+
+            self.assertEqual(exit_context.exception.code, 1)
+            self.assertIn("Windows e experimental", error.getvalue())
+            self.assertFalse((root / "presence.db").exists())
+
+    def test_disabled_runtime_preserves_only_diagnostics_and_recovery(self) -> None:
+        for command in (
+            "finish",
+            "protocols",
+            "questions",
+            "status",
+            "stop-alarm",
+            "uninstall-background-service",
+            "uninstall-codex-hook",
+            "uninstall-reply-observer-service",
+            "uninstall-systemd-service",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(
+                    _command_allowed_while_runtime_disabled(
+                        argparse.Namespace(command=command)
+                    )
+                )
+
+        self.assertTrue(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="show")
+            )
+        )
+        self.assertTrue(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="disable")
+            )
+        )
+        self.assertFalse(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="enable")
+            )
+        )
 
 
 if __name__ == "__main__":

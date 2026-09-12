@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .config import resolve_env_path
+from .config import load_config, resolve_env_path
+from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 
 HOOK_MARKERS = ("codex_presence_hook.py", "ai_presence_monitor.codex_hook")
 HOOK_EVENTS = ("SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop")
@@ -298,6 +299,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     if args.command == "install":
+        config = load_config(args.env_file, override_env=True)
+        try:
+            ensure_runtime_enabled(
+                experimental_windows_enabled=config.experimental_windows_enabled,
+            )
+        except UnsupportedPlatformError as exc:
+            print(str(exc), file=sys.stderr)
+            raise SystemExit(2) from exc
         result = install_codex_hook(
             target_path=args.target,
             env_file=args.env_file,

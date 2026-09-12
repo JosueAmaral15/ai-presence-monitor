@@ -12,6 +12,22 @@ cp .env.example .env
 
 Depois edite apenas o `.env`. O `.env.example` deve continuar sem segredos.
 
+## Plataforma Suportada
+
+Linux funciona sem configuracao adicional. Nesta release, preserve:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false
+```
+
+O codigo Windows nao foi removido. Para desenvolvimento controlado em uma
+maquina Windows, altere a copia local para `true`. Isso libera os adaptadores
+Win32, Task Scheduler e alarme Windows, mas nao os torna parte do suporte
+estavel da release. Mesmo `--dry-run` exige o opt-in.
+
+Com `false`, comandos de diagnostico, `finish`, `stop-alarm`, controles de
+desabilitacao e desinstaladores continuam disponiveis para recuperacao.
+
 ## Campos Obrigatorios para Discord
 
 Para receber mensagens reais no Discord, preencha:
@@ -266,6 +282,7 @@ O programa nao faz chamada telefonica diretamente. No modo `phone`, ele envia JS
 
 Antes de usar em producao local, confira:
 
+- `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false` para a release Linux;
 - `PRESENCE_DB_PATH` aponta para o banco esperado;
 - `PRESENCE_DEFAULT_PROTOCOL` e `PRESENCE_CODEX_PROTOCOL` usam `protocol1` ou `protocol2`;
 - se `PRESENCE_WORK_WINDOW_ENABLED=true`, inicio/fim usam `HH:MM` e o timezone esta correto;

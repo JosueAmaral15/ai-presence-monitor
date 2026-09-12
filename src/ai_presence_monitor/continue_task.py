@@ -189,7 +189,9 @@ def execute_continue_task(
             dispatch_state = native_result.state
         else:
             assert pattern is not None
-            actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+            actor = dispatcher or get_platform_factory(
+                experimental_windows_enabled=config.experimental_windows_enabled,
+            ).create_gui_dispatcher(
                 x_ratio=config.codex_gui_click_x_ratio,
                 y_ratio=config.codex_gui_click_y_ratio,
             )

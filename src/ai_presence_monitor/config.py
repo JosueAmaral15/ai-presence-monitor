@@ -188,6 +188,7 @@ class AppConfig:
     codex_remote_auth_token_env: str | None = None
     continue_transport: str = "auto"
     continue_destination: str = "local"
+    experimental_windows_enabled: bool = False
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -311,4 +312,8 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
             "PRESENCE_CONTINUE_DESTINATION",
             "local",
         ).lower(),
+        experimental_windows_enabled=_env_bool(
+            "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED",
+            False,
+        ),
     )
