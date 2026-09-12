@@ -1,19 +1,18 @@
 # Tasks - AI Presence Monitor
 
-## Em validacao
+## Concluida em 2026-09-12
 
 ### Task 017 - Despacho nativo nao bloqueante na propria sessao
 
 **Prioridade**: Critica
-**Status**: implementacao integrada localmente em `develop`; E2E nativo real
-aguarda nova autorizacao e mensagem com marcador exclusivo
+**Status**: concluida; E2E nativo real aprovado na sessao exata
 **Objetivo**: impedir que `codex queue` bloqueie o turno ativo ao enviar para a
 propria sessao e evitar falso positivo de atividade antes do hook.
 
 **Criterios de aceite**:
 
-- [ ] E2E com marcador exclusivo chega uma unica vez a sessao exata.
-- [ ] Mensagem identificavel e hook posterior confirmam o processamento no alvo.
+- [x] E2E com marcador exclusivo chega uma unica vez a sessao exata.
+- [x] Mensagem identificavel e hook posterior confirmam o processamento no alvo.
 - [x] Tentativa anterior foi reclassificada como inconclusiva depois que o
       usuario informou ter digitado manualmente o `continue` observado.
 - [x] A propria sessao usa processo destacado no Linux e no Windows.
@@ -25,6 +24,12 @@ propria sessao e evitar falso positivo de atividade antes do hook.
 - [x] Trabalho funcional e integrado localmente em `develop`.
 
 **Plano**: `docs/planning/TASK-017-native-self-queue.md`.
+
+**Conclusao (2026-09-12)**: uma unica execucao autorizada retornou
+`dispatch_started`; o marcador exclusivo apareceu uma vez como mensagem de
+usuario na sessao `019f5691-c118-7370-a205-94cfde0a93d7`, sem digitacao humana,
+e o hook `UserPromptSubmit` 2607 foi registrado em seguida para a mesma sessao.
+Nao houve retry nem processo `codex queue` remanescente.
 
 ## Concluida em 2026-09-11
 
@@ -101,9 +106,10 @@ somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
 **Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
 
-**Checkpoint externo**: o run `31540396474` nao iniciou nenhum job porque a
-conta GitHub esta bloqueada por problema de cobranca. O workflow permanece
-configurado para seis jobs; a tarefa nao sera movida para concluidas ate um run
+**Checkpoint externo**: os runs `31540396474` e `34660530783` nao iniciaram
+nenhum job porque a conta GitHub esta bloqueada por problema de cobranca. O
+segundo run foi criado pelo push de `develop` em 2026-09-11 e repetiu o mesmo
+resultado nos seis jobs. A tarefa nao sera movida para concluidas ate um run
 real em `windows-latest` passar.
 
 ## Concluidas
