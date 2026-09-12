@@ -1,8 +1,30 @@
 # Guia Operacional do Windows
 
+## Estado Nesta Release
+
+A versao 0.6.2 preserva todo o codigo Windows, mas desabilita sua execucao
+operacional por padrao. Linux e a unica plataforma suportada para publicacao
+nesta release. O Windows permanece disponivel somente para desenvolvimento e
+validacao experimental controlada.
+
+Para liberar os adaptadores existentes, defina no `.env` selecionado:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
+O opt-in nao transforma a integracao em suporte de producao. Sem ele, comandos
+operacionais encerram antes de criar banco, instalar hooks, iniciar servicos,
+controlar GUI ou disparar notificacoes. `--dry-run` tambem respeita o bloqueio,
+pois alguns comandos historicos de teste ainda podem criar estado local.
+
+Continuam disponiveis sem opt-in os comandos de ajuda, diagnostico e
+recuperacao: `status`, `protocols`, `questions`, `finish`, `stop-alarm`,
+`control show`, `control disable` e os desinstaladores de hook e servico.
+
 ## Capacidades
 
-A versao 0.5.0 oferece no Windows:
+A versao 0.5.0 implementou no Windows:
 
 - CLI, menu, SQLite, protocolos, hooks e notificacoes;
 - automacao da janela do Codex pela API Win32;
@@ -10,6 +32,15 @@ A versao 0.5.0 oferece no Windows:
 - monitor e observer de respostas no Task Scheduler;
 - caminhos nativos em `%APPDATA%` e `%LOCALAPPDATA%`;
 - workflow automatizado configurado para `windows-latest`.
+
+A versao 0.6.0 acrescenta entrada nativa por `codex queue.exe` e bandeja
+PySide6 opcional. A entrada nativa nao precisa de desktop desbloqueado, nao usa
+mouse/teclado e deve ser preferida ao dispatcher Win32.
+
+A versao 0.6.1 evita bloqueio ao enviar para a propria sessao: o processo usa
+`CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP`, retorna `dispatch_started` e
+aguarda um hook posterior como evidencia, sem atualizar atividade no momento do
+spawn.
 
 Nao e necessario executar como administrador. A automacao GUI exige a sessao do
 usuario desbloqueada e uma janela visivel.
@@ -39,6 +70,18 @@ $AiPresence = "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.ex
 & $AiPresence --help
 ```
 
+Instale e verifique a bandeja opcional:
+
+```powershell
+& "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\pip.exe" install `
+  '.[tray]'
+& $AiPresence tray --check
+& $AiPresence tray
+```
+
+O Codex CLI deve estar no `PATH` e `codex queue --help` deve funcionar. O modo
+remoto do app-server e experimental; use endpoint autenticado e TLS/tunel.
+
 Para usar diretamente do checkout:
 
 ```powershell
@@ -62,10 +105,16 @@ Copy-Item .env.example "$ConfigDir\.env"
 notepad "$ConfigDir\.env"
 ```
 
+Para uma validacao experimental, altere somente a copia local:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
 Tambem e permitido usar `.ai-presence-monitor.env` na raiz de cada projeto ou
 passar `--env-file` explicitamente.
 
-Primeiro teste sem rede, banco ou GUI:
+Primeiro teste com o opt-in ativo e sem rede, banco ou GUI:
 
 ```powershell
 & $AiPresence --dry-run protocols
@@ -217,4 +266,6 @@ py -3 scripts\quality_check.py
 ```
 
 O gate executa compilacao, testes, cobertura, Ruff, mypy, build do wheel e
-`git diff --check` sem depender de Bash.
+`git diff --check` sem depender de Bash. Na CI, Windows e executado apenas por
+`workflow_dispatch`, com resultado experimental e nao bloqueante. O gate de
+publicacao obrigatorio permanece em Linux.

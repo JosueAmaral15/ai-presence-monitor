@@ -108,25 +108,33 @@ estiver correlacionada com a pergunta e vier de um usuario permitido.
 
 ### 4. Continuidade
 
-`continue` controla uma janela grafica. Ele nao e necessario para registrar
-atividade comum:
+`continue` envia entrada a uma sessao Codex. Por padrao, usa `codex queue` sem
+controlar mouse ou teclado; X11/Win32 e apenas fallback. Ele nao e necessario
+para registrar atividade comum:
 
 ```bash
-ai-presence --dry-run continue --project "$PROJECT"
+ai-presence control show
+ai-presence --dry-run continue --project "$PROJECT" --thread SESSAO_EXATA
 ai-presence continue --project "$PROJECT"
 ```
 
-Use o segundo comando somente com autorizacao explicita e depois de aplicar a
+Use o comando real somente quando `task-automation` estiver habilitado ou o
+usuario tiver autorizado `--authorize-once`, e depois de aplicar a
 [norma de acionamento](CONTINUE-CODEX.md#norma-de-acionamento-pela-ia). Em
 resumo: a etapa atual deve estar concluida, a proxima tarefa precisa ser
 concreta e nao pode existir pergunta, bloqueio ou outra execucao pendente.
 
-Uma emissao bem-sucedida atualiza `last_activity_at` de um worker ativo no
-Protocolo 2. Falha, cancelamento, dry-run e worker inativo nao atualizam o
-monitor. O evento nao prova que o Codex processou a mensagem; verifique um hook
-posterior antes de considerar a retomada confirmada.
+Uma emissao sincrona bem-sucedida pode atualizar `last_activity_at` de um
+worker ativo no Protocolo 2. Ao enviar para a propria sessao, a CLI retorna
+`dispatch_started` sem atualizar o monitor; somente o hook posterior registra
+atividade. Falha, cancelamento, dry-run e worker inativo tambem nao atualizam o
+monitor. Nenhum estado inicial prova que o Codex processou a mensagem.
 
-Uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
+Na ausencia de `PRESENCE_CODEX_THREAD_ID`, o comando real pode inferir a sessao
+do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
+uma falha. Consulte [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md).
+
+No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para
 `xdotool`.
 
@@ -148,6 +156,24 @@ ai-presence finish \
 
 Nao use `finish` para pausas curtas se a tarefa continua sob responsabilidade
 do mesmo worker.
+
+## Integracao Git por Sessao
+
+Ao terminar cada sessao de implementacao:
+
+1. execute os gates aplicaveis e revise o diff;
+2. crie um commit na branch da tarefa;
+3. integre trabalho funcional e validado em `develop`;
+4. promova `develop` para `main` somente quando todos os requisitos de
+   publicacao, testes de integracao e dependencias externas obrigatorias
+   estiverem concluidos;
+5. registre bloqueios no plano ou em `docs/TASKS.md`, sem declarar a versao
+   pronta para publicacao.
+
+Uma suite local aprovada nao substitui um E2E real exigido pelo plano nem uma
+CI de plataforma que ainda nao executou. Commit e promocao de branch devem
+preservar o historico; nunca descarte alteracoes do usuario para obter um
+worktree limpo.
 
 ## Comandos de Diagnostico
 
@@ -171,6 +197,7 @@ O monitor e o observer de respostas sao componentes diferentes:
 | hooks do Codex | registram evidencia local de atividade |
 | monitor | avalia atrasos e envia alertas |
 | observer de respostas | consulta o Discord e processa respostas |
+| transporte nativo | enfileira texto em uma sessao exata com `codex queue` |
 | dispatcher GUI | fallback opcional de mouse e teclado |
 
 `observer nao instalado` significa que a unidade systemd do Linux ou a tarefa
@@ -183,7 +210,13 @@ impede o monitor de alertas nem os hooks de funcionar.
 - valor diferente de zero: falha de configuracao, transporte ou operacao.
 
 A IA deve verificar o codigo de saida e relatar o erro. Nao deve repetir
-automaticamente um envio GUI com resultado incerto.
+automaticamente nenhum envio com resultado incerto.
+
+`dispatch_started` com codigo zero significa apenas que o processo destacado
+foi criado. A IA deve encerrar o turno e aguardar evidencia posterior, sem
+executar novo envio nem `touch` para fabricar confirmacao. Hook isolado prova
+atividade, nao autoria; testes E2E exigem o marcador exclusivo definido em
+[USO-COMO-FERRAMENTA.md](USO-COMO-FERRAMENTA.md).
 
 ## Linux e Windows
 
@@ -193,27 +226,37 @@ para cada sistema:
 - Linux: `venv/bin/ai-presence`;
 - Windows: `venv\Scripts\ai-presence.exe`.
 
+Na versao 0.6.2, somente Linux e um runtime suportado. A implementacao Windows
+foi preservada, mas fica desabilitada por padrao. Um AI-worker nao deve ativar
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` sem autorizacao explicita para uma
+validacao controlada.
+
 Uma Abstract Factory seleciona os adaptadores operacionais sem alterar os casos
 de uso:
 
 | Capacidade | Linux atual | Windows |
 |---|---|---|
 | processo continuo | systemd de usuario | Task Scheduler do usuario |
+| entrada nativa Codex | `codex queue` | `codex queue.exe` |
 | controle GUI | X11, `xdotool`, `xclip` | API Win32 e `SendInput` |
 | alarme limitado | GNU `timeout` e `/proc` | runner e `taskkill /T /F` |
-| CLI e banco | suportado | suportado |
+| CLI e banco | suportado | experimental com opt-in |
 
 Use os comandos portateis `install-background-service` e
 `uninstall-background-service`; a factory escolhe systemd ou Task Scheduler. A
-logica dos Protocolos 1 e 2 permanece compartilhada.
+logica dos Protocolos 1 e 2 permanece compartilhada. No Windows, instalacao e
+operacao exigem o opt-in; ajuda e recuperacao permanecem acessiveis sem ele.
 
 ## Instrucao para Outro Codex
 
 Use esta orientacao no prompt inicial:
 
 ```text
-Leia AGENTS.md e docs/AI-WORKER-COMMAND-PROTOCOL.md do projeto
-ai-presence-monitor. Use ai-presence com --project apontando para a raiz deste
-projeto. Registre start ao iniciar, confie nos hooks durante o trabalho e
-registre finish somente ao concluir. Nao execute automacao GUI sem autorizacao.
+Leia AGENTS.md, docs/USO-COMO-FERRAMENTA.md e
+docs/AI-WORKER-COMMAND-PROTOCOL.md do projeto ai-presence-monitor. Use
+ai-presence com --project apontando para a raiz deste projeto. Registre start
+ao iniciar, confie nos hooks durante o trabalho e registre finish somente ao
+concluir. Prefira entrada nativa e nao execute automacao de continuidade ou
+fallback GUI sem autorizacao. Em E2E, use marcador exclusivo e nunca atribua
+uma mensagem ao transporte apenas porque ocorreu um hook posterior.
 ```

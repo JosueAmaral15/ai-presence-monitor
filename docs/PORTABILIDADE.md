@@ -6,6 +6,10 @@ Desde a versao 0.2.0, o AI Presence Monitor pode ser instalado como pacote
 Python e usado fora do diretorio do codigo-fonte. Os hooks do Codex e o servico
 systemd gerado usam o mesmo Python da instalacao.
 
+Na versao 0.6.2, Linux e o runtime suportado para publicacao. Os adaptadores
+Windows continuam no pacote e nos testes, mas sua execucao fica desabilitada
+por padrao e exige opt-in experimental explicito.
+
 ## Instalacao Recomendada
 
 Use um ambiente virtual dedicado:
@@ -49,6 +53,18 @@ continuo.
 
 ### Windows
 
+Instalar o pacote e consultar `--help` continuam permitidos. Qualquer operacao
+Windows que possa criar estado, instalar componentes, enviar entrada ou iniciar
+monitoramento exige esta configuracao no `.env` selecionado:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
+Mantenha `false` em distribuicoes normais. Diagnostico e recuperacao continuam
+disponiveis com o runtime desabilitado para que alarmes, hooks e tarefas antigas
+nao fiquem presos.
+
 O mesmo `pyproject.toml` gera um launcher `ai-presence.exe` no ambiente virtual:
 
 ```powershell
@@ -65,7 +81,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 & .\scripts\install-user-command.ps1
 ```
 
-Desde a versao 0.5.0, Windows possui familia operacional completa:
+Desde a versao 0.5.0, o codigo Windows possui uma familia operacional completa:
 
 - dispatcher Win32 por `ctypes` e `SendInput`;
 - backend de alarme com identidade por horario de criacao do processo;
@@ -73,6 +89,20 @@ Desde a versao 0.5.0, Windows possui familia operacional completa:
 - Task Scheduler para monitor e observer de respostas;
 - configuracao global em `%APPDATA%\ai-presence-monitor\.env`;
 - estado e definicoes em `%LOCALAPPDATA%\ai-presence-monitor`.
+
+Desde a versao 0.6.0, `codex queue` oferece entrada nativa compartilhada entre
+Linux e Windows sem depender dos adaptadores GUI. O comando Codex precisa estar
+no `PATH`. A bandeja PySide6 tambem e portatil, mas permanece extra opcional:
+
+```bash
+python -m pip install '/caminho/para/ai-presence-monitor[tray]'
+ai-presence tray --check
+```
+
+Na versao 0.6.1, o envio para a propria sessao inicia um subprocesso destacado:
+POSIX usa `start_new_session` e Windows usa um novo grupo de processo sem abrir
+janela. O retorno `dispatch_started` nao atualiza presenca; o hook posterior e
+a evidencia portatil de processamento.
 
 Consulte [WINDOWS.md](WINDOWS.md) para o passo a passo.
 
@@ -115,6 +145,11 @@ nao ao diretorio de onde o hook foi executado:
 ```env
 PRESENCE_DB_PATH=./data/presence.db
 ```
+
+Sem `PRESENCE_CONTROL_PATH`, o `control.json` usa a area de estado do usuario e
+fica fora do checkout. Quando configurado, um caminho relativo usa a mesma
+regra do banco. O arquivo centraliza flags e alvos alterados em tempo de
+execucao e deve permanecer fora do Git.
 
 ## Isolamento de Workers
 
@@ -234,6 +269,17 @@ Para o observer:
 ```bash
 ai-presence install-background-service --component reply-observer
 ```
+
+No Linux, o observer espera 30 segundos entre falhas e o systemd bloqueia uma
+tempestade depois de tres falhas em cinco minutos. Depois de corrigir a causa:
+
+```bash
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user start ai-presence-reply-observer.service
+```
+
+Essa protecao e exclusiva do observer; o monitor principal preserva a politica
+de reinicio continuo. No Windows, a tarefa ja limita reinicios a tres falhas.
 
 Rollback:
 

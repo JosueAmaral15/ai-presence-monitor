@@ -51,7 +51,7 @@ class DiscordQuestionClientTests(unittest.TestCase):
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["allowed_mentions"], {"parse": []})
         self.assertIn("@everyone escolha B", payload["content"])
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.5.0")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.6.2")
 
     def test_fetch_messages_uses_bot_authorization_and_orders_snowflakes(self) -> None:
         with patch(
@@ -70,6 +70,37 @@ class DiscordQuestionClientTests(unittest.TestCase):
         self.assertIn("after=9", request.full_url)
         self.assertEqual(request.headers["Authorization"], "Bot secret")
         self.assertIsNone(request.data)
+
+    def test_reply_guidance_mentions_only_allowed_author_and_explains_recovery(
+        self,
+    ) -> None:
+        with patch(
+            "ai_presence_monitor.discord_questions.urllib.request.urlopen",
+            return_value=FakeResponse({"id": "101", "channel_id": "200"}),
+        ) as urlopen:
+            self.client.post_reply_guidance(
+                author_id="300",
+                pending_count=2,
+                reasons=("missing_reference", "empty_content"),
+            )
+
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertIn("<@300>", payload["content"])
+        self.assertIn("2 perguntas ativas", payload["content"])
+        self.assertIn("Responder", payload["content"])
+        self.assertIn("Message Content Intent", payload["content"])
+        self.assertEqual(
+            payload["allowed_mentions"],
+            {"parse": [], "users": ["300"], "replied_user": False},
+        )
+
+        with self.assertRaisesRegex(DiscordQuestionError, "ao menos uma"):
+            self.client.post_reply_guidance(
+                author_id="300",
+                pending_count=0,
+                reasons=("missing_reference",),
+            )
 
     def test_full_page_paginates_back_toward_cursor_without_skipping(self) -> None:
         newest = [{"id": str(value), "channel_id": "200"} for value in range(201, 301)]

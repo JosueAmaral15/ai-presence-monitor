@@ -1,11 +1,115 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento
+## Concluida em 2026-09-12
+
+### Task 019 - Release Linux com Windows experimental desabilitado
+
+**Prioridade**: Critica
+**Status**: concluida e integrada localmente em `develop`
+**Objetivo**: habilitar oficialmente apenas Linux nesta release, preservando
+todo o codigo Windows atras de opt-in experimental desabilitado por padrao.
+
+**Criterios de aceite**:
+
+- [x] Linux continua habilitado sem configuracao adicional.
+- [x] Windows operacional falha antes de efeitos colaterais por padrao.
+- [x] `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` libera os adaptadores
+      preservados somente para validacao controlada.
+- [x] Diagnostico, encerramento e rollback continuam disponiveis no Windows.
+- [x] CI obrigatoria cobre Linux; Windows permanece manual e nao bloqueante.
+- [x] Testes, seguranca, portabilidade, ambiente e rollback estao documentados.
+- [x] Gate local completo, build e instalacao isolada passam.
+
+**Plano**: `docs/planning/TASK-019-linux-stable-runtime-gate.md`.
+
+**Conclusao (2026-09-12)**: 162 testes passaram em Python 3.10, 3.11 e
+3.12; cobertura ficou em 87%; Ruff, mypy, build 0.6.2, instalacao isolada,
+factory Linux, bandeja e servicos locais foram validados. O wheel preserva os
+modulos Windows. A CI remota Linux continua indisponivel pelo bloqueio de
+cobranca da conta GitHub e deve ser tratada na decisao de promocao para `main`.
+
+### Task 017 - Despacho nativo nao bloqueante na propria sessao
+
+**Prioridade**: Critica
+**Status**: concluida; E2E nativo real aprovado na sessao exata
+**Objetivo**: impedir que `codex queue` bloqueie o turno ativo ao enviar para a
+propria sessao e evitar falso positivo de atividade antes do hook.
+
+**Criterios de aceite**:
+
+- [x] E2E com marcador exclusivo chega uma unica vez a sessao exata.
+- [x] Mensagem identificavel e hook posterior confirmam o processamento no alvo.
+- [x] Tentativa anterior foi reclassificada como inconclusiva depois que o
+      usuario informou ter digitado manualmente o `continue` observado.
+- [x] A propria sessao usa processo destacado no Linux e no Windows.
+- [x] `dispatch_started` nao grava `observation:automation:continue` nem altera
+      `last_activity_at`.
+- [x] Bandeja nao bloqueia enquanto o Codex recebe a mensagem.
+- [x] CLI oferece `--detach` e `--no-detach` para diagnostico.
+- [x] Gate completo, wheel e instalacao isolada passam.
+- [x] Trabalho funcional e integrado localmente em `develop`.
+
+**Plano**: `docs/planning/TASK-017-native-self-queue.md`.
+
+**Conclusao (2026-09-12)**: uma unica execucao autorizada retornou
+`dispatch_started`; o marcador exclusivo apareceu uma vez como mensagem de
+usuario na sessao `019f5691-c118-7370-a205-94cfde0a93d7`, sem digitacao humana,
+e o hook `UserPromptSubmit` 2607 foi registrado em seguida para a mesma sessao.
+Nao houve retry nem processo `codex queue` remanescente.
+
+## Concluida em 2026-09-11
+
+### Task 018 - Guia de uso para humanos e AI-workers
+
+**Prioridade**: Alta
+**Status**: concluida e integrada localmente em `develop`
+**Objetivo**: oferecer uma referencia unica para seres humanos, AI-workers e
+adaptadores utilizarem o monitor como ferramenta sem superestimar evidencias.
+
+**Criterios de aceite**:
+
+- [x] Guia cobre instalacao, controles, bandeja e fluxos humanos.
+- [x] Guia cobre `start`, hooks, `touch`, perguntas, `continue` e `finish` para
+      AI-workers.
+- [x] Existe contrato para wrappers, MCP e function calling.
+- [x] Estados `dry-run`, `dispatch_started`, `input_emitted`, hook e
+      `delivery_confirmed` possuem limites explicitos.
+- [x] E2E nativo exige marcador exclusivo e distingue `prossiga` manual de
+      `continue` automatizado.
+- [x] Registro anterior foi corrigido para tentativa inconclusiva.
+- [x] AGENTS, READMEs, indice, seguranca e guias relacionados apontam para a
+      nova norma.
+- [x] Gate completo passa com 152 testes e 86% de cobertura.
+- [x] Commit `c4197fe` foi integrado em `develop` pelo merge `aab9f4c`.
+
+**Guia**: `docs/USO-COMO-FERRAMENTA.md`.
+
+### Task 016 - Bandeja do sistema e entrada nativa do Codex
+
+**Prioridade**: Alta
+**Status**: concluida em `develop`; promocao para `main` aguarda os gates Linux
+da Task 019; a validacao Windows foi reclassificada como experimental
+**Objetivo**: permitir que usuario e AI-worker controlem autorizacoes de
+automacao em uma bandeja e enviem texto para uma sessao exata do Codex sem
+ocupar mouse ou teclado.
+
+**Criterios de aceite**:
+
+- [x] Transporte nativo usa `codex queue` sem shell ou automacao fisica.
+- [x] `continue` seleciona transporte nativo ou fallback GUI explicitamente.
+- [x] CLI e bandeja compartilham uma politica persistente fora do repositorio.
+- [x] Menu da bandeja oferece habilitar automacao, responder mensagem e sair.
+- [x] Preferencias permitem habilitar ou desabilitar cada ferramenta.
+- [x] O compositor envia localmente ou a endpoint remoto autenticado.
+- [x] Testes e documentacao cobrem seguranca, portabilidade e operacao.
+
+**Plano**: `docs/planning/TASK-016-system-tray-native-input.md`.
 
 ### Task 012 - Adaptadores operacionais para Windows
 
 **Prioridade**: Alta
-**Status**: em andamento - CI externa bloqueada por cobranca da conta GitHub
+**Status**: implementacao preservada como experimental; CI real pendente e
+nao bloqueante para a release Linux da Task 019
 **Objetivo**: oferecer no Windows as integracoes locais que antes existiam
 somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
@@ -29,12 +133,89 @@ somente no Linux, preservando os mesmos protocolos, banco e regras de alerta.
 
 **Plano**: `docs/planning/TASK-012-windows-platform-adapters.md`.
 
-**Checkpoint externo**: o run `31540396474` nao iniciou nenhum job porque a
-conta GitHub esta bloqueada por problema de cobranca. O workflow permanece
-configurado para seis jobs; a tarefa nao sera movida para concluidas ate um run
-real em `windows-latest` passar.
+**Checkpoint experimental**: os runs `31540396474` e `34660530783` nao iniciaram
+nenhum job porque a conta GitHub esta bloqueada por problema de cobranca. O
+segundo run foi criado pelo push de `develop` em 2026-09-11 e repetiu o mesmo
+resultado nos seis jobs. A validacao Windows permanece pendente ate um run real
+em `windows-latest` passar, mas nao bloqueia a release Linux 0.6.2.
 
 ## Concluidas
+
+### Task 015 - E2E local do comando continue
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: validar, com autorizacao explicita, que o comando integrado
+captura uma unica janela do Codex, aguarda o delay padrao, envia `continue` e
+registra evidencia posterior de atividade.
+
+**Criterios de aceite**:
+
+- [x] Nao existe pergunta remota nem outra execucao de continuidade pendente.
+- [x] O dry-run confirma mensagem, delay, worker, projeto e alvo esperados.
+- [x] A janela configurada possui uma unica correspondencia visivel.
+- [x] A execucao real termina com `input_emitted` sem retry automatico.
+- [x] `continue` aparece como nova entrada no Codex GUI.
+- [x] Um hook posterior confirma atividade do mesmo worker.
+- [x] Evidencias e resultado final ficam registrados nesta tarefa.
+
+**Conclusao (2026-09-11)**: a janela unica `ChatGPT` foi capturada no X11, o
+delay padrao de 60 segundos terminou e `continue` apareceu nesta tarefa. O
+banco registrou `observation:automation:continue` as `00:25:44` e
+`observation:codex:UserPromptSubmit` as `00:25:45`, no mesmo worker, confirmando
+a retomada sem retry automatico.
+
+### Task 014 - Orientacao para respostas Discord invalidas
+
+**Prioridade**: Alta
+**Status**: concluida
+**Objetivo**: orientar no proprio Discord o usuario autorizado quando houver
+pergunta dentro do prazo, mas sua mensagem nao estiver vinculada ou nao puder
+ser lida.
+
+**Criterios de aceite**:
+
+- [x] Mensagem autorizada sem resposta direta recebe instrucao para usar
+      **Responder**.
+- [x] Conteudo ocultado pelo Discord recebe orientacao sobre
+      `Message Content Intent`.
+- [x] Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente
+      nao produzem lembrete.
+- [x] Cada mensagem invalida causa no maximo uma tentativa, sem loop ou retry
+      automatico.
+- [x] Respostas validas e a protecao da GUI permanecem inalteradas.
+- [x] Testes, documentacao, build e instalacao local passam.
+- [x] E2E real confirma a orientacao e a resposta valida depois de habilitar
+      `Message Content Intent`.
+
+**Plano**: `docs/planning/TASK-014-discord-reply-guidance.md`.
+
+**Conclusao (2026-09-10)**: `Message Content Intent` confirmado pela flag
+`524288`. O fluxo orientou uma referencia incorreta e aceitou a resposta direta
+seguinte, concluindo em `delivery_confirmed` sem retry ou falha GUI.
+
+### Task 013 - Hardening operacional e E2E Discord-Codex
+
+**Prioridade**: Critica
+**Status**: concluida
+**Objetivo**: impedir tempestade de reinicios do observer em falhas persistentes
+e validar o fluxo real de pergunta, resposta correlacionada e entrega no Codex
+GUI.
+
+**Criterios de aceite**:
+
+- [x] O reply observer limita reinicios sem alterar a recuperacao do monitor.
+- [x] O gate de qualidade local passa integralmente.
+- [x] Wheel atualizado e servicos reinstalados sao validados.
+- [x] E2E Discord-Codex alcanca `delivery_confirmed` sem retry automatico.
+- [x] Workers historicos sao reconciliados conforme decisao do usuario.
+- [x] Evidencias, rollback e dependencias externas ficam documentados.
+
+**Plano**: `docs/planning/TASK-013-operational-hardening-and-e2e.md`.
+
+**Conclusao (2026-09-10)**: a resposta autorizada `MANTER AMBOS` foi entregue
+e confirmada por hook. Os workers historicos de AmaralAgenda e Vinterholm
+permanecem ativos conforme a decisao do usuario.
 
 ### Task 011 - Duracao limitada do alarme vermelho
 

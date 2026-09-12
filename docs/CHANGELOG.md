@@ -1,5 +1,112 @@
 # Changelog
 
+## 2026-09-12 - v0.6.2
+
+- Linux passa a ser o runtime suportado por padrao nesta release.
+- Todo o codigo, arquitetura e testes Windows foram preservados.
+- Operacoes Windows agora exigem
+  `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` para validacao controlada.
+- Diagnostico, encerramento, parada de alarme e desinstalacao continuam
+  acessiveis com o runtime experimental desabilitado.
+- Hooks desabilitados falham abertos sem registrar atividade artificial.
+- A CI obrigatoria cobre Linux em Python 3.10, 3.11 e 3.12; Windows permanece
+  manual, experimental e nao bloqueante.
+
+## 2026-09-12 - E2E nativo do Codex concluido
+
+- Validada uma unica execucao autorizada de `codex queue` para a propria
+  sessao, em processo destacado e com atraso zero.
+- O marcador exclusivo apareceu exatamente uma vez como mensagem de usuario e
+  foi seguido por `UserPromptSubmit` da mesma sessao.
+- Nao houve digitacao humana do marcador, retry automatico, atualizacao falsa
+  de atividade em `dispatch_started` ou processo de fila remanescente.
+- O gate E2E nativo foi concluido. A versao 0.6.2 reclassificou a CI Windows
+  pendente como experimental e nao bloqueante para a publicacao Linux.
+
+## 2026-09-11 - Guia de uso e correcao da evidencia E2E
+
+- Adicionado guia operacional para seres humanos e AI-workers utilizarem o
+  monitor como ferramenta por CLI, bandeja, hooks e Discord.
+- Definida a convencao de uso humano `prossiga` e automacao `continue`, sem
+  tratar essa convencao como substituta de correlacao tecnica.
+- O proximo E2E nativo deve usar marcador exclusivo, alvo exato, uma unica
+  tentativa e confirmacao por mensagem identificavel mais hook posterior.
+- Reclassificada como inconclusiva a tentativa nativa anterior: o usuario
+  informou que digitou manualmente o `continue` observado, portanto os hooks
+  seguintes nao comprovam entrega por `codex queue`.
+
+## 2026-09-11 - v0.6.1
+
+- Corrigido o bloqueio de `codex queue` quando um AI-worker envia entrada para
+  a propria sessao Codex ainda em execucao.
+- A propria sessao agora e detectada por `CODEX_SESSION_ID` ou
+  `CODEX_THREAD_ID` e despachada em processo destacado no Linux e Windows.
+- Adicionado o estado `dispatch_started`: ele confirma somente a criacao do
+  processo e nao atualiza `last_activity_at`; um hook posterior e a evidencia
+  de que o Codex processou a entrada.
+- A bandeja sempre usa despacho destacado para nao congelar a interface.
+- Adicionados `--detach` e `--no-detach` para diagnostico e controle explicito,
+  sem retry automatico depois de resultado incerto.
+- Uma tentativa nativa autorizada atingiu timeout sincrono sem retry e motivou
+  esta correcao. A entrega permaneceu inconclusiva porque o `continue` visivel
+  foi enviado manualmente pelo usuario; um novo E2E correlacionado e necessario.
+
+## 2026-09-11 - v0.6.0
+
+- Adicionado transporte nativo por `codex queue`, sem controle de mouse,
+  teclado ou clipboard.
+- `continue` agora suporta `auto`, `native` e `gui`, com sessao explicita ou
+  inferida do hook do mesmo worker.
+- Adicionado `control.json` atomico para autorizacoes compartilhadas entre CLI
+  e bandeja.
+- Adicionados comandos `control`, `send-input` e `tray`.
+- Adicionada bandeja PySide6 opcional com habilitacao de automacao, compositor
+  local/remoto, preferencias e saida.
+- Mantido fallback X11/Win32 como opt-in, sem retry depois de resultado incerto.
+- Versao de pacote elevada para 0.6.0 e documentacao operacional atualizada.
+
+## 2026-09-11 - Verificacao E2E do comando continue
+
+- Validado o comando instalado com uma unica janela X11 `ChatGPT`, mensagem
+  padrao `continue` e delay padrao de 60 segundos.
+- Confirmados `input_emitted`, sincronizacao de atividade e aparecimento da
+  mensagem como nova entrada no Codex GUI.
+- Confirmado um hook `UserPromptSubmit` um segundo depois da observacao
+  `automation:continue`, sem retry automatico.
+
+## 2026-09-10 - Verificacao operacional da v0.5.2
+
+- Confirmado `Message Content Intent` pela flag da aplicacao
+  `GATEWAY_MESSAGE_CONTENT_LIMITED` (`524288`).
+- Concluido o fluxo real do Discord ao Codex GUI ate `delivery_confirmed`.
+- Verificado que uma resposta com referencia incorreta recebe orientacao sem
+  entrada GUI, enquanto a resposta valida seguinte e entregue uma unica vez.
+- Mantidos ativos os workers historicos de AmaralAgenda e Vinterholm conforme
+  a resposta autorizada `MANTER AMBOS`.
+
+## 2026-09-09 - v0.5.2
+
+- Adicionada orientacao no Discord para mensagem invalida de usuario
+  autorizado enquanto houver pergunta pendente.
+- O aviso ensina a usar **Responder** e diagnostica texto vazio por ausencia de
+  `Message Content Intent`.
+- Mencoes ficam restritas ao autor validado pela allowlist.
+- Bots, webhooks, usuarios nao autorizados e ausencia de pergunta pendente nao
+  geram orientacao.
+- Cada mensagem causa no maximo uma tentativa, inclusive depois de timeout
+  incerto, sem entrada GUI ou retry automatico.
+- Adicionados contadores operacionais e testes de regressao.
+
+## 2026-09-08 - v0.5.1
+
+- Limitado o reply observer Linux a tres falhas em cinco minutos.
+- Aumentado para 30 segundos o intervalo de reinicio do observer e usado
+  `Restart=on-failure`.
+- Preservada a politica `Restart=always` do monitor principal.
+- Corrigido o gate global de Ruff em `scripts/quality_check.py`.
+- Adicionados plano operacional, testes, seguranca, rollback e troubleshooting
+  para falhas persistentes e HTTP 403.
+
 ## 2026-08-12 - Protocolo normativo de continuidade
 
 - Incorporadas ao guia integrado as condicoes de acionamento do antigo

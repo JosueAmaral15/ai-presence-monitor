@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 import time
 import uuid
@@ -7,6 +8,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+
+CODEX_SESSION_PATTERN = re.compile(
+    r"(?:^|[ |])session="
+    r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=$|[ |])"
+)
 
 
 @dataclass
@@ -46,6 +53,14 @@ class RemoteQuestion:
     delivery_confirmed_at: float | None
     last_error: str | None
     updated_at: float
+
+
+@dataclass(frozen=True)
+class CodexSessionRef:
+    session_id: str
+    worker_id: str
+    task: str | None
+    observed_at: float
 
 
 class PresenceStore:
@@ -190,6 +205,59 @@ class PresenceStore:
         with self.session() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._row_to_worker(row) for row in rows]
+
+    def latest_codex_session_id(self, worker_id: str) -> str | None:
+        sessions = self.list_codex_sessions(worker_id=worker_id, limit=1)
+        return sessions[0].session_id if sessions else None
+
+    def list_codex_sessions(
+        self,
+        *,
+        worker_id: str | None = None,
+        limit: int = 50,
+    ) -> list[CodexSessionRef]:
+        if limit <= 0:
+            return []
+        where = "WHERE event_type LIKE 'observation:codex:%'"
+        params: list[object] = []
+        if worker_id is not None:
+            where += " AND worker_id = ?"
+            params.append(worker_id)
+        where += " AND message LIKE '%session=%'"
+        params.append(max(100, limit * 10))
+        with self.session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT worker_id, message, task, occurred_at
+                FROM events
+                {where}
+                ORDER BY occurred_at DESC, id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        sessions: list[CodexSessionRef] = []
+        seen: set[str] = set()
+        for row in rows:
+            message = row["message"]
+            if not isinstance(message, str):
+                continue
+            match = CODEX_SESSION_PATTERN.search(message)
+            if not match or match.group(1) in seen:
+                continue
+            session_id = match.group(1)
+            seen.add(session_id)
+            sessions.append(
+                CodexSessionRef(
+                    session_id=session_id,
+                    worker_id=row["worker_id"],
+                    task=row["task"],
+                    observed_at=row["occurred_at"],
+                )
+            )
+            if len(sessions) >= limit:
+                break
+        return sessions
 
     def record_event(
         self,

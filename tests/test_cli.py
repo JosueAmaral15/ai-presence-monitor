@@ -15,7 +15,9 @@ from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
     _ask_user,
+    _command_allowed_while_runtime_disabled,
     _continue_task,
+    _control,
     _dispatch_answer,
     _identity,
     _install_background_service,
@@ -27,6 +29,7 @@ from ai_presence_monitor.cli import (
     _run_codex_hook,
     _run_monitor,
     _run_reply_observer,
+    _send_input,
     _show_protocols,
     _show_questions,
     _show_status,
@@ -40,6 +43,7 @@ from ai_presence_monitor.cli import (
     main,
 )
 from ai_presence_monitor.config import AppConfig
+from ai_presence_monitor.control import ControlSettings, ControlStore
 from ai_presence_monitor.notify import NotificationError
 from ai_presence_monitor.store import PresenceStore
 
@@ -127,11 +131,34 @@ class CliBehaviorTests(unittest.TestCase):
                 "Codex",
                 "--allow-title-change",
                 "--no-sync-activity",
+                "--detach",
             ]
         )
         self.assertEqual(continue_args.command, "continue")
         self.assertTrue(continue_args.allow_title_change)
         self.assertFalse(continue_args.sync_activity)
+        self.assertIsNone(continue_args.destination)
+        self.assertTrue(continue_args.detach)
+
+        control_args = parser.parse_args(
+            ["control", "enable", "task-automation", "--json"]
+        )
+        self.assertEqual(control_args.action, "enable")
+        self.assertEqual(control_args.control_name, "task-automation")
+
+        input_args = parser.parse_args(
+            [
+                "--dry-run",
+                "send-input",
+                "--message",
+                "continue",
+                "--thread",
+                "thread-1",
+                "--no-detach",
+            ]
+        )
+        self.assertEqual(input_args.destination, "local")
+        self.assertFalse(input_args.detach)
 
         stop_alarm_args = parser.parse_args(
             ["--dry-run", "stop-alarm", "--timeout", "1", "--no-force"]
@@ -364,7 +391,11 @@ class CliBehaviorTests(unittest.TestCase):
     def test_continue_cli_dry_run_does_not_use_gui_or_database(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            config = make_config(root)
+            config = replace(
+                make_config(root),
+                continue_transport="gui",
+                gui_fallback_enabled=True,
+            )
             args = event_args(
                 root,
                 message=None,
@@ -381,6 +412,96 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertIn("[dry-run:continue]", output.getvalue())
             self.assertIn("atraso=60s", output.getvalue())
             self.assertFalse(config.db_path.exists())
+
+    def test_continue_cli_fails_closed_when_automation_is_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                make_config(root),
+                control_path=root / "control.json",
+                continue_transport="native",
+                codex_thread_id="thread",
+            )
+            args = event_args(
+                root,
+                dry_run=False,
+                message=None,
+                delay=0,
+                window_id=None,
+                window_title=None,
+                allow_title_change=False,
+                sync_activity=None,
+                transport=None,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                destination=None,
+                authorize_once=False,
+            )
+
+            with redirect_stderr(StringIO()) as error:
+                self.assertEqual(_continue_task(args, config), 2)
+
+            self.assertIn("automacao de tarefas desativada", error.getvalue())
+
+    def test_control_and_send_input_dry_run_share_runtime_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(make_config(root), control_path=root / "control.json")
+            enable_args = argparse.Namespace(
+                action="enable",
+                control_name="task-automation",
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=False,
+            )
+            with redirect_stdout(StringIO()):
+                self.assertEqual(_control(enable_args, config), 0)
+            saved = ControlStore.from_config(config).load()
+            self.assertTrue(saved.task_automation_enabled)
+
+            ControlStore.from_config(config).save(
+                ControlSettings(
+                    task_automation_enabled=True,
+                    native_input_enabled=True,
+                    codex_thread_id="thread-1",
+                )
+            )
+            input_args = argparse.Namespace(
+                destination="local",
+                thread=None,
+                message="answer",
+                dry_run=True,
+            )
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_send_input(input_args, config), 0)
+            self.assertIn("sessao=thread-1", output.getvalue())
+
+            dry_control = argparse.Namespace(
+                action="disable",
+                control_name="task-automation",
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=False,
+                dry_run=True,
+            )
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_control(dry_control, config), 0)
+            self.assertIn("alteracao nao persistida", output.getvalue())
+            self.assertTrue(
+                ControlStore.from_config(config).load().task_automation_enabled
+            )
+
+            input_args.message = " "
+            with redirect_stderr(StringIO()) as error:
+                self.assertEqual(_send_input(input_args, config), 2)
+            self.assertIn("nao pode ficar vazia", error.getvalue())
 
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
@@ -438,7 +559,11 @@ class CliBehaviorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             env_path = root / ".env"
-            env_path.write_text("PRESENCE_DB_PATH=./presence.db\n", encoding="utf-8")
+            env_path.write_text(
+                "PRESENCE_DB_PATH=./presence.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n",
+                encoding="utf-8",
+            )
 
             with redirect_stdout(StringIO()), self.assertRaises(SystemExit) as exit_context:
                 main(["--env-file", str(env_path), "protocols"])
@@ -466,6 +591,119 @@ class CliBehaviorTests(unittest.TestCase):
                 main(["--env-file", str(invalid_env), "status"])
             self.assertEqual(exit_context.exception.code, 1)
             self.assertIn("Escopo de worker invalido", stderr.getvalue())
+
+    def test_main_blocks_windows_operations_without_explicit_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / ".env"
+            env_path.write_text(
+                "PRESENCE_DB_PATH=./presence.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stderr(StringIO()) as error, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                main(["--env-file", str(env_path), "init"])
+
+            self.assertEqual(exit_context.exception.code, 1)
+            self.assertIn("Windows e experimental", error.getvalue())
+            self.assertFalse((root / "presence.db").exists())
+
+    def test_main_allows_explicit_windows_opt_in_and_safe_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            enabled_env = root / "enabled.env"
+            enabled_env.write_text(
+                "PRESENCE_DB_PATH=./enabled.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n",
+                encoding="utf-8",
+            )
+            disabled_env = root / "disabled.env"
+            disabled_env.write_text(
+                "PRESENCE_DB_PATH=./disabled.db\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ):
+                with redirect_stdout(StringIO()), self.assertRaises(
+                    SystemExit
+                ) as enabled_exit:
+                    main(["--env-file", str(enabled_env), "init"])
+                with redirect_stdout(StringIO()), self.assertRaises(
+                    SystemExit
+                ) as status_exit:
+                    main(["--env-file", str(disabled_env), "status"])
+
+            self.assertEqual(enabled_exit.exception.code, 0)
+            self.assertEqual(status_exit.exception.code, 0)
+            self.assertTrue((root / "enabled.db").exists())
+
+    def test_main_does_not_let_dry_run_bypass_windows_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / ".env"
+            env_path.write_text("PRESENCE_DB_PATH=./presence.db\n", encoding="utf-8")
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stderr(StringIO()) as error, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                main(
+                    [
+                        "--env-file",
+                        str(env_path),
+                        "--dry-run",
+                        "start",
+                        "--project",
+                        str(root),
+                    ]
+                )
+
+            self.assertEqual(exit_context.exception.code, 1)
+            self.assertIn("Windows e experimental", error.getvalue())
+            self.assertFalse((root / "presence.db").exists())
+
+    def test_disabled_runtime_preserves_only_diagnostics_and_recovery(self) -> None:
+        for command in (
+            "finish",
+            "protocols",
+            "questions",
+            "status",
+            "stop-alarm",
+            "uninstall-background-service",
+            "uninstall-codex-hook",
+            "uninstall-reply-observer-service",
+            "uninstall-systemd-service",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(
+                    _command_allowed_while_runtime_disabled(
+                        argparse.Namespace(command=command)
+                    )
+                )
+
+        self.assertTrue(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="show")
+            )
+        )
+        self.assertTrue(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="disable")
+            )
+        )
+        self.assertFalse(
+            _command_allowed_while_runtime_disabled(
+                argparse.Namespace(command="control", action="enable")
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,115 @@
 # Decisions
 
+## 2026-09-12 - Linux estavel e Windows com opt-in experimental
+
+**Decisao**: publicar a versao 0.6.2 com Linux habilitado e suportado por
+padrao, preservando integralmente os adaptadores Windows atras de
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
+
+**Motivo**:
+
+- a implementacao Windows existe, mas o gate externo real ainda nao foi
+  executado por bloqueio da conta GitHub;
+- remover o codigo perderia trabalho reutilizavel e dificultaria a validacao
+  futura;
+- permitir o runtime por padrao faria a release prometer um suporte ainda nao
+  comprovado;
+- um gate central e reversivel evita condicionais espalhadas nos casos de uso.
+
+**Alternativas consideradas**:
+
+- apagar Windows: rejeitado porque o problema e de maturidade, nao de desenho;
+- manter Windows como gate obrigatorio: rejeitado para esta release porque
+  impediria a publicacao Linux por uma integracao externa nao validada;
+- tratar `--dry-run` como excecao: rejeitado porque comandos historicos podem
+  criar estado local mesmo sem rede ou GUI.
+
+**Consequencia**:
+
+A Abstract Factory continua contendo as familias Linux e Windows. O guard
+central bloqueia efeitos operacionais no Windows, enquanto ajuda, diagnostico,
+`finish`, `stop-alarm`, desabilitacao de controles e desinstaladores permanecem
+disponiveis. A CI Linux e obrigatoria; a matriz Windows permanece manual,
+experimental e nao bloqueante.
+
+## 2026-09-11 - Despacho destacado para a propria sessao Codex
+
+**Decisao**: detectar quando o alvo de `codex queue` e a sessao do processo
+chamador e iniciar o CLI em segundo plano, retornando `dispatch_started` sem
+sincronizar presenca.
+
+**Motivo**:
+
+- o E2E demonstrou que a chamada sincrona pode esperar pelo turno que ela
+  propria precisa encerrar;
+- timeout e um resultado incerto: a mensagem chegou depois do limite e nao
+  poderia ser reenviada com seguranca;
+- criar atividade no momento do spawn produziria falso positivo no Protocolo 2;
+- a bandeja nao pode bloquear seu event loop aguardando uma sessao ocupada.
+
+**Alternativas consideradas**:
+
+- aumentar o timeout: descartado porque nao remove a dependencia circular;
+- marcar `input_emitted` no spawn: rejeitado porque criacao de processo nao
+  prova aceite ou processamento;
+- retry depois do timeout: rejeitado por risco de duplicacao;
+- sempre executar sincronicamente: preservado apenas via `--no-detach` para
+  diagnosticos que nao rodem dentro do proprio alvo.
+
+**Consequencia**:
+
+`CODEX_SESSION_ID` e `CODEX_THREAD_ID` ativam o modo automaticamente. POSIX usa
+uma nova sessao de processo e Windows usa um novo grupo sem janela. O hook
+posterior e evidencia de atividade e atualiza o monitor normalmente, mas um
+teste de mensagem exige marcador exclusivo para atribuir a origem.
+
+## 2026-09-11 - Entrada nativa antes do fallback GUI
+
+**Decisao**: usar `codex queue` como transporte preferencial para mensagens de
+continuidade e composicao manual. Manter X11/Win32 como fallback opt-in.
+
+**Motivo**:
+
+- a entrada nativa nao ocupa mouse, teclado ou clipboard do usuario;
+- uma sessao UUID/nome exato e um alvo mais estavel que coordenadas visuais;
+- o mesmo comando funciona no Linux e Windows quando o Codex CLI esta presente;
+- `--remote` permite direcionar um app-server autenticado no computador cliente.
+
+**Alternativas consideradas**:
+
+- PyAutoGUI global: descartado por interferir no desktop e depender de foco;
+- acessibilidade/seletores graficos: mantidos fora desta fase porque a interface
+  do Codex nao publica um contrato estavel de elementos para terceiros;
+- timer periodico de `continue`: rejeitado porque pode simular trabalho e
+  esconder inatividade real;
+- fallback automatico depois de falha nativa: rejeitado por risco de duplicar
+  uma entrada cujo resultado e incerto.
+
+**Consequencia**:
+
+`auto` usa nativo quando existe sessao do mesmo worker e somente considera GUI
+quando o usuario habilita o fallback. `input_emitted` ainda exige hook posterior
+para confirmar processamento. Como `queue`/`app-server` sao experimentais no
+Codex CLI atual, a integracao deve ser revalidada apos atualizacoes.
+
+## 2026-09-11 - Bandeja como painel de autorizacao
+
+**Decisao**: compartilhar um `control.json` entre CLI e bandeja e manter PySide6
+como extra opcional.
+
+**Motivo**:
+
+- o usuario precisa alterar permissoes sem editar `.env` ou reiniciar o app;
+- outro AI-worker precisa consultar exatamente as mesmas decisoes pela CLI;
+- a instalacao base nao deve carregar toolkit grafico em servidores;
+- tokens nao devem ser duplicados em estado de interface.
+
+**Consequencia**:
+
+O arquivo e atomico, privado em POSIX e guarda flags, sessao, endpoint e nome da
+variavel de token. A bandeja nao inicia automaticamente no login e nao agenda
+mensagens por tempo; esses limites permanecem explicitos.
+
 ## 2026-08-11 - Abstract Factory para integracoes Linux e Windows
 
 **Decisao**: selecionar dispatcher GUI, backend de alarme e gerenciador de
@@ -251,3 +361,58 @@ processo e oferecer `stop-alarm`.
 O estado usa permissao `600` e nao guarda o comando em texto. A parada valida
 PID, fingerprint e token de inicio antes de `SIGTERM`; `SIGKILL` e fallback
 configuravel.
+
+## 2026-09-08 - Limite de reinicio exclusivo do reply observer
+
+**Decisao**: manter a recuperacao rapida do monitor principal e aplicar ao
+reply observer Linux tres tentativas em cinco minutos, com espera de 30
+segundos e reinicio somente em falha.
+
+**Motivo**:
+
+- um `403` persistente produziu reinicios a cada cinco segundos;
+- o observer depende de rede e permissoes externas, ao contrario do nucleo do
+  monitor;
+- Windows ja limita reinicios da tarefa a tres falhas;
+- interromper o ciclo protege recursos e torna o erro observavel.
+
+**Alternativas consideradas**:
+
+- alterar o monitor e o observer juntos: descartado porque reduziria a
+  resiliencia do monitor;
+- retry infinito com backoff dentro do Python: adiado por adicionar estado e
+  complexidade sem necessidade atual;
+- manter cinco segundos sem limite: descartado depois do ciclo real de `403`.
+
+**Consequencia**:
+
+Depois de atingir o limite, o operador corrige a causa, executa `systemctl
+--user reset-failed ai-presence-reply-observer.service` e inicia a unidade. A
+definicao continua sem segredos e usa o mesmo Python instalado.
+
+## 2026-09-09 - Orientar resposta Discord invalida sem relaxar a correlacao
+
+**Decisao**: enquanto houver pergunta pendente no canal, publicar uma
+orientacao para cada mensagem invalida de usuario autorizado.
+
+**Motivo**:
+
+- rejeitar silenciosamente nao ensina o usuario a usar **Responder**;
+- texto vazio pode indicar `Message Content Intent` desativado;
+- a allowlist permite direcionar a orientacao sem notificar terceiros;
+- o E2E real demonstrou a lacuna sem provocar entrada GUI indevida.
+
+**Alternativas consideradas**:
+
+- aceitar mensagem solta mais recente: descartado por remover correlacao;
+- orientar qualquer autor: descartado por ruido e divulgacao do fluxo;
+- repetir aviso ate obter sucesso: descartado porque timeout de webhook tem
+  resultado incerto e pode duplicar mensagens;
+- persistir nova tabela de avisos: descartado porque o cursor existente ja
+  fornece uma tentativa por mensagem e nao ha requisito de consulta historica.
+
+**Consequencia**:
+
+Ausencia de referencia, referencia sem pergunta pendente ou texto vazio gera
+uma tentativa de orientacao e contadores no log. A mensagem invalida nao vira
+resposta, nao toca a GUI e nao altera o estado da pergunta.

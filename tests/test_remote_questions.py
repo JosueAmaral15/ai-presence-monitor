@@ -29,10 +29,13 @@ class FakeDiscordClient:
         messages: list[dict[str, object]] | None = None,
         *,
         post_error: Exception | None = None,
+        guidance_error: Exception | None = None,
     ):
         self.messages = messages or []
         self.post_error = post_error
+        self.guidance_error = guidance_error
         self.posted: list[dict[str, str]] = []
+        self.guidance: list[dict[str, object]] = []
         self.after: str | None = None
 
     def post_question(
@@ -52,6 +55,23 @@ class FakeDiscordClient:
             }
         )
         return PostedDiscordQuestion(message_id="100", channel_id="200")
+
+    def post_reply_guidance(
+        self,
+        *,
+        author_id: str,
+        pending_count: int,
+        reasons: tuple[str, ...],
+    ) -> None:
+        if self.guidance_error:
+            raise self.guidance_error
+        self.guidance.append(
+            {
+                "author_id": author_id,
+                "pending_count": pending_count,
+                "reasons": reasons,
+            }
+        )
 
     def fetch_messages(self, *, after: str | None = None) -> list[dict[str, object]]:
         self.after = after
@@ -229,6 +249,18 @@ class RemoteQuestionFlowTests(unittest.TestCase):
             self.assertEqual(result.fetched, 4)
             self.assertEqual(result.accepted, 1)
             self.assertEqual(result.dispatched, 1)
+            self.assertEqual(result.guided, 1)
+            self.assertEqual(result.guidance_failed, 0)
+            self.assertEqual(
+                client.guidance,
+                [
+                    {
+                        "author_id": "300",
+                        "pending_count": 1,
+                        "reasons": ("missing_reference",),
+                    }
+                ],
+            )
             self.assertEqual(client.after, "100")
             saved = store.require_question(question.question_id)
             self.assertEqual(saved.status, "input_emitted")
@@ -246,7 +278,124 @@ class RemoteQuestionFlowTests(unittest.TestCase):
                 now=1020,
             )
             self.assertEqual(duplicate.accepted, 0)
+            self.assertEqual(duplicate.guided, 0)
             self.assertEqual(len(dispatcher.dispatched), 1)
+
+    def test_observer_guides_each_invalid_allowed_message_only_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = remote_config(root)
+            store = PresenceStore(root / "presence.db")
+            question = store.create_question(
+                worker_id="worker",
+                prompt="Pergunta",
+                timeout_seconds=100,
+                target_window_id="900",
+                target_window_title="Codex",
+                target_window_pattern="Codex",
+                now=1000,
+            )
+            store.mark_question_published(
+                question.question_id,
+                channel_id="200",
+                external_message_id="100",
+                now=1000,
+            )
+            webhook_message = reply_message(message_id="101", bot=False)
+            webhook_message["webhook_id"] = "400"
+            client = FakeDiscordClient(
+                [
+                    webhook_message,
+                    reply_message(message_id="102", reply_to=None),
+                    reply_message(message_id="103", reply_to="999"),
+                    reply_message(message_id="104", content=""),
+                ]
+            )
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=client,  # type: ignore[arg-type]
+                dispatcher=FakeDispatcher(),  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.accepted, 0)
+            self.assertEqual(result.dispatched, 0)
+            self.assertEqual(result.guided, 3)
+            self.assertEqual(result.guidance_failed, 0)
+            self.assertEqual(
+                [item["reasons"] for item in client.guidance],
+                [
+                    ("missing_reference",),
+                    ("unmatched_reference",),
+                    ("empty_content",),
+                ],
+            )
+            self.assertEqual(
+                store.get_observer_state(CURSOR_KEY_PREFIX + "200"),
+                "104",
+            )
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "pending",
+            )
+
+    def test_guidance_failure_advances_cursor_without_retry_or_gui_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = remote_config(root)
+            store = PresenceStore(root / "presence.db")
+            question = store.create_question(
+                worker_id="worker",
+                prompt="Pergunta",
+                timeout_seconds=100,
+                now=1000,
+            )
+            store.mark_question_published(
+                question.question_id,
+                channel_id="200",
+                external_message_id="100",
+                now=1000,
+            )
+            dispatcher = FakeDispatcher()
+            client = FakeDiscordClient(
+                [reply_message(message_id="101", reply_to=None)],
+                guidance_error=DiscordQuestionError("timeout incerto"),
+            )
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=client,  # type: ignore[arg-type]
+                dispatcher=dispatcher,  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.guided, 0)
+            self.assertEqual(result.guidance_failed, 1)
+            self.assertEqual(dispatcher.dispatched, [])
+            self.assertEqual(
+                store.get_observer_state(CURSOR_KEY_PREFIX + "200"),
+                "101",
+            )
+
+    def test_observer_does_not_guide_without_pending_question(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = FakeDiscordClient(
+                [reply_message(message_id="101", reply_to=None)]
+            )
+            result = observe_discord_replies_once(
+                config=remote_config(root, gui=False),
+                store=PresenceStore(root / "presence.db"),
+                client=client,  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.guided, 0)
+            self.assertEqual(result.guidance_failed, 0)
+            self.assertEqual(client.guidance, [])
 
     def test_gui_failure_stops_automatic_retry_and_manual_retry_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

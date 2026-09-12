@@ -116,3 +116,105 @@ Qualquer automacao de teclado pode influenciar a aplicacao alvo. A revalidacao
 reduz selecao incorreta, mas nao substitui sessao desbloqueada, titulo especifico
 e revisao humana antes de comandos destrutivos. O Windows tambem pode negar
 foreground; o sistema falha fechado nessa situacao.
+
+## Task 013 - Hardening operacional do observer
+
+- [x] Limite de reinicio e aplicado somente ao observer de respostas.
+- [x] Tres falhas em cinco minutos bloqueiam uma tempestade de reinicios.
+- [x] O intervalo entre tentativas sobe de cinco para 30 segundos.
+- [x] O monitor principal preserva sua politica independente.
+- [x] Recuperacao exige corrigir a causa e executar `reset-failed`.
+- [x] Nenhum token, webhook ou conteudo do `.env` entra na unidade.
+
+### Risco residual
+
+O limite interrompe recuperacao automatica depois de falhas persistentes. Essa
+escolha evita carga e ruido indefinidos; depois de corrigir rede, canal ou
+credenciais, o operador precisa liberar e iniciar a unidade explicitamente.
+
+## Task 014 - Orientacao para respostas Discord invalidas
+
+- [x] Orientacao exige pergunta pendente no mesmo canal.
+- [x] Somente autor humano presente na allowlist pode receber o aviso.
+- [x] Mensagens de bot e webhook nao geram resposta, evitando ciclo.
+- [x] Mencao usa `parse=[]` e lista explicita com somente o autor validado.
+- [x] Mensagem invalida nunca e persistida como resposta nem enviada a GUI.
+- [x] Cursor avanca depois de uma tentativa de aviso, inclusive em timeout
+      incerto, para impedir duplicacao automatica.
+- [x] Nenhum token, webhook ou conteudo invalido e incluido no log.
+
+### Risco residual
+
+Um usuario permitido que converse normalmente no canal dedicado enquanto
+existir pergunta pendente recebera orientacao. O canal deve permanecer dedicado
+ao fluxo de perguntas. Falha do webhook pode impedir um aviso; por seguranca,
+o sistema nao repete uma entrega cujo resultado externo seja incerto.
+
+## Task 016 - Bandeja e entrada nativa
+
+- [x] `codex queue` recebe lista de argumentos e nunca usa shell.
+- [x] Sessao, endpoint e nomes de variavel rejeitam quebras de linha e NUL.
+- [x] Endpoint remoto aceita somente `ws://`, `wss://` ou `unix://`.
+- [x] Entrada remota exige nome de variavel e token presente no ambiente.
+- [x] Valor do token nao entra em argumentos, `control.json` ou logs.
+- [x] `control.json` usa gravacao atomica e modo `600` em POSIX.
+- [x] Automacao de tarefas, entrada nativa, fallback GUI, destino remoto e sync
+      possuem gates independentes.
+- [x] Uma falha nativa nao inicia fallback nem retry automatico.
+- [x] Sessao inferida vem somente de hook do mesmo worker.
+- [x] PySide6 e importado somente quando a bandeja e iniciada.
+
+### Risco residual
+
+Quem controla a sessao local do usuario pode alterar `control.json` ou a
+variavel de token. O app-server remoto do Codex e experimental e precisa de
+TLS/tunel, autenticacao, firewall e revisao depois de atualizacoes. Habilitar
+automacao e uma autorizacao persistente: desabilite-a ao terminar a cadeia de
+tarefas.
+
+O texto de `--message` e um argumento do processo `codex queue` e pode ficar
+temporariamente visivel a ferramentas locais de inspecao de processos. Nao use
+esse transporte para enviar senhas, tokens ou outros segredos.
+
+## Task 017 - Despacho destacado na propria sessao
+
+- [x] A deteccao compara somente o alvo exato com `CODEX_SESSION_ID` e
+      `CODEX_THREAD_ID`.
+- [x] O subprocesso continua usando lista de argumentos e nunca usa shell.
+- [x] Entrada e saidas do processo destacado sao isoladas em `DEVNULL`.
+- [x] POSIX cria nova sessao; Windows cria novo grupo sem janela.
+- [x] `dispatch_started` nao grava atividade nem simula trabalho no Protocolo 2.
+- [x] Falha ao criar o processo e reportada sem retry.
+- [x] Falha posterior, ausencia de hook ou resultado incerto nao causa retry.
+- [x] A bandeja sempre usa despacho destacado e permanece responsiva.
+- [x] Hook isolado nao e tratado como prova da autoria de uma mensagem.
+- [x] E2E nativo exige marcador exclusivo e confirmacao de que o humano nao o
+      digitou.
+
+### Risco residual
+
+Depois que o processo destacado e criado, seu erro de saida nao retorna ao
+chamador. Isso e intencional para romper a espera circular. A ausencia de hook
+mantem o relogio de atividade inalterado e permite que o monitor alerte; o
+operador deve diagnosticar antes de autorizar um novo envio.
+
+A convencao humana `prossiga` versus automacao `continue` reduz ambiguidades,
+mas nao constitui controle de acesso nem correlacao criptografica. Um teste
+formal continua dependendo de marcador unico e trilha de auditoria.
+
+## Task 019 - Gate do runtime Windows
+
+- [x] Windows fica desabilitado por default seguro.
+- [x] O opt-in e um booleano explicito e nao contem segredo.
+- [x] O bloqueio ocorre antes de banco, rede, GUI ou instalacao operacional.
+- [x] `--dry-run` nao contorna o gate.
+- [x] Hooks Windows desabilitados falham abertos sem criar atividade falsa.
+- [x] Parada de alarme, encerramento e desinstalacao permanecem acessiveis.
+- [x] Nenhum backend, teste ou fonte Windows foi removido.
+
+### Risco residual
+
+Definir `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` libera uma integracao que
+ainda nao passou pelo gate externo real desta release. O operador deve usar uma
+maquina de teste, desktop desbloqueado e dados nao sensiveis. O opt-in nao deve
+ser distribuido em configuracoes Linux ou tratado como garantia de suporte.

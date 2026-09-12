@@ -63,6 +63,8 @@ printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. A
 automacao usa a API Win32 nativa, sem dependencia GUI externa. Wayland e macOS
 nao estao implementados.
+Na versao 0.6.2, o caminho Windows e experimental e requer
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
 
 ## Criar o Bot no Discord
 
@@ -98,7 +100,9 @@ Referencias oficiais:
 
 O programa acrescenta `wait=true` ao webhook. Esse parametro faz o Discord
 retornar a mensagem criada, incluindo o ID usado na correlacao. O payload
-tambem desativa mencoes automaticas com `allowed_mentions`.
+da pergunta desativa mencoes automaticas com `allowed_mentions`. Uma orientacao
+de resposta invalida pode mencionar somente o autor que ja passou pela
+allowlist; mencoes por texto continuam bloqueadas.
 
 Referencia oficial:
 [Execute Webhook](https://docs.discord.com/developers/resources/webhook#execute-webhook).
@@ -159,8 +163,9 @@ ai-presence ask-user \
   --question "Qual opcao devo usar: A ou B?"
 ```
 
-No Discord, use **Responder** na mensagem da pergunta. Uma mensagem solta no
-canal e ignorada.
+No Discord, use **Responder** na mensagem da pergunta. Enquanto houver pergunta
+pendente, uma mensagem solta de usuario autorizado e rejeitada e recebe uma
+orientacao no proprio canal. Mensagens de outros usuarios continuam ignoradas.
 
 Consulte uma vez:
 
@@ -171,6 +176,30 @@ ai-presence questions
 
 O estado esperado e `answered`. Nesta fase nenhum mouse, teclado ou Enter e
 executado.
+
+### Orientacao automatica para resposta invalida
+
+Cada mensagem nova de usuario autorizado gera no maximo uma tentativa de
+orientacao quando:
+
+- nao foi enviada com **Responder**;
+- referencia uma mensagem que nao corresponde a pergunta ainda pendente; ou
+- o Discord entrega `content` vazio.
+
+O aviso menciona somente o autor autorizado, informa quantas perguntas ainda
+estao dentro do prazo e ensina a selecionar **Pergunta do AI-worker** e usar
+**Responder**. Para texto vazio, tambem solicita a verificacao de **Message
+Content Intent** em **Developer Portal > Applications > aplicativo > Bot >
+Privileged Gateway Intents**.
+
+O observer exibe `orientadas=N` e `falhas_orientacao=N`. O cursor avanca mesmo
+quando o webhook do aviso falha, pois um timeout pode ocorrer depois de o
+Discord ter aceitado a mensagem; repetir automaticamente poderia duplicar o
+aviso.
+
+Nenhuma dessas mensagens invalidas e persistida como resposta ou enviada a
+GUI. Bots, webhooks, usuarios fora da allowlist e mensagens recebidas sem
+pergunta pendente permanecem silenciosos.
 
 ## Identificar a Janela do Codex no Linux
 
@@ -278,6 +307,25 @@ schtasks.exe /Query /TN "AI Presence Reply Observer" /V /FO LIST
 O Linux gera a unidade sem habilita-la. O Windows registra a tarefa para cada
 logon interativo, mas o primeiro inicio imediato ainda e explicito.
 
+### Falhas persistentes e HTTP 403
+
+No Linux, a unidade do observer espera 30 segundos entre falhas e permite no
+maximo tres inicios com falha em cinco minutos. Isso evita um ciclo agressivo
+quando token, canal, permissoes ou rede estao incorretos. O monitor principal
+nao usa esse limite.
+
+Para `403`, confirme no canal dedicado as permissoes `View Channel`,
+`Read Message History` e `Send Messages`. Teste uma leitura antes de reativar:
+
+```bash
+systemctl --user disable --now ai-presence-reply-observer.service
+ai-presence observe-replies --once
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user enable --now ai-presence-reply-observer.service
+```
+
+Nao regenere o token como primeira tentativa e nunca o publique em logs.
+
 ## Uso pelo AI-worker
 
 Quando precisar de uma decisao humana, o AI-worker pode executar:
@@ -329,8 +377,10 @@ ai-presence dispatch-answer ID_DA_PERGUNTA
 - Nunca publique o `.env`.
 - O texto autorizado vira entrada do Codex e pode mudar o trabalho executado.
 - Conta Discord comprometida dentro da allowlist equivale a controle do prompt.
-- Respostas vazias, anexos sem texto, bots e mensagens sem referencia sao
-  ignorados.
+- Respostas vazias e mensagens sem referencia de usuario autorizado recebem
+  orientacao somente enquanto houver pergunta pendente; nao sao aceitas nem
+  enviadas a GUI.
+- Bots, webhooks e usuarios fora da allowlist sao ignorados sem feedback.
 - O programa nao passa a resposta para shell.
 - A entrega GUI fica desativada por padrao.
 - `--dry-run` nao toca rede, banco ou GUI nos comandos novos.
@@ -363,6 +413,10 @@ systemctl --user disable --now ai-presence-reply-observer.service
 ai-presence uninstall-background-service --component reply-observer
 systemctl --user daemon-reload
 ```
+
+Se a unidade estiver bloqueada pelo limite de falhas, use `systemctl --user
+reset-failed ai-presence-reply-observer.service` somente depois de corrigir a
+causa.
 
 No Windows PowerShell:
 

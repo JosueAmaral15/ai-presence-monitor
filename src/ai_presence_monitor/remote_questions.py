@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from .config import AppConfig
-from .discord_questions import DiscordQuestionClient, DiscordQuestionError
+from .discord_questions import (
+    DiscordQuestionClient,
+    DiscordQuestionError,
+    ReplyGuidanceReason,
+)
 from .gui_answer import GuiAnswerDispatcher, GuiDispatchError, WindowTarget
 from .platform_integration import UnsupportedPlatformError, get_platform_factory
 from .store import PresenceStore, RemoteQuestion
@@ -23,6 +27,8 @@ class ReplyObserverResult:
     accepted: int
     dispatched: int
     dispatch_failed: int
+    guided: int
+    guidance_failed: int
 
 
 def validate_remote_question_config(config: AppConfig) -> None:
@@ -73,7 +79,9 @@ def capture_gui_target(
             "PRESENCE_CODEX_GUI_WINDOW_TITLE e obrigatorio quando a entrega GUI esta ativa."
         )
     try:
-        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+        actor = dispatcher or get_platform_factory(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        ).create_gui_dispatcher(
             x_ratio=config.codex_gui_click_x_ratio,
             y_ratio=config.codex_gui_click_y_ratio,
         )
@@ -162,15 +170,17 @@ def observe_discord_replies_once(
     assert config.discord_question_channel_id is not None
     cursor_key = CURSOR_KEY_PREFIX + config.discord_question_channel_id
     cursor = store.get_observer_state(cursor_key)
+    pending_by_message_id = {
+        question.external_message_id: question
+        for question in store.list_questions(status="pending", limit=1000)
+        if (
+            question.channel_id == config.discord_question_channel_id
+            and question.external_message_id is not None
+            and question.external_message_id.isdigit()
+        )
+    }
     if cursor is None:
-        pending_message_ids = [
-            question.external_message_id
-            for question in store.list_questions(status="pending", limit=1000)
-            if (
-                question.external_message_id is not None
-                and question.external_message_id.isdigit()
-            )
-        ]
+        pending_message_ids = list(pending_by_message_id)
         if pending_message_ids:
             cursor = min(pending_message_ids, key=int)
 
@@ -182,10 +192,14 @@ def observe_discord_replies_once(
     accepted = 0
     dispatched = 0
     dispatch_failed = 0
+    guided = 0
+    guidance_failed = 0
     actor = dispatcher
     if config.gui_answer_enabled and actor is None:
         try:
-            actor = get_platform_factory().create_gui_dispatcher(
+            actor = get_platform_factory(
+                experimental_windows_enabled=config.experimental_windows_enabled,
+            ).create_gui_dispatcher(
                 x_ratio=config.codex_gui_click_x_ratio,
                 y_ratio=config.codex_gui_click_y_ratio,
             )
@@ -198,11 +212,30 @@ def observe_discord_replies_once(
         if message_id is None:
             continue
         last_message_id = _max_snowflake(last_message_id, message_id)
-        answer = _authorized_answer(message, config)
-        if answer is None:
+        candidate = _allowed_human_message(message, config)
+        if candidate is None:
             continue
 
-        referenced_message_id, author_id, content = answer
+        referenced_message_id, author_id, content = candidate
+        guidance_reasons = _reply_guidance_reasons(
+            referenced_message_id=referenced_message_id,
+            content=content,
+            pending_message_ids=set(pending_by_message_id),
+        )
+        if guidance_reasons:
+            if pending_by_message_id:
+                try:
+                    transport.post_reply_guidance(
+                        author_id=author_id,
+                        pending_count=len(pending_by_message_id),
+                        reasons=guidance_reasons,
+                    )
+                    guided += 1
+                except (DiscordQuestionError, OSError, ValueError):
+                    guidance_failed += 1
+            continue
+
+        assert referenced_message_id is not None
         question = store.record_question_answer(
             external_message_id=referenced_message_id,
             channel_id=config.discord_question_channel_id,
@@ -214,6 +247,7 @@ def observe_discord_replies_once(
         if question is None:
             continue
         accepted += 1
+        pending_by_message_id.pop(referenced_message_id, None)
 
         if not config.gui_answer_enabled:
             continue
@@ -239,6 +273,8 @@ def observe_discord_replies_once(
         accepted=accepted,
         dispatched=dispatched,
         dispatch_failed=dispatch_failed,
+        guided=guided,
+        guidance_failed=guidance_failed,
     )
 
 
@@ -260,7 +296,9 @@ def retry_gui_dispatch(
             f"A pergunta esta em estado {question.status!r}, sem resposta pronta para entrega."
         )
     try:
-        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+        actor = dispatcher or get_platform_factory(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        ).create_gui_dispatcher(
             x_ratio=config.codex_gui_click_x_ratio,
             y_ratio=config.codex_gui_click_y_ratio,
         )
@@ -282,30 +320,47 @@ def retry_gui_dispatch(
     )
 
 
-def _authorized_answer(
+def _allowed_human_message(
     message: dict[str, Any],
     config: AppConfig,
-) -> tuple[str, str, str] | None:
+) -> tuple[str | None, str, str] | None:
     if _snowflake(message.get("channel_id")) != config.discord_question_channel_id:
         return None
     author = message.get("author")
-    if not isinstance(author, dict) or author.get("bot") is True:
+    if (
+        not isinstance(author, dict)
+        or author.get("bot") is True
+        or message.get("webhook_id") is not None
+    ):
         return None
     author_id = _snowflake(author.get("id"))
     if author_id is None or author_id not in config.discord_allowed_user_ids:
         return None
     reference = message.get("message_reference")
-    if not isinstance(reference, dict):
-        return None
-    referenced_message_id = _snowflake(reference.get("message_id"))
+    referenced_message_id = (
+        _snowflake(reference.get("message_id"))
+        if isinstance(reference, dict)
+        else None
+    )
     content = message.get("content")
-    if (
-        referenced_message_id is None
-        or not isinstance(content, str)
-        or not content.strip()
-    ):
-        return None
-    return referenced_message_id, author_id, content.strip()
+    clean_content = content.strip() if isinstance(content, str) else ""
+    return referenced_message_id, author_id, clean_content
+
+
+def _reply_guidance_reasons(
+    *,
+    referenced_message_id: str | None,
+    content: str,
+    pending_message_ids: set[str],
+) -> tuple[ReplyGuidanceReason, ...]:
+    reasons: list[ReplyGuidanceReason] = []
+    if referenced_message_id is None:
+        reasons.append("missing_reference")
+    elif referenced_message_id not in pending_message_ids:
+        reasons.append("unmatched_reference")
+    if not content:
+        reasons.append("empty_content")
+    return tuple(reasons)
 
 
 def _snowflake(value: object) -> str | None:

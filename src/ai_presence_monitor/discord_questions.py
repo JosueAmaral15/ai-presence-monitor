@@ -5,7 +5,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from . import __version__
 
@@ -14,6 +14,13 @@ DISCORD_API_BASE = "https://discord.com/api/v10"
 
 class DiscordQuestionError(RuntimeError):
     pass
+
+
+ReplyGuidanceReason = Literal[
+    "missing_reference",
+    "unmatched_reference",
+    "empty_content",
+]
 
 
 @dataclass(frozen=True)
@@ -100,6 +107,56 @@ class DiscordQuestionClient:
                 "O webhook publicou em canal diferente de DISCORD_QUESTION_CHANNEL_ID."
             )
         return PostedDiscordQuestion(message_id=message_id, channel_id=channel_id)
+
+    def post_reply_guidance(
+        self,
+        *,
+        author_id: str,
+        pending_count: int,
+        reasons: tuple[ReplyGuidanceReason, ...],
+    ) -> None:
+        allowed_author_id = _require_snowflake(author_id, "ID do usuario autorizado")
+        if pending_count <= 0:
+            raise DiscordQuestionError(
+                "A orientacao exige ao menos uma pergunta pendente."
+            )
+
+        question_label = "pergunta ativa" if pending_count == 1 else "perguntas ativas"
+        lines = [
+            f"<@{allowed_author_id}> **Resposta nao associada.**",
+            f"Ha {pending_count} {question_label} dentro do prazo.",
+            "Selecione a mensagem **Pergunta do AI-worker**, use **Responder** "
+            "e confirme que o Discord mostra a resposta vinculada.",
+        ]
+        if "missing_reference" in reasons:
+            lines.append(
+                "A mensagem recebida nao tinha referencia a pergunta escolhida."
+            )
+        if "unmatched_reference" in reasons:
+            lines.append(
+                "A mensagem selecionada nao corresponde a uma pergunta que ainda "
+                "esteja pendente; responda diretamente a uma pergunta ativa."
+            )
+        if "empty_content" in reasons:
+            lines.append(
+                "O Discord entregou o texto vazio ao bot. Se voce enviou texto, "
+                "habilite **Message Content Intent** no aplicativo do bot e tente "
+                "novamente."
+            )
+
+        self._request_json(
+            _webhook_wait_url(self.webhook_url),
+            method="POST",
+            payload={
+                "content": "\n".join(lines),
+                "allowed_mentions": {
+                    "parse": [],
+                    "users": [allowed_author_id],
+                    "replied_user": False,
+                },
+            },
+            label="orientacao de resposta Discord",
+        )
 
     def fetch_messages(self, *, after: str | None = None) -> list[dict[str, Any]]:
         if after is not None:

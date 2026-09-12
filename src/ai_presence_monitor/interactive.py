@@ -28,6 +28,8 @@ from .codex_hook_installer import (
     print_result as print_hook_install_result,
 )
 from .config import AppConfig, load_config, resolve_env_path
+from .control import ControlStore
+from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .protocols import PROTOCOLS
 
 DEFAULT_ENV_FILE = resolve_env_path()
@@ -751,6 +753,7 @@ def _run_reply_observer_loop(env_file: Path, dry_run: bool) -> None:
 
 def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
     config = _load_current_config(env_file)
+    controls = ControlStore.from_config(config).load()
     ai_name = _prompt_text("Nome da IA/agente", "codex", allow_clear=False)
     computer = _prompt_text(
         "Nome do computador",
@@ -772,17 +775,35 @@ def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
         "Atraso antes do envio em segundos",
         config.continue_delay_seconds,
     )
+    transport = _prompt_choice(
+        "Transporte de entrada",
+        ["auto", "native", "gui"],
+        config.continue_transport,
+    )
+    destination = _prompt_choice(
+        "Computador de destino",
+        ["local", "client"],
+        config.continue_destination,
+    )
+    thread_id = _prompt_text(
+        "Sessao Codex exata, opcional quando um hook do worker ja existe",
+        controls.codex_thread_id or "",
+    )
     window_title = _prompt_text(
-        "Padrao do titulo da janela do Codex",
+        "Padrao do titulo para fallback GUI, opcional",
         config.codex_gui_window_title or "",
-        required=True,
-        allow_clear=False,
     )
     window_id = _prompt_text("ID exato da janela, opcional", "")
     sync_activity = _prompt_yes_no(
         "Sincronizar o envio com a atividade do worker",
         config.continue_sync_activity,
     )
+    authorize_once = False
+    if not dry_run and not controls.task_automation_enabled:
+        authorize_once = _prompt_yes_no(
+            "Autorizar somente esta execucao de continue",
+            False,
+        )
     args = argparse.Namespace(
         worker=worker,
         computer=computer,
@@ -794,8 +815,15 @@ def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
         message=message,
         delay=delay,
         window_id=window_id or None,
-        window_title=window_title,
+        window_title=window_title or None,
+        allow_title_change=False,
         sync_activity=sync_activity,
+        transport=transport,
+        destination=destination,
+        thread=thread_id or None,
+        remote=None,
+        remote_auth_token_env=None,
+        authorize_once=authorize_once,
         dry_run=dry_run,
     )
     _continue_task(args, config)
@@ -851,7 +879,7 @@ def _menu() -> None:
     print("15. Observar respostas uma vez")
     print("16. Observar respostas continuamente")
     print("17. Listar perguntas e respostas")
-    print("18. Agendar e enviar continue ao Codex")
+    print("18. Agendar e enviar continue ao Codex (nativo/GUI)")
     print("19. Interromper alarme local")
     print("20. Instalar execucao continua desta plataforma")
     print("21. Remover execucao continua desta plataforma")
@@ -961,4 +989,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
-    run_interactive(Path(args.env_file), dry_run=args.dry_run)
+    try:
+        config = load_config(args.env_file, override_env=True)
+        ensure_runtime_enabled(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        )
+        run_interactive(Path(args.env_file), dry_run=args.dry_run)
+    except (UnsupportedPlatformError, ValueError) as exc:
+        print(str(exc))
+        raise SystemExit(2) from exc

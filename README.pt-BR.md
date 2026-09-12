@@ -4,6 +4,10 @@
 
 Monitor local para presencas artificiais de trabalho. Ele registra atividade de uma IA/agente, mantém estado em SQLite e envia notificacoes automáticas por Discord e, opcionalmente, Telegram.
 
+Esta release possui suporte operacional oficial somente para Linux. O codigo
+Windows foi preservado, mas fica experimental e desabilitado por padrao. Testes
+controlados no Windows exigem `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
+
 ## Protocolos
 
 ### Protocolo 1
@@ -31,9 +35,11 @@ Alertas:
 Guia detalhado do `.env` e dos dados necessarios:
 
 - [docs/INDEX.md](docs/INDEX.md)
+- [docs/USO-COMO-FERRAMENTA.md](docs/USO-COMO-FERRAMENTA.md)
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
 - [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md)
+- [docs/SYSTEM-TRAY-NATIVE-INPUT.md](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md)
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
@@ -54,6 +60,13 @@ Set-ExecutionPolicy -Scope Process Bypass
 & "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
 ```
 
+A instalacao preserva os adaptadores, mas comandos operacionais Windows ficam
+bloqueados. Ative-os somente para desenvolvimento controlado no `.env`:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
 Durante o desenvolvimento no proprio checkout:
 
 ```bash
@@ -62,6 +75,22 @@ python3 main.py
 ```
 
 O menu pergunta os dados no terminal e pode criar o `.env`, inicializar o banco, registrar ponto, registrar inicio/fim de tarefa e rodar o monitor.
+
+A versao 0.6.1 tambem oferece entrada direta por `codex queue`, sem controlar
+mouse ou teclado, e uma bandeja opcional. Instale e inicie com:
+
+```bash
+python -m pip install '/caminho/para/ai-presence-monitor[tray]'
+ai-presence tray --check
+ai-presence tray
+```
+
+O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
+local/remoto e a autorizacao do procedimento `continue`.
+
+Quando o alvo e a propria sessao Codex, o comando retorna `dispatch_started`
+sem bloquear o turno e sem antecipar atividade. Um hook posterior registra
+atividade da sessao, mas a autoria de uma mensagem exige correlacao adicional.
 
 Atalho equivalente no Linux:
 
@@ -91,7 +120,8 @@ disponibiliza-lo no `PATH` do usuario Linux:
 ai-presence --help
 ```
 
-Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md) e
+Uma IA responsavel por operar o monitor deve ler [AGENTS.md](AGENTS.md),
+[docs/USO-COMO-FERRAMENTA.md](docs/USO-COMO-FERRAMENTA.md) e
 [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md).
 O protocolo define inicio, atividade observada, perguntas, continuidade,
 encerramento, codigos de saida e limites da automacao GUI.
@@ -166,6 +196,12 @@ A versao 0.3.0 pode publicar uma pergunta em um canal dedicado do Discord,
 aceitar somente resposta direta de usuario autorizado e, opcionalmente, colar a
 resposta na janela exata do Codex GUI.
 
+Enquanto existir pergunta pendente, uma mensagem invalida de usuario
+autorizado recebe uma unica orientacao no Discord. O aviso explica como usar
+**Responder** e aponta `Message Content Intent` quando a API entregar texto
+vazio. Bots, webhooks, usuarios nao autorizados e canais sem pergunta pendente
+permanecem silenciosos.
+
 O recurso e desativado por padrao. Configure e teste primeiro com a entrega GUI
 desativada, seguindo
 [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
@@ -187,6 +223,11 @@ ai-presence install-background-service --component reply-observer
 
 No Linux, execute os comandos `systemctl` impressos. No Windows, execute o
 comando `schtasks.exe /Run` impresso para iniciar a tarefa imediatamente.
+No Linux, o observer tenta novamente a cada 30 segundos e interrompe o ciclo
+depois de tres falhas em cinco minutos. Depois de corrigir credenciais ou rede,
+execute `systemctl --user reset-failed
+ai-presence-reply-observer.service` antes de inicia-lo novamente. O monitor
+principal preserva sua politica de reinicio independente.
 
 ## Continue Integrado
 

@@ -98,6 +98,18 @@ ai-presence uninstall-systemd-service
 systemctl --user daemon-reload
 ```
 
+Depois de corrigir uma falha persistente e antes de reativar a unidade:
+
+```bash
+ai-presence observe-replies --once
+systemctl --user reset-failed ai-presence-reply-observer.service
+systemctl --user start ai-presence-reply-observer.service
+```
+
+O limite padrao do observer e tres falhas em cinco minutos, com 30 segundos
+entre tentativas. O rollback do wheel restaura a definicao anterior quando a
+unidade for reinstalada.
+
 O desinstalador informa o caminho do backup `.service.backup-*`.
 
 Para restaurar hooks, use `hooks.json.backup-*` ou execute:
@@ -193,3 +205,40 @@ schtasks.exe /Delete /TN "AI Presence Reply Observer" /F
 
 Depois, reinstale um wheel 0.4.3 conhecido. Nao remova o `.env` nem o SQLite:
 nao houve migracao de esquema e as chaves novas preservam defaults compativeis.
+
+## Task 016 - Bandeja e entrada nativa
+
+Desabilite primeiro todas as autorizacoes:
+
+```bash
+ai-presence control disable task-automation
+ai-presence control disable remote-input
+ai-presence control disable gui-fallback
+ai-presence control disable native-input
+```
+
+Encerre a bandeja pelo menu **Exit**. Isso nao encerra monitor nem observer.
+Para restaurar os defaults do `.env`, remova somente o arquivo apontado por
+`PRESENCE_CONTROL_PATH`; nao remova `.env` nem o banco SQLite.
+
+O recurso nao altera o esquema do banco. Reinstalar o wheel anterior faz o
+pacote ignorar `control.json` e as novas chaves. Um fallback GUI antigo pode
+voltar a ser usado pela versao anterior, portanto mantenha a configuracao de
+janela desativada quando o objetivo for impedir toda entrada automatizada.
+
+## Task 019 - Gate Linux estavel
+
+Para desabilitar imediatamente toda operacao experimental Windows, mantenha:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false
+```
+
+Isso nao remove os adaptadores nem altera SQLite ou `control.json`. Mesmo com o
+runtime bloqueado, use `stop-alarm`, `finish`, `control disable` e os comandos
+de desinstalacao para encerrar componentes criados por uma validacao anterior.
+
+Para restaurar temporariamente o comportamento Windows existente em uma
+maquina de teste, altere somente a copia local para `true`. Para remover a
+politica do codigo, reverta o commit da Task 019; nao apague `.env`, banco,
+hooks ou definicoes de tarefa como parte do rollback.

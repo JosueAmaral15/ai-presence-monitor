@@ -14,6 +14,30 @@ class UnsupportedPlatformError(RuntimeError):
     pass
 
 
+WINDOWS_PLATFORM_NAMES = frozenset({"win32", "windows", "cygwin"})
+WINDOWS_OPT_IN_ENV = "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED"
+
+
+def ensure_runtime_enabled(
+    *,
+    platform_name: str | None = None,
+    experimental_windows_enabled: bool = False,
+) -> str:
+    selected = (platform_name or sys.platform).lower()
+    if selected.startswith("linux"):
+        return "linux"
+    if selected in WINDOWS_PLATFORM_NAMES:
+        if experimental_windows_enabled:
+            return "windows"
+        raise UnsupportedPlatformError(
+            "O runtime Windows e experimental e esta desativado nesta release. "
+            f"Defina {WINDOWS_OPT_IN_ENV}=true somente para validacao controlada."
+        )
+    raise UnsupportedPlatformError(
+        f"Plataforma sem adaptador operacional habilitado: {selected}."
+    )
+
+
 class PlatformIntegrationFactory(ABC):
     platform_name: str
 
@@ -80,12 +104,15 @@ class WindowsPlatformFactory(PlatformIntegrationFactory):
         return WindowsTaskSchedulerService()
 
 
-def get_platform_factory(platform_name: str | None = None) -> PlatformIntegrationFactory:
-    selected = (platform_name or sys.platform).lower()
-    if selected.startswith("linux"):
-        return LinuxPlatformFactory()
-    if selected in {"win32", "windows", "cygwin"}:
-        return WindowsPlatformFactory()
-    raise UnsupportedPlatformError(
-        f"Plataforma sem adaptador operacional: {selected}."
+def get_platform_factory(
+    platform_name: str | None = None,
+    *,
+    experimental_windows_enabled: bool = False,
+) -> PlatformIntegrationFactory:
+    selected = ensure_runtime_enabled(
+        platform_name=platform_name,
+        experimental_windows_enabled=experimental_windows_enabled,
     )
+    if selected == "linux":
+        return LinuxPlatformFactory()
+    return WindowsPlatformFactory()

@@ -115,31 +115,69 @@ revalidado da janela da plataforma.
 
 O polling possui unidade systemd ou tarefa agendada separada. Assim, falha de
 Discord ou da GUI nao interrompe o monitor de atrasos nem o hook passivo.
+Mensagens humanas de usuarios permitidos passam por classificacao antes da
+aceitacao. Se ainda houver pergunta pendente, ausencia de referencia,
+referencia sem correspondencia ou conteudo vazio gera uma unica tentativa de
+orientacao pelo webhook. O cursor avanca mesmo se o aviso falhar, evitando
+duplicacao depois de timeout incerto. Bots, webhooks e autores fora da
+allowlist nao recebem feedback.
+
+No Linux, a unidade do observer usa `Restart=on-failure`, espera 30 segundos e
+aceita no maximo tres inicios com falha em cinco minutos. O monitor principal
+continua com `Restart=always` e espera de cinco segundos. No Windows, o Task
+Scheduler ja limita a tres reinicializacoes em falha.
 
 ## Continue Integrado
 
 ```text
-CLI/menu -> captura alvo de janela unico -> delay -> revalidacao
-                                           |
-                                           v
-                              adaptador GUI + texto + Enter
-                                           |
-                                           v
-                              input_emitted localmente
-                                           |
-                       worker active? -----+----- nao -> sem sync
-                             |
-                             v
-          observation:automation:continue -> last_activity_at
-                             |
-                             v
-                    hook posterior do Codex
+CLI/bandeja -> ControlStore -> resolve sessao/alvo -> delay
+                                      |
+                     +----------------+----------------+
+                     |                                 |
+                     v                                 v
+       CodexQueueClient (`codex queue`)      dispatcher GUI opt-in
+              |                  |                      |
+      propria sessao       outra sessao                |
+              |                  |                      |
+              v                  +----------+-----------+
+     dispatch_started                       |
+              |                             v
+              |                      input_emitted
+              |                             |
+              |          worker active? ---+--- nao -> sem sync
+              |                 |
+              |                 v
+              |  observation:automation:continue -> last_activity_at
+              |                 |
+              +-----------------+----------------+
+                                                 |
+                                                 v
+                                      hook posterior do Codex
 ```
 
-`continue_task.py` coordena o caso de uso. `gui_answer.py` oferece a operacao
-generica de despacho textual, tambem reutilizada por respostas remotas. A
-sincronizacao ocorre depois do despacho; falha ou cancelamento nao alteram o
+`continue_task.py` coordena o caso de uso. `codex_input.py` encapsula o
+subprocesso nativo sem shell e o destino local/remoto. `gui_answer.py` permanece
+como fallback de despacho textual. A propria sessao e detectada pelas variaveis
+do ambiente Codex e usa processo destacado. `dispatch_started` nao altera o
+SQLite; somente o hook posterior registra atividade. Emissoes sincronas podem
+sincronizar o worker depois do sucesso. Falha ou cancelamento nunca alteram o
 SQLite.
+
+## Bandeja e Politica de Automacao
+
+`control.py` persiste `ControlSettings` em JSON por substituicao atomica. Por
+padrao, o arquivo fica na area de estado do usuario, fora do checkout, e nao
+armazena token, somente o nome da variavel de ambiente. CLI e `tray.py` leem o
+mesmo arquivo.
+
+`tray.py` importa PySide6 apenas ao iniciar a interface. Isso mantem a camada
+grafica fora da dependencia base e permite executar monitor/hooks em ambientes
+sem desktop. O menu oferece tres comandos; o dialogo de preferencias edita as
+flags e o compositor chama o mesmo `send_native_message` usado pela CLI.
+
+A permissao `task_automation_enabled` e um gate, nao um scheduler. A decisao de
+executar `continue` continua pertencendo ao AI-worker e as pre-condicoes
+normativas da tarefa.
 
 ## Source Layout
 
@@ -157,6 +195,11 @@ servicos podem executar sem carregar configuracao interativa do shell.
 O nucleo de configuracao, identidade, protocolos e SQLite e independente da
 plataforma. `platform_integration.py` implementa Abstract Factory e cria tres
 produtos coerentes:
+
+Na versao 0.6.2, `ensure_runtime_enabled` atua antes da criacao desses produtos:
+Linux e habilitado por padrao, enquanto a familia Windows preservada exige
+`PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`. O gate altera disponibilidade,
+nao a estrutura das implementacoes concretas.
 
 ```text
 PlatformIntegrationFactory
