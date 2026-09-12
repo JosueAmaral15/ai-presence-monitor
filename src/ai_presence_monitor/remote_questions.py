@@ -79,7 +79,9 @@ def capture_gui_target(
             "PRESENCE_CODEX_GUI_WINDOW_TITLE e obrigatorio quando a entrega GUI esta ativa."
         )
     try:
-        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+        actor = dispatcher or get_platform_factory(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        ).create_gui_dispatcher(
             x_ratio=config.codex_gui_click_x_ratio,
             y_ratio=config.codex_gui_click_y_ratio,
         )
@@ -195,7 +197,9 @@ def observe_discord_replies_once(
     actor = dispatcher
     if config.gui_answer_enabled and actor is None:
         try:
-            actor = get_platform_factory().create_gui_dispatcher(
+            actor = get_platform_factory(
+                experimental_windows_enabled=config.experimental_windows_enabled,
+            ).create_gui_dispatcher(
                 x_ratio=config.codex_gui_click_x_ratio,
                 y_ratio=config.codex_gui_click_y_ratio,
             )
@@ -292,7 +296,9 @@ def retry_gui_dispatch(
             f"A pergunta esta em estado {question.status!r}, sem resposta pronta para entrega."
         )
     try:
-        actor = dispatcher or get_platform_factory().create_gui_dispatcher(
+        actor = dispatcher or get_platform_factory(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        ).create_gui_dispatcher(
             x_ratio=config.codex_gui_click_x_ratio,
             y_ratio=config.codex_gui_click_y_ratio,
         )

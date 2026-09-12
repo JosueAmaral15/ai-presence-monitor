@@ -79,5 +79,6 @@ manually, so the subsequent `SessionStart` and `UserPromptSubmit` hooks cannot
 prove native queue delivery. Task 017 contains the non-blocking correction and
 the requirements for a uniquely correlated retest.
 
-Native queue E2E and the external Windows CI gate recorded by Task 012 remain
-open, so `main` promotion is still blocked.
+This historical checkpoint was superseded by Tasks 017 and 019: the native
+queue E2E passed, and Windows CI is now experimental and non-blocking for the
+Linux release. Task 019 owns the current Linux promotion gates.

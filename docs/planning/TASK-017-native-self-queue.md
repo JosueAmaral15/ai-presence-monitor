@@ -107,9 +107,9 @@ real queue delivery. The E2E result requires all of the following:
 4. a later hook from the same session;
 5. no retry after timeout or another uncertain result.
 
-The native queue E2E gate is complete. `main` promotion remains blocked only by
-the external Windows CI gate documented in Task 012. Local Linux validation
-does not replace that platform evidence.
+The native queue E2E gate is complete. Task 019 later reclassified Windows CI
+as manual, experimental, and non-blocking for the Linux release. Task 019 owns
+the current Linux promotion evidence; this does not claim Windows support.
 
 ## Rollback
 

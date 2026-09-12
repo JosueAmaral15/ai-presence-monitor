@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from test_cli import make_config
 
 from ai_presence_monitor.codex_input import (
     CodexInputError,
@@ -8,7 +12,8 @@ from ai_presence_monitor.codex_input import (
     send_native_message,
 )
 from ai_presence_monitor.control import ControlSettings
-from ai_presence_monitor.tray import build_parser, dispatch_tray_message
+from ai_presence_monitor.platform_integration import UnsupportedPlatformError
+from ai_presence_monitor.tray import build_parser, dispatch_tray_message, run_tray
 
 
 class FakeClient:
@@ -138,6 +143,14 @@ class TrayMessageTests(unittest.TestCase):
                 client=client,  # type: ignore[arg-type]
             )
         self.assertEqual(client.calls, [])
+
+    def test_tray_blocks_windows_before_loading_qt(self) -> None:
+        config = make_config(Path("/tmp"))
+        with patch(
+            "ai_presence_monitor.platform_integration.sys.platform",
+            "win32",
+        ), self.assertRaisesRegex(UnsupportedPlatformError, "experimental"):
+            run_tray(config, check_only=True)
 
 
 if __name__ == "__main__":

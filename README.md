@@ -17,7 +17,8 @@ The project also provides:
 - an optional system tray for automation permissions and local/remote input;
 - scheduled `continue` input with native-first transport and guarded GUI fallback;
 - one-shot red alerts with a bounded local alarm;
-- native operational adapters for Linux and Windows.
+- stable Linux operational adapters, with preserved Windows adapters behind an
+  explicit experimental opt-in.
 
 ## Presence Protocols
 
@@ -70,14 +71,14 @@ The Portuguese version of this README is preserved in
 ## Requirements
 
 - Python 3.10, 3.11, or 3.12;
-- Linux or Windows for the complete local integration family;
+- Linux for the supported runtime in this release;
 - on Linux: `/proc`, GNU `timeout`, and optionally systemd/X11/`xdotool`/`xclip`;
-- on Windows: an interactive unlocked desktop for GUI input and Task Scheduler
-  for optional continuous execution.
+- Windows adapters remain in the package but are experimental and disabled by
+  default through `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false`.
 
-Linux has no third-party runtime Python dependency. On Windows, `pip` installs
-the platform-neutral `tzdata` package because the standard library does not
-ship the IANA time-zone database there.
+Linux has no third-party runtime Python dependency. Experimental Windows
+installations include the platform-neutral `tzdata` package because the
+standard library does not ship the IANA time-zone database there.
 
 The system tray is optional on both platforms and uses PySide6. Native Codex
 input requires an installed Codex CLI that provides `codex queue`.
@@ -114,6 +115,16 @@ Set-ExecutionPolicy -Scope Process Bypass
 & .\scripts\install-user-command.ps1
 & "$env:LOCALAPPDATA\ai-presence-monitor\venv\Scripts\ai-presence.exe" --help
 ```
+
+Windows operational commands remain blocked after installation. Controlled
+development requires this explicit setting in the selected environment file:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true
+```
+
+Do not enable it for the supported Linux release. Read
+[docs/WINDOWS.md](docs/WINDOWS.md) before experimental validation.
 
 For development directly from the checkout:
 
@@ -559,7 +570,9 @@ python3 -m pip install -e '.[dev]'
 ```
 
 The gate runs compilation, unit tests, coverage, Ruff, mypy, package build, and
-`git diff --check`. The release matrix covers Python 3.10, 3.11, and 3.12:
+`git diff --check`. Required release validation covers Linux on Python 3.10,
+3.11, and 3.12. Windows validation is preserved as a manual, non-blocking
+experimental workflow:
 
 ```bash
 ./scripts/test-python-matrix.sh

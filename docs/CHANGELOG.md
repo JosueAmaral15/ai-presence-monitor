@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-12 - v0.6.2
+
+- Linux passa a ser o runtime suportado por padrao nesta release.
+- Todo o codigo, arquitetura e testes Windows foram preservados.
+- Operacoes Windows agora exigem
+  `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` para validacao controlada.
+- Diagnostico, encerramento, parada de alarme e desinstalacao continuam
+  acessiveis com o runtime experimental desabilitado.
+- Hooks desabilitados falham abertos sem registrar atividade artificial.
+- A CI obrigatoria cobre Linux em Python 3.10, 3.11 e 3.12; Windows permanece
+  manual, experimental e nao bloqueante.
+
 ## 2026-09-12 - E2E nativo do Codex concluido
 
 - Validada uma unica execucao autorizada de `codex queue` para a propria
@@ -8,8 +20,8 @@
   foi seguido por `UserPromptSubmit` da mesma sessao.
 - Nao houve digitacao humana do marcador, retry automatico, atualizacao falsa
   de atividade em `dispatch_started` ou processo de fila remanescente.
-- O gate E2E nativo foi concluido; a promocao para `main` continua bloqueada
-  somente pela CI real em Windows.
+- O gate E2E nativo foi concluido. A versao 0.6.2 reclassificou a CI Windows
+  pendente como experimental e nao bloqueante para a publicacao Linux.
 
 ## 2026-09-11 - Guia de uso e correcao da evidencia E2E
 

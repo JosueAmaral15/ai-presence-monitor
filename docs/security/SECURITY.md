@@ -201,3 +201,20 @@ operador deve diagnosticar antes de autorizar um novo envio.
 A convencao humana `prossiga` versus automacao `continue` reduz ambiguidades,
 mas nao constitui controle de acesso nem correlacao criptografica. Um teste
 formal continua dependendo de marcador unico e trilha de auditoria.
+
+## Task 019 - Gate do runtime Windows
+
+- [x] Windows fica desabilitado por default seguro.
+- [x] O opt-in e um booleano explicito e nao contem segredo.
+- [x] O bloqueio ocorre antes de banco, rede, GUI ou instalacao operacional.
+- [x] `--dry-run` nao contorna o gate.
+- [x] Hooks Windows desabilitados falham abertos sem criar atividade falsa.
+- [x] Parada de alarme, encerramento e desinstalacao permanecem acessiveis.
+- [x] Nenhum backend, teste ou fonte Windows foi removido.
+
+### Risco residual
+
+Definir `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` libera uma integracao que
+ainda nao passou pelo gate externo real desta release. O operador deve usar uma
+maquina de teste, desktop desbloqueado e dados nao sensiveis. O opt-in nao deve
+ser distribuido em configuracoes Linux ou tratado como garantia de suporte.

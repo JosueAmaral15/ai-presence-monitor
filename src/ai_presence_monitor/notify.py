@@ -26,12 +26,16 @@ class Notifier:
     ):
         self.config = config
         self.dry_run = dry_run
-        self.alarm_controller = alarm_controller or AlarmController(
-            max_duration_seconds=getattr(
-                config,
-                "red_alert_max_duration_seconds",
-                15,
-            )
+        self.alarm_controller = alarm_controller
+        self._alarm_max_duration_seconds = getattr(
+            config,
+            "red_alert_max_duration_seconds",
+            15,
+        )
+        self._experimental_windows_enabled = getattr(
+            config,
+            "experimental_windows_enabled",
+            False,
         )
 
     def send_point(self, event_type: str, worker: WorkerState, message: str | None) -> None:
@@ -193,6 +197,11 @@ class Notifier:
         if self.dry_run:
             print(f"[dry-run:comando] {command}")
             return
+        if self.alarm_controller is None:
+            self.alarm_controller = AlarmController(
+                max_duration_seconds=self._alarm_max_duration_seconds,
+                experimental_windows_enabled=self._experimental_windows_enabled,
+            )
         try:
             result = self.alarm_controller.start(command)
         except AlarmControlError as exc:

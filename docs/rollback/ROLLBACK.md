@@ -225,3 +225,20 @@ O recurso nao altera o esquema do banco. Reinstalar o wheel anterior faz o
 pacote ignorar `control.json` e as novas chaves. Um fallback GUI antigo pode
 voltar a ser usado pela versao anterior, portanto mantenha a configuracao de
 janela desativada quando o objetivo for impedir toda entrada automatizada.
+
+## Task 019 - Gate Linux estavel
+
+Para desabilitar imediatamente toda operacao experimental Windows, mantenha:
+
+```env
+PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false
+```
+
+Isso nao remove os adaptadores nem altera SQLite ou `control.json`. Mesmo com o
+runtime bloqueado, use `stop-alarm`, `finish`, `control disable` e os comandos
+de desinstalacao para encerrar componentes criados por uma validacao anterior.
+
+Para restaurar temporariamente o comportamento Windows existente em uma
+maquina de teste, altere somente a copia local para `true`. Para remover a
+politica do codigo, reverta o commit da Task 019; nao apague `.env`, banco,
+hooks ou definicoes de tarefa como parte do rollback.

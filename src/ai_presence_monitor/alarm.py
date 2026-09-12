@@ -58,13 +58,16 @@ class AlarmController:
         state_path: Path | None = None,
         max_duration_seconds: float = DEFAULT_ALARM_MAX_DURATION_SECONDS,
         backend: AlarmProcessBackend | None = None,
+        experimental_windows_enabled: bool = False,
     ):
         self.state_path = (state_path or default_alarm_state_path()).expanduser()
         self.max_duration_seconds = max_duration_seconds
         if backend is None:
             from .platform_integration import get_platform_factory
 
-            backend = get_platform_factory().create_alarm_process_backend()
+            backend = get_platform_factory(
+                experimental_windows_enabled=experimental_windows_enabled,
+            ).create_alarm_process_backend()
         self.backend = backend
 
     def start(self, command: str) -> AlarmStartResult:

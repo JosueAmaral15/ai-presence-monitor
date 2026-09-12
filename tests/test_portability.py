@@ -81,6 +81,7 @@ class ConfigPortabilityTests(unittest.TestCase):
                 "PRESENCE_NATIVE_INPUT_ENABLED=false\n"
                 "PRESENCE_GUI_FALLBACK_ENABLED=true\n"
                 "PRESENCE_REMOTE_INPUT_ENABLED=true\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n"
                 "PRESENCE_CONTINUE_TRANSPORT=native\n"
                 "PRESENCE_CONTINUE_DESTINATION=client\n"
                 "PRESENCE_CODEX_THREAD_ID=thread-1\n"
@@ -105,11 +106,21 @@ class ConfigPortabilityTests(unittest.TestCase):
             self.assertFalse(config.native_input_enabled)
             self.assertTrue(config.gui_fallback_enabled)
             self.assertTrue(config.remote_input_enabled)
+            self.assertTrue(config.experimental_windows_enabled)
             self.assertEqual(config.continue_transport, "native")
             self.assertEqual(config.continue_destination, "client")
             self.assertEqual(config.codex_thread_id, "thread-1")
             self.assertEqual(config.codex_remote, "wss://client.example/app-server")
             self.assertEqual(config.codex_remote_auth_token_env, "REMOTE_TOKEN")
+
+    def test_windows_runtime_is_disabled_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.touch()
+            with patch.dict(os.environ, {}, clear=True):
+                config = load_config(env_path, override_env=True)
+
+            self.assertFalse(config.experimental_windows_enabled)
 
     def test_env_resolution_prefers_existing_local_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

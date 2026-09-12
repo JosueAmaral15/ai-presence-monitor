@@ -29,6 +29,7 @@ from .codex_hook_installer import (
 )
 from .config import AppConfig, load_config, resolve_env_path
 from .control import ControlStore
+from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .protocols import PROTOCOLS
 
 DEFAULT_ENV_FILE = resolve_env_path()
@@ -988,4 +989,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
-    run_interactive(Path(args.env_file), dry_run=args.dry_run)
+    try:
+        config = load_config(args.env_file, override_env=True)
+        ensure_runtime_enabled(
+            experimental_windows_enabled=config.experimental_windows_enabled,
+        )
+        run_interactive(Path(args.env_file), dry_run=args.dry_run)
+    except (UnsupportedPlatformError, ValueError) as exc:
+        print(str(exc))
+        raise SystemExit(2) from exc

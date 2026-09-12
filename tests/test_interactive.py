@@ -27,6 +27,9 @@ from ai_presence_monitor.interactive import (
     configure_env,
     run_interactive,
 )
+from ai_presence_monitor.interactive import (
+    main as interactive_main,
+)
 
 
 class InteractiveEnvironmentTests(unittest.TestCase):
@@ -299,6 +302,26 @@ class InteractiveEnvironmentTests(unittest.TestCase):
         args = build_parser().parse_args(["--env-file", "/tmp/test.env", "--dry-run"])
         self.assertEqual(args.env_file, "/tmp/test.env")
         self.assertTrue(args.dry_run)
+
+    def test_interactive_entrypoint_blocks_windows_without_opt_in(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            env_path.write_text(
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), patch(
+                "ai_presence_monitor.interactive.run_interactive"
+            ) as run, redirect_stdout(StringIO()), self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                interactive_main(["--env-file", str(env_path)])
+
+            self.assertEqual(exit_context.exception.code, 2)
+            run.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from argparse import Namespace
+from contextlib import redirect_stdout
 from dataclasses import replace
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_presence_monitor.cli import _identity
 from ai_presence_monitor.codex_hook import (
@@ -13,6 +17,9 @@ from ai_presence_monitor.codex_hook import (
     load_hook_payload,
     record_codex_hook_payload,
     run_from_stdin,
+)
+from ai_presence_monitor.codex_hook import (
+    main as hook_main,
 )
 from ai_presence_monitor.config import AppConfig
 from ai_presence_monitor.store import PresenceStore
@@ -237,6 +244,27 @@ class CodexHookTests(unittest.TestCase):
             )
 
             self.assertEqual(manual_worker, observation.worker_id)
+
+    def test_disabled_windows_hook_fails_open_without_writing_database(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_path = root / ".env"
+            env_path.write_text(
+                "PRESENCE_DB_PATH=./presence.db\n"
+                "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ), redirect_stdout(StringIO()) as output, self.assertRaises(
+                SystemExit
+            ) as exit_context:
+                hook_main(["--env-file", str(env_path), "--verbose"])
+
+            self.assertEqual(exit_context.exception.code, 0)
+            self.assertIn("observacao ignorada", output.getvalue())
+            self.assertFalse((root / "presence.db").exists())
 
 
 if __name__ == "__main__":
