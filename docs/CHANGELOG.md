@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-09-13 - Entrega nativa de respostas Discord
+## 2026-09-13 - v0.7.0
 
 - Cada pergunta passa a salvar transporte, sessao e destino antes da
   publicacao no Discord.
@@ -15,6 +15,10 @@
   atualizados.
 - O configurador interativo preserva os controles nativos existentes e coleta
   transporte, sessao e destino para novas perguntas.
+- O E2E real confirmou uma resposta Discord aceita uma vez, entregue sem GUI
+  para a sessao Codex congelada e seguida por confirmacao do mesmo alvo.
+- O runtime Linux instalado e o observer systemd foram atualizados e
+  recuperados antes da validacao.
 
 ## 2026-09-12 - v0.6.2
 

@@ -2,11 +2,34 @@
 
 ## Em andamento em 2026-09-13
 
+### Task 021 - E2E nativo Discord e release Linux
+
+**Prioridade**: Critica
+**Status**: E2E real e estabilizacao aprovados; release 0.7.0 pronta para
+integracao final
+**Objetivo**: provar uma entrega unica da resposta Discord para a sessao exata
+do Codex, estabilizar o observer e promover o resultado validado ate `main`.
+
+**Criterios de aceite**:
+
+- [x] Runtime local atualizado de 0.6.1 para 0.7.0 com rollback privado.
+- [x] Observer recuperado da falha DNS e preflight Discord aprovado.
+- [x] Sessao, transporte nativo/local e marcador exclusivo congelados.
+- [x] Primeira pergunta invalidada antes da entrega; uma unica pergunta valida
+      aceita e entregue, com GUI e retry automatico desabilitados.
+- [x] Resposta direta aceita e entregue uma vez a sessao exata.
+- [x] Hook da mesma sessao produz `delivery_confirmed`.
+- [x] Observer reiniciado e estavel depois do teste.
+- [x] Gate local completo passa com 171 testes e 86% de cobertura.
+- [ ] Evidencia final integrada em `develop` e promovida a `main`.
+
+**Plano**: `docs/planning/TASK-021-native-discord-e2e-release.md`.
+
 ### Task 020 - Entrega nativa de respostas Discord
 
 **Prioridade**: Alta
-**Status**: implementacao validada e integrada localmente em `develop`; E2E
-real pendente antes de promover `main`
+**Status**: implementacao e E2E real validados; integracao da evidencia da
+Task 021 em andamento
 **Objetivo**: devolver cada resposta autorizada do Discord para a sessao exata
 do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
 
@@ -22,7 +45,7 @@ do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
 - [x] CLI, `.env.example`, arquitetura, seguranca e guias foram atualizados.
 - [x] Gate local completo, build e instalacao isolada passam.
 - [x] Commit da sessao e integracao funcional em `develop`.
-- [ ] E2E Discord-Codex real com marcador exclusivo e nova autorizacao.
+- [x] E2E Discord-Codex real com marcador exclusivo e nova autorizacao.
 
 **Plano**: `docs/planning/TASK-020-native-discord-answer-routing.md`.
 
