@@ -29,8 +29,8 @@ ferramenta leia por engano o `.env` de outra aplicacao.
 
 ## Politica de Plataforma
 
-Linux e a plataforma operacional suportada na versao 0.6.2. O codigo Windows
-permanece instalado, mas o runtime e desabilitado por padrao:
+Linux e a plataforma operacional suportada desde a versao 0.6.2. O codigo
+Windows permanece instalado, mas o runtime e desabilitado por padrao:
 
 ```env
 PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=false

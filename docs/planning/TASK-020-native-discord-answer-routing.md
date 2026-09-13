@@ -107,6 +107,12 @@ The answer must contain a unique marker that the human agrees not to type or
 paste manually. Success requires one visible delivery in the saved target, a
 later hook from that same session, and no retry.
 
+This gate passed on 2026-09-13 under Task 021. The allowlisted user answered a
+single valid replacement question directly in Discord. The observer accepted
+and delivered the response once through native/local transport, the unique
+marker appeared once in the frozen Codex session, and that session recorded
+`delivery_confirmed`. GUI fallback and automatic retry remained disabled.
+
 ## Validation Result
 
 - Focused routing and interactive suites passed during implementation.
@@ -120,10 +126,10 @@ later hook from that same session, and no retry.
   GUI input, or a real Codex queue invocation.
 - Implementation commit: `4605476` on
   `codex/native-discord-answer-routing` after rebasing onto `develop`.
-- The validated task branch was selected for local integration into `develop`;
-  `main` remains unchanged because the real E2E is still pending.
-- No real Discord question or Codex input was sent in this session. That E2E
-  remains a publication gate requiring separate, exact authorization.
+- The validated task branch was selected for local integration into `develop`.
+- No real Discord question or Codex input was sent during Task 020 itself. The
+  separately authorized Task 021 completed that publication gate on
+  2026-09-13.
 
 ## Rollback
 

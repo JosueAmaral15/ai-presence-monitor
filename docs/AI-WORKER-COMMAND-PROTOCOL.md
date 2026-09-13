@@ -231,8 +231,8 @@ para cada sistema:
 - Linux: `venv/bin/ai-presence`;
 - Windows: `venv\Scripts\ai-presence.exe`.
 
-Na versao 0.6.2, somente Linux e um runtime suportado. A implementacao Windows
-foi preservada, mas fica desabilitada por padrao. Um AI-worker nao deve ativar
+Desde a versao 0.6.2, somente Linux e um runtime suportado. A implementacao
+Windows foi preservada, mas fica desabilitada por padrao. Um AI-worker nao deve ativar
 `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` sem autorizacao explicita para uma
 validacao controlada.
 

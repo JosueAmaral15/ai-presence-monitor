@@ -37,27 +37,30 @@ the gates pass. This plan interprets that authorization conservatively:
 - [x] Resolve and record the exact current Codex session ID.
 - [x] Generate a unique `ACK_ONLY` marker not previously used.
 - [x] Stop the continuous observer to prevent competing consumers.
-- [x] Publish exactly one Discord question using native/local delivery.
-- [ ] Receive one direct reply from the allowlisted user in Discord.
-- [ ] Run one observer poll with no automatic retry or GUI fallback.
-- [ ] Confirm the marker appears exactly once in the saved Codex session.
-- [ ] Confirm a later hook from that same session records
+- [x] Invalidate the first pending question before dispatch after its marker was
+      disclosed in the target conversation.
+- [x] Publish one replacement Discord question using native/local delivery.
+- [x] Receive one direct reply from the allowlisted user in Discord.
+- [x] Run one observer delivery with no automatic retry or GUI fallback.
+- [x] Confirm the replacement marker appears exactly once in the saved Codex
+      session.
+- [x] Confirm a later hook from that same session records
       `delivery_confirmed`.
 
 ### Phase 3 - Stabilization and Evidence
 
-- [ ] Restart the continuous observer.
-- [ ] Verify the unit remains active without a restart loop.
-- [ ] Record sanitized question, session, state, and service evidence.
-- [ ] Update `docs/TASKS.md`, changelog, and Task 020 validation status.
+- [x] Restart the continuous observer.
+- [x] Verify the unit remains active without a restart loop.
+- [x] Record sanitized question, session, state, and service evidence.
+- [x] Update `docs/TASKS.md`, changelog, and Task 020 validation status.
 - [x] Run the complete local quality gate and review the diff for secrets.
 
 ### Phase 4 - Integration and Release
 
-- [ ] Commit the session on this task branch.
+- [x] Commit the session on this task branch.
 - [ ] Merge the validated task branch into `develop`.
 - [ ] Push `develop` to its remote branch.
-- [ ] Record the temporary private Linux-only CI decision if remote CI remains
+- [x] Record the temporary private Linux-only CI decision if remote CI remains
       unavailable.
 - [ ] Merge validated `develop` into `main` and push `main`.
 - [ ] Register the AI-worker finish event once.
@@ -79,21 +82,35 @@ the gates pass. This plan interprets that authorization conservatively:
 ## Evidence In Progress
 
 - Initial live package: `0.6.1`.
-- Candidate installed in the live venv: `0.6.2`.
+- E2E candidate installed in the live venv: `0.6.2`; the final `0.7.0` wheel
+  was built and installed after the real integration passed.
 - Initial observer state: `failed`; the last error was a temporary DNS
   resolution failure while reading Discord.
 - Recovery preflight: one Discord poll completed with zero failures.
 - Refreshed systemd unit started successfully and produced healthy polls before
   the controlled stop.
 - Exact target session: `019f5691-c118-7370-a205-94cfde0a93d7`.
-- Question ID: `1b629b56-2cd8-47f1-9ddb-95b52591a202`.
-- Discord message ID: `1548663978215870545`.
-- E2E marker:
-  `[AI-PRESENCE-DISCORD-E2E:a5f80722-e483-4de2-a804-0e3bfa32af3d] ACK_ONLY`.
+- The first question was invalidated as `expired` before dispatch because its
+  marker was disclosed in the target conversation. It produced no accepted
+  reply and no Codex input.
+- Valid question ID: `9de8144f-3dd7-4226-92a6-e7d569755bcf`.
+- Valid Discord message ID: `1548666857685385297`.
+- Valid E2E marker:
+  `[AI-PRESENCE-DISCORD-E2E:d8edc7f0-b348-495e-ab1f-458091cfacab] ACK_ONLY`.
 - Transport/destination: `native` / `local`; GUI fallback disabled.
-- Local gate: 171 tests passed, coverage 86%, Ruff and mypy passed, package
-  build passed, and `git diff --check` passed.
-- Current E2E state: pending direct Discord reply; no input has been emitted.
+- Observer result: one reply accepted, one input delivered, zero delivery
+  failures, zero guidance messages, and no retry.
+- Stored result: `delivery_confirmed` for the exact target session; confirmation
+  was recorded about ten seconds after `input_emitted`.
+- The marker appeared once as the next Codex user input after the dispatching
+  turn yielded. The human entered it only as a direct Discord reply.
+- Local gate: 171 tests passed on Python 3.10, 3.11, and 3.12; coverage was 86%;
+  Ruff, mypy, package build, and `git diff --check` passed.
+- Final live package: `0.7.0`; the observer restarted from that wheel with zero
+  initial systemd restarts.
+- Stabilization: the final service remained `active/running` for more than ten
+  minutes with `NRestarts=0` and no warning-or-higher journal entries.
+- Final E2E state: passed for the valid replacement question.
 
 ## Failure Policy
 

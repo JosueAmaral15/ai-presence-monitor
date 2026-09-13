@@ -209,8 +209,8 @@ O nucleo de configuracao, identidade, protocolos e SQLite e independente da
 plataforma. `platform_integration.py` implementa Abstract Factory e cria tres
 produtos coerentes:
 
-Na versao 0.6.2, `ensure_runtime_enabled` atua antes da criacao desses produtos:
-Linux e habilitado por padrao, enquanto a familia Windows preservada exige
+Desde a versao 0.6.2, `ensure_runtime_enabled` atua antes da criacao desses
+produtos: Linux e habilitado por padrao, enquanto a familia Windows preservada exige
 `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`. O gate altera disponibilidade,
 nao a estrutura das implementacoes concretas.
 
