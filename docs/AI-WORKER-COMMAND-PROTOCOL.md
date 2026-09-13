@@ -100,11 +100,16 @@ mecanismo. Como fallback remoto:
 ```bash
 ai-presence ask-user \
   --project "$PROJECT" \
+  --thread SESSAO_EXATA \
   --question "Pergunta objetiva para o usuario"
 ```
 
 O observer de respostas e um processo separado. Uma resposta so e aceita se
-estiver correlacionada com a pergunta e vier de um usuario permitido.
+estiver correlacionada com a pergunta e vier de um usuario permitido. Por
+padrao, a pergunta salva a sessao exata e o observer usa `codex queue`, sem
+mouse ou teclado. Se `--thread` for omitido, zero ou mais de uma sessao recente
+do mesmo worker causa falha fechada. `store` e GUI sao alternativas explicitas;
+falha nativa nunca autoriza fallback nem retry.
 
 ### 4. Continuidade
 

@@ -11,7 +11,8 @@ The project also provides:
 - passive Codex activity observation through hooks;
 - per-project and per-session worker identities;
 - work-hour alert policies;
-- remote Discord questions with an optional guarded GUI fallback;
+- remote Discord questions routed to the originating Codex session, with
+  store-only and guarded GUI alternatives;
 - direct Codex session input through `codex queue`, without taking over the
   user's mouse or keyboard;
 - an optional system tray for automation permissions and local/remote input;
@@ -413,8 +414,9 @@ journalctl --user -u ai-presence-monitor.service -n 100 --no-pager
 
 Remote questions are disabled by default. The monitor can publish a correlated
 question in a dedicated Discord channel, accept only a direct reply from an
-allowlisted user, and optionally deliver the answer to the exact Codex GUI
-window.
+allowlisted user, and route the answer to the exact Codex session recorded when
+the question was created. Native delivery uses `codex queue` without mouse or
+keyboard input. Store-only and guarded GUI transports remain explicit options.
 
 While a question is still pending, an invalid message from an allowlisted user
 receives one Discord guidance notice. The notice explains how to use
@@ -422,12 +424,15 @@ receives one Discord guidance notice. The notice explains how to use
 returns empty text. Bots, webhooks, unauthorized users, and channels with no
 pending question remain silent.
 
-Keep GUI delivery disabled until the Discord correlation flow has been tested.
+Keep GUI delivery disabled for native or store-only operation. A missing or
+ambiguous native session fails before the question is posted; pass `--thread`
+to bind it explicitly. Native failure never triggers GUI fallback or automatic
+retry.
 See the [remote response guide](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
 
 ```bash
-ai-presence --dry-run ask-user --worker worker-id --question "May I proceed?"
-ai-presence ask-user --worker worker-id --question "May I proceed?"
+ai-presence --dry-run ask-user --worker worker-id --thread SESSION --question "May I proceed?"
+ai-presence ask-user --worker worker-id --thread SESSION --question "May I proceed?"
 ai-presence observe-replies --once
 ai-presence observe-replies
 ai-presence questions

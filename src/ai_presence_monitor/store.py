@@ -43,6 +43,11 @@ class RemoteQuestion:
     answer: str | None
     answered_by: str | None
     reply_message_id: str | None
+    answer_transport: str | None
+    target_session_id: str | None
+    target_destination: str | None
+    target_remote: str | None
+    target_remote_auth_token_env: str | None
     target_window_id: str | None
     target_window_title: str | None
     target_window_pattern: str | None
@@ -158,6 +163,11 @@ class PresenceStore:
                     answer TEXT,
                     answered_by TEXT,
                     reply_message_id TEXT UNIQUE,
+                    answer_transport TEXT,
+                    target_session_id TEXT,
+                    target_destination TEXT,
+                    target_remote TEXT,
+                    target_remote_auth_token_env TEXT,
                     target_window_id TEXT,
                     target_window_title TEXT,
                     target_window_pattern TEXT,
@@ -171,6 +181,24 @@ class PresenceStore:
                 )
                 """
             )
+            question_columns = {
+                row["name"]
+                for row in conn.execute(
+                    "PRAGMA table_info(remote_questions)"
+                ).fetchall()
+            }
+            question_migrations = {
+                "answer_transport": "TEXT",
+                "target_session_id": "TEXT",
+                "target_destination": "TEXT",
+                "target_remote": "TEXT",
+                "target_remote_auth_token_env": "TEXT",
+            }
+            for column, column_type in question_migrations.items():
+                if column not in question_columns:
+                    conn.execute(
+                        f"ALTER TABLE remote_questions ADD COLUMN {column} {column_type}"
+                    )
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_remote_questions_status
@@ -471,6 +499,11 @@ class PresenceStore:
         worker_id: str,
         prompt: str,
         timeout_seconds: int,
+        answer_transport: str | None = None,
+        target_session_id: str | None = None,
+        target_destination: str | None = None,
+        target_remote: str | None = None,
+        target_remote_auth_token_env: str | None = None,
         target_window_id: str | None = None,
         target_window_title: str | None = None,
         target_window_pattern: str | None = None,
@@ -487,6 +520,11 @@ class PresenceStore:
             answer=None,
             answered_by=None,
             reply_message_id=None,
+            answer_transport=answer_transport,
+            target_session_id=target_session_id,
+            target_destination=target_destination,
+            target_remote=target_remote,
+            target_remote_auth_token_env=target_remote_auth_token_env,
             target_window_id=target_window_id,
             target_window_title=target_window_title,
             target_window_pattern=target_window_pattern,
@@ -504,10 +542,12 @@ class PresenceStore:
                 INSERT INTO remote_questions (
                     question_id, worker_id, prompt, status, channel_id,
                     external_message_id, answer, answered_by, reply_message_id,
+                    answer_transport, target_session_id, target_destination,
+                    target_remote, target_remote_auth_token_env,
                     target_window_id, target_window_title, target_window_pattern,
                     created_at, expires_at, answered_at, input_emitted_at,
                     delivery_confirmed_at, last_error, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     question.question_id,
@@ -519,6 +559,11 @@ class PresenceStore:
                     question.answer,
                     question.answered_by,
                     question.reply_message_id,
+                    question.answer_transport,
+                    question.target_session_id,
+                    question.target_destination,
+                    question.target_remote,
+                    question.target_remote_auth_token_env,
                     question.target_window_id,
                     question.target_window_title,
                     question.target_window_pattern,
@@ -668,6 +713,7 @@ class PresenceStore:
         worker_id: str,
         observed_at: float,
         timeout_seconds: int,
+        session_id: str | None = None,
     ) -> int:
         with self.session() as conn:
             cursor = conn.execute(
@@ -680,6 +726,11 @@ class PresenceStore:
                   AND status = 'input_emitted'
                   AND input_emitted_at <= ?
                   AND input_emitted_at >= ?
+                  AND (
+                      answer_transport IS NULL
+                      OR answer_transport != 'native'
+                      OR target_session_id = ?
+                  )
                 """,
                 (
                     observed_at,
@@ -687,6 +738,7 @@ class PresenceStore:
                     worker_id,
                     observed_at,
                     observed_at - timeout_seconds,
+                    session_id,
                 ),
             )
         return cursor.rowcount
@@ -793,6 +845,11 @@ class PresenceStore:
             answer=row["answer"],
             answered_by=row["answered_by"],
             reply_message_id=row["reply_message_id"],
+            answer_transport=row["answer_transport"],
+            target_session_id=row["target_session_id"],
+            target_destination=row["target_destination"],
+            target_remote=row["target_remote"],
+            target_remote_auth_token_env=row["target_remote_auth_token_env"],
             target_window_id=row["target_window_id"],
             target_window_title=row["target_window_title"],
             target_window_pattern=row["target_window_pattern"],

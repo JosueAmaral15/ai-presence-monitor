@@ -13,6 +13,7 @@ from test_cli import make_config
 
 from ai_presence_monitor.interactive import (
     ENV_FIELDS,
+    _ask_user_interactive,
     _prompt_choice,
     _prompt_event_args,
     _prompt_int,
@@ -166,7 +167,11 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             self.assertEqual(values["RED_ALERT_COMMAND"], "echo alarm")
             self.assertEqual(values["RED_ALERT_MAX_DURATION_SECONDS"], "15")
             self.assertEqual(values["PRESENCE_REMOTE_QUESTIONS_ENABLED"], "true")
-            self.assertEqual(values["PRESENCE_GUI_ANSWER_ENABLED"], "true")
+            self.assertEqual(values["PRESENCE_QUESTION_ANSWER_TRANSPORT"], "native")
+            self.assertEqual(values["PRESENCE_QUESTION_ANSWER_DESTINATION"], "local")
+            self.assertEqual(values["PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS"], "300")
+            self.assertEqual(values["PRESENCE_NATIVE_INPUT_ENABLED"], "true")
+            self.assertEqual(values["PRESENCE_GUI_ANSWER_ENABLED"], "false")
             self.assertEqual(values["DISCORD_QUESTION_CHANNEL_ID"], "200")
 
             def second_choice(label: str, _choices: list[str], default: str) -> str:
@@ -231,6 +236,39 @@ class InteractiveEnvironmentTests(unittest.TestCase):
             ), redirect_stdout(StringIO()) as output:
                 _run_monitor_loop(config.env_path, True)
             self.assertIn("Monitor interrompido", output.getvalue())
+
+    def test_interactive_question_collects_native_session_and_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = make_config(root)
+            with patch(
+                "ai_presence_monitor.interactive._load_current_config",
+                return_value=config,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_text",
+                side_effect=[
+                    "codex",
+                    "computer",
+                    "worker",
+                    "Question?",
+                    "session-exact",
+                ],
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_int",
+                return_value=1800,
+            ), patch(
+                "ai_presence_monitor.interactive._prompt_choice",
+                side_effect=["native", "local"],
+            ), patch(
+                "ai_presence_monitor.interactive._ask_user"
+            ) as ask_user:
+                _ask_user_interactive(root / ".env", dry_run=True)
+
+            args, passed_config = ask_user.call_args.args
+            self.assertIs(passed_config, config)
+            self.assertEqual(args.answer_transport, "native")
+            self.assertEqual(args.thread, "session-exact")
+            self.assertEqual(args.answer_destination, "local")
 
     def test_menu_routes_all_options_without_external_effects(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

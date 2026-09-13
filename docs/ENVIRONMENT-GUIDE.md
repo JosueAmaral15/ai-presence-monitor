@@ -338,6 +338,9 @@ DISCORD_QUESTION_CHANNEL_ID=
 DISCORD_ALLOWED_USER_IDS=
 PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
 PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
+PRESENCE_QUESTION_ANSWER_TRANSPORT=native
+PRESENCE_QUESTION_ANSWER_DESTINATION=local
+PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS=300
 
 PRESENCE_GUI_ANSWER_ENABLED=false
 PRESENCE_CODEX_GUI_WINDOW_TITLE=
@@ -353,8 +356,17 @@ campos Discord sao obrigatorios quando ele esta ativo.
 uma mensagem do autor permitido que use **Responder** na pergunta original e
 aceita.
 
-`PRESENCE_GUI_ANSWER_ENABLED` e um segundo bloqueio. Quando `false`, a resposta
-fica no SQLite como `answered`; nenhum controle de GUI acontece.
+`PRESENCE_QUESTION_ANSWER_TRANSPORT` escolhe `native`, `gui` ou `store`.
+`native` e o padrao recomendado: salva a sessao exata quando a pergunta e
+publicada e usa `codex queue` quando a resposta chega. `store` mantem a resposta
+no SQLite como `answered`. `gui` exige o segundo bloqueio
+`PRESENCE_GUI_ANSWER_ENABLED=true`.
+
+O alvo nativo vem de `--thread`, do ambiente Codex, do controle persistido ou
+de uma unica sessao recente observada para o mesmo worker. A idade maxima da
+ultima opcao e `PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS`; alvo ausente ou
+ambiguo falha antes de publicar. `client` exige entrada remota habilitada e
+congela endpoint mais nome da variavel de token, nunca o token.
 
 Quando `true`, `PRESENCE_CODEX_GUI_WINDOW_TITLE` deve identificar uma unica
 janela visivel. As proporcoes X/Y definem o clique dentro da janela. O alvo e
@@ -720,6 +732,9 @@ DISCORD_QUESTION_CHANNEL_ID=
 DISCORD_ALLOWED_USER_IDS=
 PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
 PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
+PRESENCE_QUESTION_ANSWER_TRANSPORT=native
+PRESENCE_QUESTION_ANSWER_DESTINATION=local
+PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS=300
 PRESENCE_GUI_ANSWER_ENABLED=false
 PRESENCE_CODEX_GUI_WINDOW_TITLE=
 PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50

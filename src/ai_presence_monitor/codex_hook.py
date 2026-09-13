@@ -39,6 +39,7 @@ class CodexHookObservation:
     ia_name: str
     protocol: str
     task: str | None
+    session_id: str | None
     message: str
 
 
@@ -126,6 +127,7 @@ def build_observation(payload: dict[str, Any], config: AppConfig) -> CodexHookOb
         ia_name=ia_name,
         protocol=protocol,
         task=task,
+        session_id=session_id,
         message=" | ".join(message_parts),
     )
 
@@ -170,6 +172,7 @@ def record_codex_hook_payload(
             worker_id=worker.worker_id,
             observed_at=worker.last_activity_at,
             timeout_seconds=config.gui_confirmation_timeout_seconds,
+            session_id=observation.session_id,
         )
     return worker
 

@@ -169,6 +169,9 @@ class AppConfig:
     discord_allowed_user_ids: tuple[str, ...] = ()
     question_poll_interval_seconds: int = 5
     question_timeout_seconds: int = 1800
+    question_answer_transport: str = "native"
+    question_answer_destination: str = "local"
+    question_session_max_age_seconds: int = 300
     gui_answer_enabled: bool = False
     codex_gui_window_title: str | None = None
     codex_gui_click_x_ratio: float = 0.5
@@ -255,6 +258,18 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         question_timeout_seconds=_env_int(
             "PRESENCE_QUESTION_TIMEOUT_SECONDS",
             1800,
+        ),
+        question_answer_transport=_env_str(
+            "PRESENCE_QUESTION_ANSWER_TRANSPORT",
+            "native",
+        ).lower(),
+        question_answer_destination=_env_str(
+            "PRESENCE_QUESTION_ANSWER_DESTINATION",
+            "local",
+        ).lower(),
+        question_session_max_age_seconds=_env_int(
+            "PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS",
+            300,
         ),
         gui_answer_enabled=_env_bool("PRESENCE_GUI_ANSWER_ENABLED", False),
         codex_gui_window_title=(

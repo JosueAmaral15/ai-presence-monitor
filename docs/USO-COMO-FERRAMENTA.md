@@ -242,12 +242,17 @@ existir, o fallback Discord e:
 ```bash
 ai-presence ask-user \
   --project "$PROJECT" \
+  --thread SESSAO_EXATA \
   --question "Pergunta objetiva que bloqueia a proxima decisao"
 ```
 
 A resposta valida precisa vir de usuario permitido, no canal correto, como
 resposta direta a pergunta ainda aberta. A IA nao deve contornar correlacao,
-allowlist ou expiracao.
+allowlist ou expiracao. O transporte recomendado e `native`: a sessao fica
+congelada antes da publicacao e a resposta retorna por `codex queue`. Use
+`--answer-transport store` para somente registrar ou `gui` como fallback
+explicitamente autorizado. Uma falha nativa nao permite trocar de transporte
+automaticamente.
 
 ### Solicitar continuidade
 
@@ -300,7 +305,7 @@ ai-presence finish \
 | `dispatch_started` | processo destacado foi criado | aceite, entrega ou atividade |
 | `input_emitted` | transporte sincrono terminou com sucesso | interpretacao correta pelo agente |
 | hook posterior | houve atividade posterior naquela sessao/worker | autoria da mensagem isoladamente |
-| `delivery_confirmed` | observer Discord correlacionou entrega GUI e hook | qualidade da resposta da IA |
+| `delivery_confirmed` | observer correlacionou entrega e hook; nativo exige a mesma sessao | interpretacao correta ou qualidade da resposta |
 
 Para `continue` nativo, um hook isolado nao identifica qual entrada causou a
 atividade. Nao declare E2E concluido apenas porque apareceu um hook depois do
@@ -388,7 +393,7 @@ presence_start(project, protocol, task, message)
 presence_touch(project, protocol, task, message)
 presence_finish(project, protocol, task, message)
 presence_status()
-presence_ask_user(project, question, timeout)
+presence_ask_user(project, thread, question, timeout, answer_transport, destination)
 presence_continue(project, thread, message, delay, authorize_once)
 presence_stop_alarm()
 ```
@@ -396,6 +401,9 @@ presence_stop_alarm()
 O adaptador deve mapear cada funcao para um subcomando existente e retornar
 codigo de saida, estado textual e erro sanitizado. Ele nao deve transformar
 `dispatch_started` em sucesso de entrega.
+
+Para entrega automatica da resposta, `presence_ask_user` deve exigir sessao
+explicita quando o wrapper nao puder herdar com seguranca a sessao atual.
 
 ## Prompt Pronto para Outra IA
 
