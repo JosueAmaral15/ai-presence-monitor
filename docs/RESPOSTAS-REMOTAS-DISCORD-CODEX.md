@@ -1,4 +1,4 @@
-# Respostas Remotas do Discord para o Codex GUI
+# Respostas Remotas do Discord para uma Sessao Codex
 
 ## Objetivo
 
@@ -7,13 +7,13 @@ Este recurso permite que um AI-worker:
 1. publique uma pergunta em um canal dedicado do Discord;
 2. aguarde uma resposta de um usuario autorizado;
 3. correlacione a resposta com a pergunta original;
-4. entregue o texto na janela exata do Codex GUI;
-5. pressione Enter;
-6. aguarde um hook posterior do Codex para confirmar nova atividade.
+4. congele a sessao exata e o transporte antes de publicar a pergunta;
+5. entregue o texto por `codex queue`, sem mouse ou teclado;
+6. aguarde um hook posterior da mesma sessao para confirmar nova atividade.
 
-Esta e uma integracao de fallback. Uma API nativa de entrada por MCP ou App
-Server deve ser preferida quando estiver disponivel, pois controle de GUI pode
-ser afetado por foco, titulo de janela, sessao grafica e mudancas visuais.
+O transporte nativo e o padrao recomendado. A GUI permanece disponivel como
+fallback explicitamente selecionado, e `store` permite receber e consultar a
+resposta sem entrega automatica.
 
 ## Arquitetura
 
@@ -32,13 +32,17 @@ Usuario autorizado usa "Responder"
     v
 Observer local -> allowlist + referencia + SQLite
     |
-    | resposta aceita
-    v
-adaptador GUI da plataforma -> janela exata -> texto -> Enter
-    |
-    | proximo evento do hook do mesmo worker
-    v
-delivery_confirmed
+    | resposta aceita e transporte salvo
+    +----------------+----------------+----------------+
+    | native         | gui            | store          |
+    v                v                v
+codex queue       X11/Win32       answered no SQLite
+    |                |
+    +--------+-------+
+             |
+             | hook posterior correlacionado
+             v
+      delivery_confirmed
 ```
 
 O observer usa polling da API REST. Nao abre porta local e nao expoe servidor
@@ -47,10 +51,11 @@ HTTP na Internet.
 ## Pre-requisitos
 
 - bot e webhook do Discord;
-- hook do Codex instalado para confirmar a entrega;
+- Codex CLI com `codex queue` para entrega nativa;
+- hook do Codex instalado para confirmar a entrega na sessao correta;
 - observer `observe-replies` em execucao.
 
-No Linux, use uma sessao X11 com `xdotool` e `xclip`:
+Somente para fallback GUI no Linux, use uma sessao X11 com `xdotool` e `xclip`:
 
 Verifique:
 
@@ -63,7 +68,7 @@ printf 'sessao=%s display=%s\n' "$XDG_SESSION_TYPE" "$DISPLAY"
 No Windows 10/11, use uma sessao de desktop interativa e desbloqueada. A
 automacao usa a API Win32 nativa, sem dependencia GUI externa. Wayland e macOS
 nao estao implementados.
-Na versao 0.6.2, o caminho Windows e experimental e requer
+Desde a versao 0.6.2, o caminho Windows e experimental e requer
 `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
 
 ## Criar o Bot no Discord
@@ -130,6 +135,9 @@ DISCORD_QUESTION_CHANNEL_ID=123456789012345678
 DISCORD_ALLOWED_USER_IDS=111111111111111111
 PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
 PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
+PRESENCE_QUESTION_ANSWER_TRANSPORT=native
+PRESENCE_QUESTION_ANSWER_DESTINATION=local
+PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS=300
 
 PRESENCE_GUI_ANSWER_ENABLED=false
 PRESENCE_CODEX_GUI_WINDOW_TITLE=
@@ -147,11 +155,12 @@ DISCORD_ALLOWED_USER_IDS=111111111111111111,222222222222222222
 Nomes de usuario nao sao aceitos. IDs sao estaveis e evitam confusao por
 renomeacao.
 
-## Teste 1: Discord sem Controlar a GUI
+## Teste 1: Discord em Modo Store
 
-Mantenha:
+Para validar somente Discord e correlacao, use:
 
 ```env
+PRESENCE_QUESTION_ANSWER_TRANSPORT=store
 PRESENCE_GUI_ANSWER_ENABLED=false
 ```
 
@@ -177,7 +186,42 @@ ai-presence questions
 O estado esperado e `answered`. Nesta fase nenhum mouse, teclado ou Enter e
 executado.
 
-### Orientacao automatica para resposta invalida
+## Entrega Nativa Recomendada
+
+Use:
+
+```env
+PRESENCE_QUESTION_ANSWER_TRANSPORT=native
+PRESENCE_QUESTION_ANSWER_DESTINATION=local
+PRESENCE_NATIVE_INPUT_ENABLED=true
+PRESENCE_GUI_ANSWER_ENABLED=false
+```
+
+Ao criar a pergunta, informe o alvo exato quando ele nao puder ser herdado do
+ambiente do Codex:
+
+```bash
+ai-presence ask-user \
+  --project "$PWD" \
+  --thread SESSAO_EXATA \
+  --question "Devo alterar tambem a API publica?"
+```
+
+A ordem de resolucao e `--thread`, ambiente Codex, alvo persistido em
+`control.json` e, por ultimo, uma unica sessao recente do mesmo worker. Zero ou
+mais de uma sessao recente causa falha antes da publicacao. O alvo fica salvo
+na pergunta e nao muda quando o usuario troca de janela ou abre outra tarefa.
+
+Depois da resposta direta no Discord, o observer executa uma unica chamada
+sincrona a `codex queue`. Sucesso produz `input_emitted`; timeout ou rejeicao
+produz `dispatch_failed`, sem retry e sem fallback GUI automaticos. Um hook so
+confirma a entrega nativa quando traz a mesma sessao salva.
+
+Para uma sessao em computador cliente, use `--answer-destination client` e
+configure o gate remoto, endpoint e nome da variavel de token. O valor do token
+fica somente no ambiente e nunca e salvo com a pergunta.
+
+## Orientacao automatica para resposta invalida
 
 Cada mensagem nova de usuario autorizado gera no maximo uma tentativa de
 orientacao quando:
@@ -242,11 +286,12 @@ Get-Process | Where-Object MainWindowTitle | Select-Object Id, MainWindowHandle,
 Use `MainWindowHandle` como `--window-id`. O identificador e o titulo sao
 revalidados antes da entrega em ambas as plataformas.
 
-## Teste 2: Entrega na GUI
+## Fallback GUI Explicito
 
 Ative somente depois do Teste 1:
 
 ```env
+PRESENCE_QUESTION_ANSWER_TRANSPORT=gui
 PRESENCE_GUI_ANSWER_ENABLED=true
 PRESENCE_CODEX_GUI_WINDOW_TITLE=Codex
 PRESENCE_CODEX_GUI_CLICK_X_RATIO=0.50
@@ -314,8 +359,8 @@ maximo tres inicios com falha em cinco minutos. Isso evita um ciclo agressivo
 quando token, canal, permissoes ou rede estao incorretos. O monitor principal
 nao usa esse limite.
 
-Para `403`, confirme no canal dedicado as permissoes `View Channel`,
-`Read Message History` e `Send Messages`. Teste uma leitura antes de reativar:
+Para `403`, confirme no canal dedicado as permissoes `View Channel` e
+`Read Message History`. Teste uma leitura antes de reativar:
 
 ```bash
 systemctl --user disable --now ai-presence-reply-observer.service
@@ -333,11 +378,12 @@ Quando precisar de uma decisao humana, o AI-worker pode executar:
 ```bash
 ai-presence ask-user \
   --worker ID_EXATO_DO_WORKER \
+  --thread SESSAO_EXATA \
   --question "A pergunta objetiva ao usuario"
 ```
 
-O observer recebe e entrega a resposta. O AI-worker nao deve publicar de novo
-se a primeira tentativa tiver resultado incerto.
+O observer recebe e entrega a resposta para a sessao congelada. O AI-worker nao
+deve publicar de novo se a primeira tentativa tiver resultado incerto.
 
 Com escopo `project`, o comando pode derivar o worker:
 
@@ -345,6 +391,7 @@ Com escopo `project`, o comando pode derivar o worker:
 ai-presence ask-user \
   --scope project \
   --project "$PWD" \
+  --thread SESSAO_EXATA \
   --question "Devo alterar tambem a API publica?"
 ```
 
@@ -357,13 +404,13 @@ ai-presence ask-user \
 | `pending` | Pergunta publicada e dentro do prazo. |
 | `publish_failed` | Publicacao falhou. |
 | `answered` | Resposta autorizada persistida. |
-| `input_emitted` | Texto, clique e Enter foram emitidos pela GUI. |
-| `delivery_confirmed` | Hook posterior do mesmo worker registrou atividade. |
-| `dispatch_failed` | A entrega GUI falhou ou ficou incerta. |
+| `input_emitted` | O transporte sincrono concluiu sem erro. |
+| `delivery_confirmed` | Hook posterior correlacionado registrou atividade; nativo exige a mesma sessao. |
+| `dispatch_failed` | A entrega falhou ou ficou incerta e nao sera repetida automaticamente. |
 | `expired` | O prazo terminou antes de uma resposta valida. |
 
-Uma falha GUI nao e reenviada automaticamente. Depois de verificar visualmente
-que o texto nao foi enviado:
+Uma falha nao e reenviada automaticamente. Depois de verificar no alvo que o
+texto nao foi enviado:
 
 ```bash
 ai-presence dispatch-answer ID_DA_PERGUNTA
@@ -379,10 +426,14 @@ ai-presence dispatch-answer ID_DA_PERGUNTA
 - Conta Discord comprometida dentro da allowlist equivale a controle do prompt.
 - Respostas vazias e mensagens sem referencia de usuario autorizado recebem
   orientacao somente enquanto houver pergunta pendente; nao sao aceitas nem
-  enviadas a GUI.
+  enviadas a qualquer transporte.
 - Bots, webhooks e usuarios fora da allowlist sao ignorados sem feedback.
 - O programa nao passa a resposta para shell.
-- A entrega GUI fica desativada por padrao.
+- Entrega nativa usa lista de argumentos sem shell.
+- GUI fica desativada por padrao e nunca e fallback automatico de falha nativa.
+- Endpoint remoto e nome da variavel de token podem ser salvos; o token nao.
+- O texto da resposta pode aparecer temporariamente na lista local de processos
+  como argumento de `codex queue`; nao use este fluxo para segredos.
 - `--dry-run` nao toca rede, banco ou GUI nos comandos novos.
 
 ## Limites
@@ -391,11 +442,13 @@ ai-presence dispatch-answer ID_DA_PERGUNTA
 - Apenas texto e aceito.
 - Mais de 1000 mensagens novas entre ciclos causam falha fechada e exigem
   intervencao manual; use um canal dedicado e restrito.
-- A confirmacao por hook prova atividade posterior, nao interpretacao correta.
+- A confirmacao por hook prova atividade posterior na sessao correlacionada,
+  nao interpretacao correta nem qualidade do trabalho.
 - Alteracao de titulo, fechamento da janela ou ausencia de desktop compativel causa
   `dispatch_failed`.
-- O programa nao le a resposta diretamente na memoria interna desta conversa;
-  ele usa o prompt visivel como fallback.
+- `input_emitted` nao prova que o agente interpretou ou aplicou a resposta.
+- O transporte nativo depende da interface `codex queue` disponivel na versao
+  instalada do Codex CLI.
 
 ## Rollback
 
@@ -403,6 +456,7 @@ Desative:
 
 ```env
 PRESENCE_REMOTE_QUESTIONS_ENABLED=false
+PRESENCE_QUESTION_ANSWER_TRANSPORT=store
 PRESENCE_GUI_ANSWER_ENABLED=false
 ```
 

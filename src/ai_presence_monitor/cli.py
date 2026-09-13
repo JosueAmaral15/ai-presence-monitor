@@ -48,7 +48,7 @@ from .remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
     observe_discord_replies_once,
-    retry_gui_dispatch,
+    retry_answer_dispatch,
 )
 from .store import PresenceStore, WorkerState
 from .systemd_service import (
@@ -266,14 +266,24 @@ def _ask_user(args: argparse.Namespace, config: AppConfig) -> int:
     if timeout <= 0:
         raise ValueError("O prazo da pergunta precisa ser maior que zero.")
     if args.dry_run:
+        answer_transport = (
+            getattr(args, "answer_transport", None)
+            or config.question_answer_transport
+        )
+        answer_destination = (
+            getattr(args, "answer_destination", None)
+            or config.question_answer_destination
+        )
         print(
             f"[dry-run:pergunta] worker={worker_id} prazo={timeout}s "
-            f"gui={'ativa' if config.gui_answer_enabled else 'inativa'} "
+            f"transporte={answer_transport} destino={answer_destination} "
+            f"sessao={getattr(args, 'thread', None) or '-'} "
             f"texto={args.question!r}"
         )
         return 0
 
     store = PresenceStore(config.db_path)
+    controls = ControlStore.from_config(config).load()
     try:
         question = ask_remote_question(
             config=config,
@@ -281,8 +291,12 @@ def _ask_user(args: argparse.Namespace, config: AppConfig) -> int:
             worker_id=worker_id,
             prompt=args.question,
             timeout_seconds=timeout,
+            answer_transport=getattr(args, "answer_transport", None),
+            thread_id=getattr(args, "thread", None),
+            destination=getattr(args, "answer_destination", None),
             window_id=args.window_id,
             title_pattern=args.window_title,
+            controls=controls,
         )
     except RemoteQuestionError as exc:
         print(f"Falha ao publicar pergunta: {exc}", file=sys.stderr)
@@ -290,7 +304,9 @@ def _ask_user(args: argparse.Namespace, config: AppConfig) -> int:
 
     print(
         f"pergunta={question.question_id} status={question.status} "
-        f"discord_message={question.external_message_id} worker={question.worker_id}"
+        f"discord_message={question.external_message_id} worker={question.worker_id} "
+        f"transporte={question.answer_transport} "
+        f"sessao={question.target_session_id or '-'}"
     )
     return 0
 
@@ -303,13 +319,14 @@ def _observe_replies_once(config: AppConfig, dry_run: bool = False) -> int:
         result = observe_discord_replies_once(
             config=config,
             store=PresenceStore(config.db_path),
+            controls=ControlStore.from_config(config).load(),
         )
     except RemoteQuestionError as exc:
         print(f"Falha no observer de respostas: {exc}", file=sys.stderr)
         return 2
     print(
         f"respostas: lidas={result.fetched} aceitas={result.accepted} "
-        f"entregues={result.dispatched} falhas_gui={result.dispatch_failed} "
+        f"entregues={result.dispatched} falhas_entrega={result.dispatch_failed} "
         f"orientadas={result.guided} falhas_orientacao={result.guidance_failed}"
     )
     return 0
@@ -346,6 +363,9 @@ def _show_questions(args: argparse.Namespace, config: AppConfig) -> int:
             f"criada={_timestamp(question.created_at)} | "
             f"expira={_timestamp(question.expires_at)} | "
             f"discord={question.external_message_id or '-'} | "
+            f"transporte={question.answer_transport or 'legacy'} | "
+            f"sessao={question.target_session_id or '-'} | "
+            f"destino={question.target_destination or '-'} | "
             f"autor={question.answered_by or '-'} | resposta={answer!r} | erro={error!r}"
         )
     return 0
@@ -354,18 +374,19 @@ def _show_questions(args: argparse.Namespace, config: AppConfig) -> int:
 def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
     if args.dry_run:
         print(
-            f"[dry-run:entrega-gui] pergunta={args.question_id}; "
-            "mouse, teclado e banco nao foram alterados."
+            f"[dry-run:entrega-resposta] pergunta={args.question_id}; "
+            "transporte e banco nao foram alterados."
         )
         return 0
     try:
-        question = retry_gui_dispatch(
+        question = retry_answer_dispatch(
             config=config,
             store=PresenceStore(config.db_path),
             question_id=args.question_id,
+            controls=ControlStore.from_config(config).load(),
         )
     except (RemoteQuestionError, ValueError) as exc:
-        print(f"Falha na entrega GUI: {exc}", file=sys.stderr)
+        print(f"Falha na entrega da resposta: {exc}", file=sys.stderr)
         return 2
     print(f"pergunta={question.question_id} status={question.status}")
     return 0
@@ -841,6 +862,23 @@ def build_parser() -> argparse.ArgumentParser:
     ask_parser.add_argument("--question", required=True, help="Pergunta enviada ao usuario.")
     ask_parser.add_argument("--timeout", type=int, help="Prazo da pergunta em segundos.")
     ask_parser.add_argument(
+        "--answer-transport",
+        choices=("native", "gui", "store"),
+        help=(
+            "Entrega da resposta. Padrao: "
+            "PRESENCE_QUESTION_ANSWER_TRANSPORT ou native."
+        ),
+    )
+    ask_parser.add_argument(
+        "--thread",
+        help="UUID ou nome exato da sessao Codex para entrega nativa.",
+    )
+    ask_parser.add_argument(
+        "--answer-destination",
+        choices=("local", "client"),
+        help="Computador da sessao Codex. Padrao: local.",
+    )
+    ask_parser.add_argument(
         "--window-id",
         help="ID exato da janela. Se omitido, exige um unico titulo correspondente.",
     )
@@ -868,7 +906,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     dispatch_parser = subparsers.add_parser(
         "dispatch-answer",
-        help="Reenvia manualmente uma resposta apos revisar uma falha GUI.",
+        help="Reenvia manualmente uma resposta apos revisar uma falha de entrega.",
     )
     dispatch_parser.add_argument("question_id", help="ID local da pergunta.")
     dispatch_parser.set_defaults(func=lambda args, config: _dispatch_answer(args, config))

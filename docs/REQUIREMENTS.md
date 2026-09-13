@@ -42,11 +42,16 @@
 - Perguntas devem ser correlacionadas com a mensagem Discord publicada.
 - Somente resposta direta de usuario em allowlist deve ser aceita.
 - O observer nao deve expor servidor HTTP publico.
+- Cada pergunta deve congelar `native`, `gui` ou `store` antes da publicacao.
+- Entrega nativa deve usar `codex queue` para a sessao exata salva.
+- Alvo nativo ausente, antigo ou ambiguo deve falhar antes da publicacao.
+- Falha nativa nao deve acionar fallback GUI.
 - A entrega GUI deve ficar desativada por padrao.
 - O alvo GUI deve ser uma janela exata X11 ou Win32, sem fallback para a
   primeira janela.
 - Falha ou resultado incerto nao deve causar reenvio automatico.
-- Hook posterior do mesmo worker deve confirmar a atividade depois da entrega.
+- Hook posterior do mesmo worker deve confirmar GUI legada; entrega nativa
+  tambem deve exigir a mesma sessao salva.
 - O observer continuo deve ter unidade systemd ou tarefa agendada separada e
   opcional.
 - Falhas persistentes do observer nao devem provocar reinicios ilimitados em

@@ -35,6 +35,7 @@ from .protocols import PROTOCOLS
 DEFAULT_ENV_FILE = resolve_env_path()
 
 ENV_FIELDS = (
+    "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED",
     "PRESENCE_DB_PATH",
     "PRESENCE_DEFAULT_PROTOCOL",
     "PRESENCE_COMPUTER_NAME",
@@ -70,6 +71,9 @@ ENV_FIELDS = (
     "DISCORD_ALLOWED_USER_IDS",
     "PRESENCE_QUESTION_POLL_INTERVAL_SECONDS",
     "PRESENCE_QUESTION_TIMEOUT_SECONDS",
+    "PRESENCE_QUESTION_ANSWER_TRANSPORT",
+    "PRESENCE_QUESTION_ANSWER_DESTINATION",
+    "PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS",
     "PRESENCE_GUI_ANSWER_ENABLED",
     "PRESENCE_CODEX_GUI_WINDOW_TITLE",
     "PRESENCE_CODEX_GUI_CLICK_X_RATIO",
@@ -78,6 +82,17 @@ ENV_FIELDS = (
     "PRESENCE_CONTINUE_MESSAGE",
     "PRESENCE_CONTINUE_DELAY_SECONDS",
     "PRESENCE_CONTINUE_SYNC_ACTIVITY",
+    "PRESENCE_CONTROL_PATH",
+    "PRESENCE_TASK_AUTOMATION_ENABLED",
+    "PRESENCE_NATIVE_INPUT_ENABLED",
+    "PRESENCE_GUI_FALLBACK_ENABLED",
+    "PRESENCE_REMOTE_INPUT_ENABLED",
+    "PRESENCE_CONTINUE_TRANSPORT",
+    "PRESENCE_CONTINUE_DESTINATION",
+    "PRESENCE_CODEX_THREAD_ID",
+    "PRESENCE_CODEX_REMOTE",
+    "PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV",
+    "CODEX_REMOTE_AUTH_TOKEN",
 )
 
 
@@ -114,6 +129,9 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         "# Gerado pelo AI Presence Monitor",
+        "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED="
+        + _quote_env(values["PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED"]),
+        "",
         "PRESENCE_DB_PATH=" + _quote_env(values["PRESENCE_DB_PATH"]),
         "PRESENCE_DEFAULT_PROTOCOL=" + _quote_env(values["PRESENCE_DEFAULT_PROTOCOL"]),
         "PRESENCE_COMPUTER_NAME=" + _quote_env(values["PRESENCE_COMPUTER_NAME"]),
@@ -172,6 +190,12 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
         + _quote_env(values["PRESENCE_QUESTION_POLL_INTERVAL_SECONDS"]),
         "PRESENCE_QUESTION_TIMEOUT_SECONDS="
         + _quote_env(values["PRESENCE_QUESTION_TIMEOUT_SECONDS"]),
+        "PRESENCE_QUESTION_ANSWER_TRANSPORT="
+        + _quote_env(values["PRESENCE_QUESTION_ANSWER_TRANSPORT"]),
+        "PRESENCE_QUESTION_ANSWER_DESTINATION="
+        + _quote_env(values["PRESENCE_QUESTION_ANSWER_DESTINATION"]),
+        "PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS="
+        + _quote_env(values["PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS"]),
         "",
         "PRESENCE_GUI_ANSWER_ENABLED="
         + _quote_env(values["PRESENCE_GUI_ANSWER_ENABLED"]),
@@ -190,6 +214,27 @@ def _write_env(path: Path, values: dict[str, str]) -> None:
         + _quote_env(values["PRESENCE_CONTINUE_DELAY_SECONDS"]),
         "PRESENCE_CONTINUE_SYNC_ACTIVITY="
         + _quote_env(values["PRESENCE_CONTINUE_SYNC_ACTIVITY"]),
+        "PRESENCE_CONTROL_PATH=" + _quote_env(values["PRESENCE_CONTROL_PATH"]),
+        "PRESENCE_TASK_AUTOMATION_ENABLED="
+        + _quote_env(values["PRESENCE_TASK_AUTOMATION_ENABLED"]),
+        "PRESENCE_NATIVE_INPUT_ENABLED="
+        + _quote_env(values["PRESENCE_NATIVE_INPUT_ENABLED"]),
+        "PRESENCE_GUI_FALLBACK_ENABLED="
+        + _quote_env(values["PRESENCE_GUI_FALLBACK_ENABLED"]),
+        "PRESENCE_REMOTE_INPUT_ENABLED="
+        + _quote_env(values["PRESENCE_REMOTE_INPUT_ENABLED"]),
+        "PRESENCE_CONTINUE_TRANSPORT="
+        + _quote_env(values["PRESENCE_CONTINUE_TRANSPORT"]),
+        "PRESENCE_CONTINUE_DESTINATION="
+        + _quote_env(values["PRESENCE_CONTINUE_DESTINATION"]),
+        "PRESENCE_CODEX_THREAD_ID="
+        + _quote_env(values["PRESENCE_CODEX_THREAD_ID"]),
+        "PRESENCE_CODEX_REMOTE="
+        + _quote_env(values["PRESENCE_CODEX_REMOTE"]),
+        "PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV="
+        + _quote_env(values["PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV"]),
+        "CODEX_REMOTE_AUTH_TOKEN="
+        + _quote_env(values["CODEX_REMOTE_AUTH_TOKEN"]),
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -318,6 +363,38 @@ def configure_env(env_file: Path) -> None:
     print("Para limpar um valor existente, digite - quando indicado.\n")
 
     values = dict(current)
+    values["PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED"] = (
+        current.get("PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED") or "false"
+    )
+    values["PRESENCE_CONTROL_PATH"] = current.get("PRESENCE_CONTROL_PATH", "")
+    values["PRESENCE_TASK_AUTOMATION_ENABLED"] = (
+        current.get("PRESENCE_TASK_AUTOMATION_ENABLED") or "false"
+    )
+    values["PRESENCE_NATIVE_INPUT_ENABLED"] = (
+        current.get("PRESENCE_NATIVE_INPUT_ENABLED") or "true"
+    )
+    values["PRESENCE_GUI_FALLBACK_ENABLED"] = (
+        current.get("PRESENCE_GUI_FALLBACK_ENABLED") or "false"
+    )
+    values["PRESENCE_REMOTE_INPUT_ENABLED"] = (
+        current.get("PRESENCE_REMOTE_INPUT_ENABLED") or "false"
+    )
+    values["PRESENCE_CONTINUE_TRANSPORT"] = (
+        current.get("PRESENCE_CONTINUE_TRANSPORT") or "auto"
+    )
+    values["PRESENCE_CONTINUE_DESTINATION"] = (
+        current.get("PRESENCE_CONTINUE_DESTINATION") or "local"
+    )
+    values["PRESENCE_CODEX_THREAD_ID"] = current.get(
+        "PRESENCE_CODEX_THREAD_ID",
+        "",
+    )
+    values["PRESENCE_CODEX_REMOTE"] = current.get("PRESENCE_CODEX_REMOTE", "")
+    values["PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV"] = (
+        current.get("PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV")
+        or "CODEX_REMOTE_AUTH_TOKEN"
+    )
+    values["CODEX_REMOTE_AUTH_TOKEN"] = current.get("CODEX_REMOTE_AUTH_TOKEN", "")
     values["PRESENCE_DB_PATH"] = _prompt_text(
         "Caminho do banco SQLite",
         current.get("PRESENCE_DB_PATH") or "./presence.db",
@@ -560,6 +637,53 @@ def configure_env(env_file: Path) -> None:
                 _coerce_int(current.get("PRESENCE_QUESTION_TIMEOUT_SECONDS"), 1800),
             )
         )
+        answer_transport = _prompt_choice(
+            "Transporte da resposta",
+            ["native", "store", "gui"],
+            current.get("PRESENCE_QUESTION_ANSWER_TRANSPORT") or "native",
+        )
+        values["PRESENCE_QUESTION_ANSWER_TRANSPORT"] = answer_transport
+        values["PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS"] = str(
+            _prompt_int(
+                "Idade maxima da sessao inferida em segundos",
+                _coerce_int(
+                    current.get("PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS"),
+                    300,
+                ),
+            )
+        )
+        if answer_transport == "native":
+            values["PRESENCE_NATIVE_INPUT_ENABLED"] = "true"
+            answer_destination = _prompt_choice(
+                "Destino da resposta nativa",
+                ["local", "client"],
+                current.get("PRESENCE_QUESTION_ANSWER_DESTINATION") or "local",
+            )
+            values["PRESENCE_QUESTION_ANSWER_DESTINATION"] = answer_destination
+            if answer_destination == "client":
+                values["PRESENCE_REMOTE_INPUT_ENABLED"] = "true"
+                values["PRESENCE_CODEX_REMOTE"] = _prompt_text(
+                    "Endpoint remoto do Codex",
+                    current.get("PRESENCE_CODEX_REMOTE", ""),
+                    required=True,
+                )
+                values["PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV"] = _prompt_text(
+                    "Nome da variavel do token remoto",
+                    current.get("PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV")
+                    or "CODEX_REMOTE_AUTH_TOKEN",
+                    required=True,
+                    allow_clear=False,
+                )
+                values["CODEX_REMOTE_AUTH_TOKEN"] = _prompt_text(
+                    "Token do endpoint remoto",
+                    current.get("CODEX_REMOTE_AUTH_TOKEN", ""),
+                    required=True,
+                    secret=True,
+                )
+        else:
+            values["PRESENCE_QUESTION_ANSWER_DESTINATION"] = (
+                current.get("PRESENCE_QUESTION_ANSWER_DESTINATION") or "local"
+            )
     else:
         values["DISCORD_QUESTION_WEBHOOK_URL"] = ""
         values["DISCORD_BOT_TOKEN"] = ""
@@ -567,13 +691,16 @@ def configure_env(env_file: Path) -> None:
         values["DISCORD_ALLOWED_USER_IDS"] = ""
         values["PRESENCE_QUESTION_POLL_INTERVAL_SECONDS"] = "5"
         values["PRESENCE_QUESTION_TIMEOUT_SECONDS"] = "1800"
+        values["PRESENCE_QUESTION_ANSWER_TRANSPORT"] = "store"
+        values["PRESENCE_QUESTION_ANSWER_DESTINATION"] = "local"
+        values["PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS"] = "300"
+        answer_transport = "store"
 
-    print("\nEntrega opcional na interface do Codex")
-    gui_enabled = remote_enabled and _prompt_yes_no(
-        "Ativar controle de mouse e teclado para entregar respostas",
-        current.get("PRESENCE_GUI_ANSWER_ENABLED", "").lower() == "true",
-    )
+    print("\nFallback opcional na interface do Codex")
+    gui_enabled = remote_enabled and answer_transport == "gui"
     values["PRESENCE_GUI_ANSWER_ENABLED"] = "true" if gui_enabled else "false"
+    if gui_enabled:
+        values["PRESENCE_GUI_FALLBACK_ENABLED"] = "true"
     if gui_enabled:
         values["PRESENCE_CODEX_GUI_CLICK_X_RATIO"] = str(
             _prompt_ratio(
@@ -718,6 +845,23 @@ def _ask_user_interactive(env_file: Path, dry_run: bool) -> None:
         "Prazo da pergunta em segundos",
         config.question_timeout_seconds,
     )
+    answer_transport = _prompt_choice(
+        "Transporte da resposta",
+        ["native", "store", "gui"],
+        config.question_answer_transport,
+    )
+    thread = None
+    answer_destination = config.question_answer_destination
+    if answer_transport == "native":
+        thread = _prompt_text(
+            "Sessao exata do Codex (vazio para inferir)",
+            config.codex_thread_id or "",
+        ) or None
+        answer_destination = _prompt_choice(
+            "Destino da resposta nativa",
+            ["local", "client"],
+            config.question_answer_destination,
+        )
     args = argparse.Namespace(
         worker=worker,
         computer=computer,
@@ -730,6 +874,9 @@ def _ask_user_interactive(env_file: Path, dry_run: bool) -> None:
         message=None,
         question=question,
         timeout=timeout,
+        answer_transport=answer_transport,
+        thread=thread,
+        answer_destination=answer_destination,
         window_id=None,
         window_title=None,
         dry_run=dry_run,

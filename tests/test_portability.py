@@ -81,6 +81,9 @@ class ConfigPortabilityTests(unittest.TestCase):
                 "PRESENCE_NATIVE_INPUT_ENABLED=false\n"
                 "PRESENCE_GUI_FALLBACK_ENABLED=true\n"
                 "PRESENCE_REMOTE_INPUT_ENABLED=true\n"
+                "PRESENCE_QUESTION_ANSWER_TRANSPORT=gui\n"
+                "PRESENCE_QUESTION_ANSWER_DESTINATION=client\n"
+                "PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS=600\n"
                 "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true\n"
                 "PRESENCE_CONTINUE_TRANSPORT=native\n"
                 "PRESENCE_CONTINUE_DESTINATION=client\n"
@@ -106,6 +109,9 @@ class ConfigPortabilityTests(unittest.TestCase):
             self.assertFalse(config.native_input_enabled)
             self.assertTrue(config.gui_fallback_enabled)
             self.assertTrue(config.remote_input_enabled)
+            self.assertEqual(config.question_answer_transport, "gui")
+            self.assertEqual(config.question_answer_destination, "client")
+            self.assertEqual(config.question_session_max_age_seconds, 600)
             self.assertTrue(config.experimental_windows_enabled)
             self.assertEqual(config.continue_transport, "native")
             self.assertEqual(config.continue_destination, "client")

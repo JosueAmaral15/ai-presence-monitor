@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from test_cli import make_config
 
+from ai_presence_monitor.codex_input import (
+    CodexInputError,
+    CodexInputResult,
+)
 from ai_presence_monitor.discord_questions import (
     DiscordQuestionError,
     PostedDiscordQuestion,
@@ -17,6 +23,7 @@ from ai_presence_monitor.remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
     observe_discord_replies_once,
+    retry_answer_dispatch,
     retry_gui_dispatch,
     validate_remote_question_config,
 )
@@ -101,6 +108,22 @@ class FakeDispatcher:
         self.dispatched.append(question.question_id)  # type: ignore[attr-defined]
 
 
+class FakeNativeClient:
+    def __init__(self, *, fail: bool = False):
+        self.fail = fail
+        self.sent: list[dict[str, object]] = []
+
+    def send(self, **kwargs: object) -> CodexInputResult:
+        self.sent.append(kwargs)
+        if self.fail:
+            raise CodexInputError("timeout incerto")
+        return CodexInputResult(
+            thread_id=str(kwargs["thread_id"]),
+            remote=kwargs.get("remote"),  # type: ignore[arg-type]
+            state="input_emitted",
+        )
+
+
 def remote_config(root: Path, *, gui: bool = True):
     return replace(
         make_config(root),
@@ -116,6 +139,7 @@ def remote_config(root: Path, *, gui: bool = True):
         codex_gui_click_x_ratio=0.5,
         codex_gui_click_y_ratio=0.9,
         gui_confirmation_timeout_seconds=120,
+        question_answer_transport="gui" if gui else "store",
     )
 
 
@@ -207,6 +231,287 @@ class RemoteQuestionFlowTests(unittest.TestCase):
             self.assertEqual(len(questions), 1)
             self.assertEqual(questions[0].status, "publish_failed")
             self.assertEqual(questions[0].last_error, "offline")
+
+    def test_native_question_persists_exact_session_and_dispatches_without_gui(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                remote_config(root, gui=False),
+                question_answer_transport="native",
+                native_input_enabled=True,
+            )
+            store = PresenceStore(root / "presence.db")
+            discord = FakeDiscordClient()
+
+            question = ask_remote_question(
+                config=config,
+                store=store,
+                worker_id="worker",
+                prompt="Qual caminho?",
+                thread_id="session-exact",
+                client=discord,  # type: ignore[arg-type]
+                now=1000,
+            )
+
+            self.assertEqual(question.answer_transport, "native")
+            self.assertEqual(question.target_session_id, "session-exact")
+            self.assertEqual(question.target_destination, "local")
+            self.assertIsNone(question.target_window_id)
+
+            native = FakeNativeClient()
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                native_client=native,  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.dispatched, 1)
+            self.assertEqual(result.dispatch_failed, 0)
+            self.assertEqual(native.sent[0]["thread_id"], "session-exact")
+            self.assertEqual(native.sent[0]["text"], "Use a opcao B.")
+            self.assertFalse(bool(native.sent[0]["detached"]))
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "input_emitted",
+            )
+
+    def test_native_failure_never_falls_back_to_gui_or_retries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                remote_config(root),
+                question_answer_transport="native",
+                native_input_enabled=True,
+            )
+            store = PresenceStore(root / "presence.db")
+            question = ask_remote_question(
+                config=config,
+                store=store,
+                worker_id="worker",
+                prompt="Pergunta",
+                thread_id="session-exact",
+                client=FakeDiscordClient(),  # type: ignore[arg-type]
+                now=1000,
+            )
+            native = FakeNativeClient(fail=True)
+            gui = FakeDispatcher()
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                dispatcher=gui,  # type: ignore[arg-type]
+                native_client=native,  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.dispatch_failed, 1)
+            self.assertEqual(len(native.sent), 1)
+            self.assertEqual(gui.dispatched, [])
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "dispatch_failed",
+            )
+
+            replay = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                dispatcher=gui,  # type: ignore[arg-type]
+                native_client=native,  # type: ignore[arg-type]
+                now=1020,
+            )
+            self.assertEqual(replay.accepted, 0)
+            self.assertEqual(len(native.sent), 1)
+
+            recovered = FakeNativeClient()
+            retried = retry_answer_dispatch(
+                config=config,
+                store=store,
+                question_id=question.question_id,
+                native_client=recovered,  # type: ignore[arg-type]
+                now=1030,
+            )
+            self.assertEqual(retried.status, "input_emitted")
+            self.assertEqual(len(recovered.sent), 1)
+
+    def test_native_client_target_stores_token_name_but_never_token_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                remote_config(root, gui=False),
+                question_answer_transport="native",
+                question_answer_destination="client",
+                native_input_enabled=True,
+                remote_input_enabled=True,
+                codex_remote="wss://client.example/app-server",
+                codex_remote_auth_token_env="REMOTE_TOKEN",
+            )
+            store = PresenceStore(root / "presence.db")
+
+            with patch.dict("os.environ", {"REMOTE_TOKEN": "secret-value"}):
+                question = ask_remote_question(
+                    config=config,
+                    store=store,
+                    worker_id="worker",
+                    prompt="Pergunta",
+                    thread_id="remote-session",
+                    client=FakeDiscordClient(),  # type: ignore[arg-type]
+                    now=1000,
+                )
+
+            self.assertEqual(question.target_destination, "client")
+            self.assertEqual(
+                question.target_remote,
+                "wss://client.example/app-server",
+            )
+            self.assertEqual(
+                question.target_remote_auth_token_env,
+                "REMOTE_TOKEN",
+            )
+            with sqlite3.connect(store.db_path) as conn:
+                stored_text = " ".join(
+                    str(value)
+                    for row in conn.execute("SELECT * FROM remote_questions")
+                    for value in row
+                    if value is not None
+                )
+            self.assertNotIn("secret-value", stored_text)
+
+    def test_store_transport_records_answer_without_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = remote_config(root, gui=False)
+            store = PresenceStore(root / "presence.db")
+            question = ask_remote_question(
+                config=config,
+                store=store,
+                worker_id="worker",
+                prompt="Pergunta",
+                client=FakeDiscordClient(),  # type: ignore[arg-type]
+                now=1000,
+            )
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                native_client=FakeNativeClient(),  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.accepted, 1)
+            self.assertEqual(result.dispatched, 0)
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "answered",
+            )
+
+    def test_unknown_stored_transport_fails_closed_and_is_auditable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = remote_config(root, gui=False)
+            store = PresenceStore(root / "presence.db")
+            question = store.create_question(
+                worker_id="worker",
+                prompt="Pergunta",
+                timeout_seconds=100,
+                answer_transport="unknown",
+                now=1000,
+            )
+            store.mark_question_published(
+                question.question_id,
+                channel_id="200",
+                external_message_id="100",
+                now=1000,
+            )
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                native_client=FakeNativeClient(),  # type: ignore[arg-type]
+                now=1010,
+            )
+
+            self.assertEqual(result.accepted, 1)
+            self.assertEqual(result.dispatch_failed, 1)
+            failed = store.require_question(question.question_id)
+            self.assertEqual(failed.status, "dispatch_failed")
+            self.assertIn("Transporte salvo invalido", failed.last_error or "")
+
+    def test_native_target_fails_closed_when_recent_sessions_are_ambiguous(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                remote_config(root, gui=False),
+                question_answer_transport="native",
+            )
+            store = PresenceStore(root / "presence.db")
+            for session_id in (
+                "11111111-1111-1111-1111-111111111111",
+                "22222222-2222-2222-2222-222222222222",
+            ):
+                store.record_observation(
+                    worker_id="worker",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    source="codex:PostToolUse",
+                    message=f"codex hook PostToolUse | session={session_id}",
+                    now=1000,
+                )
+
+            with patch.dict(
+                "os.environ",
+                {"CODEX_SESSION_ID": "", "CODEX_THREAD_ID": ""},
+            ), self.assertRaisesRegex(RemoteQuestionError, "Mais de uma sessao"):
+                ask_remote_question(
+                    config=config,
+                    store=store,
+                    worker_id="worker",
+                    prompt="Pergunta",
+                    client=FakeDiscordClient(),  # type: ignore[arg-type]
+                    now=1010,
+                )
+
+            self.assertEqual(store.list_questions(), [])
+
+    def test_existing_database_is_migrated_without_losing_question(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "legacy.db"
+            with sqlite3.connect(db_path) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE remote_questions (
+                        question_id TEXT PRIMARY KEY, worker_id TEXT NOT NULL,
+                        prompt TEXT NOT NULL, status TEXT NOT NULL, channel_id TEXT,
+                        external_message_id TEXT UNIQUE, answer TEXT, answered_by TEXT,
+                        reply_message_id TEXT UNIQUE, target_window_id TEXT,
+                        target_window_title TEXT, target_window_pattern TEXT,
+                        created_at REAL NOT NULL, expires_at REAL NOT NULL,
+                        answered_at REAL, input_emitted_at REAL,
+                        delivery_confirmed_at REAL, last_error TEXT,
+                        updated_at REAL NOT NULL
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO remote_questions (
+                        question_id, worker_id, prompt, status, created_at,
+                        expires_at, updated_at
+                    ) VALUES ('legacy', 'worker', 'Pergunta', 'pending', 1, 2, 1)
+                    """
+                )
+
+            question = PresenceStore(db_path).require_question("legacy")
+
+            self.assertEqual(question.prompt, "Pergunta")
+            self.assertIsNone(question.answer_transport)
+            self.assertIsNone(question.target_session_id)
 
     def test_observer_accepts_only_authorized_direct_reply_once(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

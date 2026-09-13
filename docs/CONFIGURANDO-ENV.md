@@ -142,7 +142,8 @@ Se apenas um dos dois estiver preenchido, o Telegram fica desativado pelo codigo
 
 ## Respostas Remotas pelo Discord
 
-Esse recurso exige um bot alem do webhook. Comece com a GUI desligada:
+Esse recurso exige um bot alem do webhook. A configuracao recomendada devolve
+a resposta para a sessao exata do Codex sem controlar mouse ou teclado:
 
 ```env
 PRESENCE_REMOTE_QUESTIONS_ENABLED=true
@@ -152,6 +153,9 @@ DISCORD_QUESTION_CHANNEL_ID=id-numerico-do-canal
 DISCORD_ALLOWED_USER_IDS=id-numerico-do-usuario
 PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
 PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
+PRESENCE_QUESTION_ANSWER_TRANSPORT=native
+PRESENCE_QUESTION_ANSWER_DESTINATION=local
+PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS=300
 
 PRESENCE_GUI_ANSWER_ENABLED=false
 PRESENCE_CODEX_GUI_WINDOW_TITLE=
@@ -165,8 +169,23 @@ Intent**. Crie o bot somente no Discord Developer Portal oficial. O passo a
 passo, os testes em duas fases e o rollback estao em
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`.
 
-Ative `PRESENCE_GUI_ANSWER_ENABLED=true` somente depois de confirmar que uma
-resposta autorizada chega ao estado `answered` sem controlar mouse ou teclado.
+`native` usa `codex queue`, exige `PRESENCE_NATIVE_INPUT_ENABLED=true` e vincula
+a pergunta a uma sessao antes de publica-la. A ordem de resolucao e:
+
+1. `--thread` explicito;
+2. `CODEX_SESSION_ID` ou `CODEX_THREAD_ID` do processo que pergunta;
+3. alvo persistido por `ai-presence control target --thread ...`;
+4. uma unica sessao do mesmo worker observada por hook nos ultimos
+   `PRESENCE_QUESTION_SESSION_MAX_AGE_SECONDS`.
+
+Zero ou mais de uma sessao recente causa falha fechada. Use `store` para apenas
+registrar a resposta ou `gui` para o fallback explicito. Ative
+`PRESENCE_GUI_ANSWER_ENABLED=true` somente quando escolher `gui` e depois de
+validar a correlacao Discord sem entrada automatica.
+
+`PRESENCE_QUESTION_ANSWER_DESTINATION=client` usa o endpoint remoto e exige
+`PRESENCE_REMOTE_INPUT_ENABLED=true`. O endpoint e o nome da variavel de token
+sao congelados na pergunta; o valor do token nunca entra no banco.
 
 ## Continue Integrado
 

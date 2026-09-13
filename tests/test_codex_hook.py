@@ -167,6 +167,68 @@ class CodexHookTests(unittest.TestCase):
             self.assertEqual(confirmed.status, "delivery_confirmed")
             self.assertIsNotNone(confirmed.delivery_confirmed_at)
 
+    def test_native_delivery_requires_hook_from_exact_target_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_config(Path(tmp) / "presence.db", auto_start=False)
+            store = PresenceStore(config.db_path)
+            store.record_event(
+                worker_id="test-computer:codex",
+                computer="test-computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+                task="project",
+            )
+            target_session = "11111111-1111-1111-1111-111111111111"
+            question = store.create_question(
+                worker_id="test-computer:codex",
+                prompt="Pergunta",
+                timeout_seconds=60,
+                answer_transport="native",
+                target_session_id=target_session,
+                target_destination="local",
+            )
+            store.mark_question_published(
+                question.question_id,
+                channel_id="200",
+                external_message_id="100",
+            )
+            answered = store.record_question_answer(
+                external_message_id="100",
+                channel_id="200",
+                reply_message_id="101",
+                answered_by="300",
+                answer="Resposta",
+            )
+            assert answered is not None
+            store.mark_input_emitted(question.question_id)
+
+            record_codex_hook_payload(
+                payload={
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "22222222-2222-2222-2222-222222222222",
+                    "cwd": "/tmp/project",
+                },
+                config=config,
+            )
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "input_emitted",
+            )
+
+            record_codex_hook_payload(
+                payload={
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": target_session,
+                    "cwd": "/tmp/project",
+                },
+                config=config,
+            )
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "delivery_confirmed",
+            )
+
     def test_invalid_json_is_fail_open_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = make_config(Path(tmp) / "presence.db")

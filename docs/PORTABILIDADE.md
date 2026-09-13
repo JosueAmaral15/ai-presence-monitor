@@ -6,7 +6,7 @@ Desde a versao 0.2.0, o AI Presence Monitor pode ser instalado como pacote
 Python e usado fora do diretorio do codigo-fonte. Os hooks do Codex e o servico
 systemd gerado usam o mesmo Python da instalacao.
 
-Na versao 0.6.2, Linux e o runtime suportado para publicacao. Os adaptadores
+Desde a versao 0.6.2, Linux e o runtime suportado para publicacao. Os adaptadores
 Windows continuam no pacote e nos testes, mas sua execucao fica desabilitada
 por padrao e exige opt-in experimental explicito.
 

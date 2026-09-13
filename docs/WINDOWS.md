@@ -2,8 +2,8 @@
 
 ## Estado Nesta Release
 
-A versao 0.6.2 preserva todo o codigo Windows, mas desabilita sua execucao
-operacional por padrao. Linux e a unica plataforma suportada para publicacao
+Desde a versao 0.6.2, todo o codigo Windows e preservado, mas sua execucao fica
+desabilitada por padrao. Linux e a unica plataforma suportada para publicacao
 nesta release. O Windows permanece disponivel somente para desenvolvimento e
 validacao experimental controlada.
 

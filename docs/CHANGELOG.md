@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-13 - v0.7.0
+
+- Cada pergunta passa a salvar transporte, sessao e destino antes da
+  publicacao no Discord.
+- `native` devolve a resposta para a sessao exata com `codex queue`; `gui` e
+  `store` permanecem alternativas explicitas.
+- Sessao nativa ausente, antiga ou ambigua falha fechada antes da publicacao.
+- Falha nativa nao aciona GUI nem retry automatico.
+- Confirmacao nativa exige hook posterior do mesmo worker e da mesma sessao.
+- Banco SQLite existente recebe migracao aditiva sem perda das perguntas
+  legadas.
+- CLI, `.env.example`, arquitetura, seguranca e guias operacionais foram
+  atualizados.
+- O configurador interativo preserva os controles nativos existentes e coleta
+  transporte, sessao e destino para novas perguntas.
+- O E2E real confirmou uma resposta Discord aceita uma vez, entregue sem GUI
+  para a sessao Codex congelada e seguida por confirmacao do mesmo alvo.
+- O runtime Linux instalado e o observer systemd foram atualizados e
+  recuperados antes da validacao.
+
 ## 2026-09-12 - v0.6.2
 
 - Linux passa a ser o runtime suportado por padrao nesta release.

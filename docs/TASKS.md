@@ -1,5 +1,54 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento em 2026-09-13
+
+### Task 021 - E2E nativo Discord e release Linux
+
+**Prioridade**: Critica
+**Status**: E2E real e estabilizacao aprovados; release 0.7.0 pronta para
+integracao final
+**Objetivo**: provar uma entrega unica da resposta Discord para a sessao exata
+do Codex, estabilizar o observer e promover o resultado validado ate `main`.
+
+**Criterios de aceite**:
+
+- [x] Runtime local atualizado de 0.6.1 para 0.7.0 com rollback privado.
+- [x] Observer recuperado da falha DNS e preflight Discord aprovado.
+- [x] Sessao, transporte nativo/local e marcador exclusivo congelados.
+- [x] Primeira pergunta invalidada antes da entrega; uma unica pergunta valida
+      aceita e entregue, com GUI e retry automatico desabilitados.
+- [x] Resposta direta aceita e entregue uma vez a sessao exata.
+- [x] Hook da mesma sessao produz `delivery_confirmed`.
+- [x] Observer reiniciado e estavel depois do teste.
+- [x] Gate local completo passa com 171 testes e 86% de cobertura.
+- [ ] Evidencia final integrada em `develop` e promovida a `main`.
+
+**Plano**: `docs/planning/TASK-021-native-discord-e2e-release.md`.
+
+### Task 020 - Entrega nativa de respostas Discord
+
+**Prioridade**: Alta
+**Status**: implementacao e E2E real validados; integracao da evidencia da
+Task 021 em andamento
+**Objetivo**: devolver cada resposta autorizada do Discord para a sessao exata
+do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
+
+**Criterios de aceite**:
+
+- [x] Pergunta congela transporte, sessao e destino antes da publicacao.
+- [x] Entrega nativa reutiliza `codex queue` sem shell.
+- [x] Sessao ausente, antiga ou ambigua falha fechada.
+- [x] Falha nativa nao ativa GUI nem retry automatico.
+- [x] Hook de outra sessao nao confirma entrega nativa.
+- [x] GUI explicita e modo `store` permanecem disponiveis.
+- [x] Migracao SQLite preserva perguntas existentes.
+- [x] CLI, `.env.example`, arquitetura, seguranca e guias foram atualizados.
+- [x] Gate local completo, build e instalacao isolada passam.
+- [x] Commit da sessao e integracao funcional em `develop`.
+- [x] E2E Discord-Codex real com marcador exclusivo e nova autorizacao.
+
+**Plano**: `docs/planning/TASK-020-native-discord-answer-routing.md`.
+
 ## Concluida em 2026-09-12
 
 ### Task 019 - Release Linux com Windows experimental desabilitado
