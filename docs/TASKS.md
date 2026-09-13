@@ -5,8 +5,8 @@
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fase 1 implementada e validada na branch de tarefa; integracao em
-`develop` pendente
+**Status**: fase 1 implementada, validada e integrada localmente em `develop`;
+fases de observers e notificacao permanecem pendentes
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -19,7 +19,7 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Testes focados de migracao, validacao e ciclo de incidente.
 - [x] Gate local completo: 177 testes nas versoes Python 3.10, 3.11 e 3.12,
       87% de cobertura, Ruff, mypy, build e diff aprovados.
-- [ ] Commit da sessao e integracao em `develop`.
+- [x] Commit da sessao e integracao local em `develop`.
 
 **Fases seguintes**:
 

@@ -58,8 +58,9 @@ that genuine inactivity has been proven.
 
 ## Phase 1 - Domain and Persistence Foundation
 
-Status: implemented and validated on `codex/task-022-diagnostic-foundation`;
-integration into `develop` remains pending.
+Status: implemented and validated on `codex/task-022-diagnostic-foundation`,
+then integrated locally into `develop`. Later observer and notification phases
+remain pending.
 
 Deliverables:
 
@@ -125,6 +126,14 @@ Validation result on 2026-09-13:
 - the complete Python 3.12 gate passed with 87% coverage;
 - Ruff, mypy, compileall, wheel/sdist build and `git diff --check` passed;
 - no live observer, Discord notification or recovery action was executed.
+
+Integration result:
+
+- task commit: `de1625b`;
+- merged locally into `develop` after the complete gate passed;
+- `main` was not promoted because Task 022 still requires live observer and
+  Discord integration phases;
+- no remote push was performed without a separate request.
 
 ## Rollback
 
