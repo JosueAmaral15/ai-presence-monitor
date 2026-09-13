@@ -416,3 +416,33 @@ orientacao para cada mensagem invalida de usuario autorizado.
 Ausencia de referencia, referencia sem pergunta pendente ou texto vazio gera
 uma tentativa de orientacao e contadores no log. A mensagem invalida nao vira
 resposta, nao toca a GUI e nao altera o estado da pergunta.
+
+## 2026-09-13 - Vincular resposta Discord a sessao Codex imutavel
+
+**Decisao**: selecionar `native`, `gui` ou `store` quando a pergunta e criada e
+persistir o identificador exato da sessao para entrega nativa por `codex queue`.
+
+**Motivo**:
+
+- a janela em foco nao identifica de forma estavel a tarefa que perguntou;
+- o projeto ja possui um cliente nativo sem shell e um E2E aprovado;
+- varias sessoes podem compartilhar o mesmo worker com escopo de projeto;
+- correlacao de confirmacao precisa incluir a sessao, nao apenas o worker;
+- a escolha antecipada impede fallback silencioso depois de resultado incerto.
+
+**Alternativas consideradas**:
+
+- manter somente GUI: rejeitado por depender de foco, desktop e coordenadas;
+- selecionar a sessao no momento da resposta: rejeitado porque o alvo poderia
+  mudar durante a espera humana;
+- fallback GUI automatico depois de timeout nativo: rejeitado por risco de
+  duplicacao;
+- exigir App Server direto nesta fase: adiado; `codex queue` ja oferece o
+  contrato necessario e fica isolado pela Strategy de transporte.
+
+**Consequencia**:
+
+`ask-user` falha antes da publicacao quando um alvo nativo nao pode ser
+determinado sem ambiguidade. O observer entrega uma vez ao alvo salvo e um hook
+so confirma nativo quando pertence a mesma sessao. GUI continua disponivel por
+opt-in e `store` desativa entrega preservando a resposta no SQLite.

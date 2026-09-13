@@ -119,6 +119,24 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertTrue(args.dry_run)
         self.assertEqual(args.scope, "project-session")
 
+        ask_args = parser.parse_args(
+            [
+                "--dry-run",
+                "ask-user",
+                "--question",
+                "Which option?",
+                "--answer-transport",
+                "native",
+                "--thread",
+                "session-1",
+                "--answer-destination",
+                "local",
+            ]
+        )
+        self.assertEqual(ask_args.answer_transport, "native")
+        self.assertEqual(ask_args.thread, "session-1")
+        self.assertEqual(ask_args.answer_destination, "local")
+
         continue_args = parser.parse_args(
             [
                 "--dry-run",
@@ -378,7 +396,7 @@ class CliBehaviorTests(unittest.TestCase):
             )
             with redirect_stdout(StringIO()) as output:
                 self.assertEqual(_dispatch_answer(dispatch_args, config), 0)
-            self.assertIn("mouse, teclado e banco", output.getvalue())
+            self.assertIn("transporte e banco", output.getvalue())
 
             list_args = argparse.Namespace(status=None, limit=50)
             with redirect_stdout(StringIO()) as output:

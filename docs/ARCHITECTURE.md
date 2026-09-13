@@ -5,7 +5,8 @@
 O AI Presence Monitor tem cinco blocos:
 
 - **Producers**: CLI manual, menu interativo e observers.
-- **GUI Automation**: entrada local X11 ou Win32 para respostas e continuidade.
+- **Input Transports**: `codex queue` para sessoes exatas e X11/Win32 como
+  fallback GUI explicito.
 - **Event Store**: SQLite local via `PresenceStore`.
 - **Rule Engine**: protocolos e limiares em `protocols.py`, janela de expediente em `work_window.py` e avaliacao em `cli._check_once`.
 - **Notifiers**: Discord, Telegram e escalonamento vermelho.
@@ -100,18 +101,30 @@ ask-user -> webhook Discord -> remote_questions
                                   |
 Discord REST polling -> validacao-+-> resposta autorizada
                                   |
-                                  v
-                  GuiAnswerDispatcher (Protocol)
-                    /                     \
-     X11GuiAnswerDispatcher       Win32GuiAnswerDispatcher
-                                  |
-                                  v
-                     input_emitted -> hook -> delivery_confirmed
+                +-----------------+------------------+
+                | native          | gui              | store
+                v                 v                  v
+    NativeCodexAnswerDispatcher   GuiQuestion...     SQLite
+                |                 /        \
+          codex queue           X11       Win32
+                |                 |
+                +--------+--------+
+                         v
+          input_emitted -> hook correlacionado -> delivery_confirmed
 ```
 
 `discord_questions.py` encapsula HTTP. `remote_questions.py` aplica correlacao,
-allowlist e estados. O dispatcher selecionado atua somente no ID capturado e
-revalidado da janela da plataforma.
+allowlist, resolucao imutavel do alvo e estados. `answer_dispatch.py` define a
+Strategy de entrega. O nativo usa a sessao exata salva na pergunta; o GUI atua
+somente no ID capturado e revalidado da janela da plataforma. Uma falha nativa
+nunca seleciona a GUI nem gera retry automatico.
+
+O alvo nativo e resolvido antes da publicacao pela ordem: argumento explicito,
+ambiente Codex, controle persistido ou uma unica sessao recente do mesmo
+worker. Endpoint remoto e nome da variavel de token podem ser persistidos, mas
+o token continua somente no ambiente. Hooks confirmam entrega nativa apenas
+quando `worker_id` e `session_id` correspondem ao registro da pergunta. Registros
+GUI anteriores a esta estrategia preservam a confirmacao por worker.
 
 O polling possui unidade systemd ou tarefa agendada separada. Assim, falha de
 Discord ou da GUI nao interrompe o monitor de atrasos nem o hook passivo.

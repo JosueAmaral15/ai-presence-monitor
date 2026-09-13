@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-13 - Entrega nativa de respostas Discord
+
+- Cada pergunta passa a salvar transporte, sessao e destino antes da
+  publicacao no Discord.
+- `native` devolve a resposta para a sessao exata com `codex queue`; `gui` e
+  `store` permanecem alternativas explicitas.
+- Sessao nativa ausente, antiga ou ambigua falha fechada antes da publicacao.
+- Falha nativa nao aciona GUI nem retry automatico.
+- Confirmacao nativa exige hook posterior do mesmo worker e da mesma sessao.
+- Banco SQLite existente recebe migracao aditiva sem perda das perguntas
+  legadas.
+- CLI, `.env.example`, arquitetura, seguranca e guias operacionais foram
+  atualizados.
+- O configurador interativo preserva os controles nativos existentes e coleta
+  transporte, sessao e destino para novas perguntas.
+
 ## 2026-09-12 - v0.6.2
 
 - Linux passa a ser o runtime suportado por padrao nesta release.

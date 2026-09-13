@@ -192,9 +192,10 @@ python3 -m ai_presence_monitor status
 
 ## Perguntas e Respostas Remotas
 
-A versao 0.3.0 pode publicar uma pergunta em um canal dedicado do Discord,
-aceitar somente resposta direta de usuario autorizado e, opcionalmente, colar a
-resposta na janela exata do Codex GUI.
+O monitor pode publicar uma pergunta em um canal dedicado do Discord, aceitar
+somente resposta direta de usuario autorizado e devolver o texto para a sessao
+exata do Codex salva na pergunta. O transporte nativo usa `codex queue` sem
+mouse ou teclado; `store` e GUI sao alternativas explicitas.
 
 Enquanto existir pergunta pendente, uma mensagem invalida de usuario
 autorizado recebe uma unica orientacao no Discord. O aviso explica como usar
@@ -202,13 +203,14 @@ autorizado recebe uma unica orientacao no Discord. O aviso explica como usar
 vazio. Bots, webhooks, usuarios nao autorizados e canais sem pergunta pendente
 permanecem silenciosos.
 
-O recurso e desativado por padrao. Configure e teste primeiro com a entrega GUI
-desativada, seguindo
+O recurso e desativado por padrao. Configure e teste primeiro em modo `store`.
+Para entrega nativa, informe `--thread` quando a sessao nao puder ser herdada
+sem ambiguidade. Falha nativa nao aciona GUI nem retry automatico. Siga
 [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md).
 
 ```bash
-ai-presence --dry-run ask-user --worker worker-id --question "Posso prosseguir?"
-ai-presence ask-user --worker worker-id --question "Posso prosseguir?"
+ai-presence --dry-run ask-user --worker worker-id --thread SESSAO --question "Posso prosseguir?"
+ai-presence ask-user --worker worker-id --thread SESSAO --question "Posso prosseguir?"
 ai-presence observe-replies --once
 ai-presence observe-replies
 ai-presence questions

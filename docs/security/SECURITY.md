@@ -218,3 +218,26 @@ Definir `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true` libera uma integracao que
 ainda nao passou pelo gate externo real desta release. O operador deve usar uma
 maquina de teste, desktop desbloqueado e dados nao sensiveis. O opt-in nao deve
 ser distribuido em configuracoes Linux ou tratado como garantia de suporte.
+
+## Task 020 - Entrega nativa de respostas Discord
+
+- [x] Transporte e sessao sao congelados antes de publicar a pergunta.
+- [x] Sessao ausente, antiga ou ambigua falha antes de acessar o Discord.
+- [x] `codex queue` recebe lista de argumentos e nunca usa shell.
+- [x] Resposta Discord nunca e interpretada como comando do sistema.
+- [x] Falha nativa nao ativa fallback GUI nem retry automatico.
+- [x] O observer aceita cada resposta correlacionada no maximo uma vez.
+- [x] Hook de outra sessao nao confirma entrega nativa.
+- [x] Destino remoto exige gate, endpoint e nome de variavel de token.
+- [x] O valor do token remoto nao entra no SQLite, argumentos ou logs.
+- [x] Bancos existentes recebem somente colunas nullable e preservam dados.
+- [x] Modo `store` permite desativar entrega sem perder respostas autorizadas.
+
+### Risco residual
+
+O texto autorizado e passado como argumento de `codex queue` e pode ficar
+temporariamente visivel a ferramentas locais de inspecao de processos. Nao use
+o canal para senhas ou tokens. `input_emitted` comprova somente conclusao do
+transporte; mesmo um hook posterior da sessao correta nao prova que o agente
+interpretou corretamente a resposta. Timeout ou rejeicao permanecem incertos e
+exigem verificacao humana antes de um retry manual.
