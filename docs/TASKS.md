@@ -2,6 +2,28 @@
 
 ## Em andamento em 2026-09-13
 
+### Task 021 - E2E nativo Discord e release Linux
+
+**Prioridade**: Critica
+**Status**: runtime 0.6.2 implantado e observer recuperado; pergunta E2E
+aguardando resposta direta no Discord
+**Objetivo**: provar uma entrega unica da resposta Discord para a sessao exata
+do Codex, estabilizar o observer e promover o resultado validado ate `main`.
+
+**Criterios de aceite**:
+
+- [x] Runtime local atualizado de 0.6.1 para 0.6.2 com rollback privado.
+- [x] Observer recuperado da falha DNS e preflight Discord aprovado.
+- [x] Sessao, transporte nativo/local e marcador exclusivo congelados.
+- [x] Uma unica pergunta E2E publicada; GUI e retry automatico desabilitados.
+- [ ] Resposta direta aceita e entregue uma vez a sessao exata.
+- [ ] Hook da mesma sessao produz `delivery_confirmed`.
+- [ ] Observer reiniciado e estavel depois do teste.
+- [x] Gate local completo passa com 171 testes e 86% de cobertura.
+- [ ] Evidencia final integrada em `develop` e promovida a `main`.
+
+**Plano**: `docs/planning/TASK-021-native-discord-e2e-release.md`.
+
 ### Task 020 - Entrega nativa de respostas Discord
 
 **Prioridade**: Alta
