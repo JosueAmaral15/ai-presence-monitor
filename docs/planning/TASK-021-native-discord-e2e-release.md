@@ -58,12 +58,12 @@ the gates pass. This plan interprets that authorization conservatively:
 ### Phase 4 - Integration and Release
 
 - [x] Commit the session on this task branch.
-- [ ] Merge the validated task branch into `develop`.
-- [ ] Push `develop` to its remote branch.
+- [x] Merge the validated task branch into `develop`.
+- [x] Push `develop` to its remote branch.
 - [x] Record the temporary private Linux-only CI decision if remote CI remains
       unavailable.
-- [ ] Merge validated `develop` into `main` and push `main`.
-- [ ] Register the AI-worker finish event once.
+- [x] Merge validated `develop` into `main` and push `main`.
+- [x] Register the AI-worker finish event once.
 
 ## Pass Criteria
 
@@ -79,7 +79,7 @@ the gates pass. This plan interprets that authorization conservatively:
 - The observer returns to a stable active state.
 - Local tests, coverage, lint, typing, build, and diff checks pass.
 
-## Evidence In Progress
+## Final Evidence
 
 - Initial live package: `0.6.1`.
 - E2E candidate installed in the live venv: `0.6.2`; the final `0.7.0` wheel
@@ -111,6 +111,9 @@ the gates pass. This plan interprets that authorization conservatively:
 - Stabilization: the final service remained `active/running` for more than ten
   minutes with `NRestarts=0` and no warning-or-higher journal entries.
 - Final E2E state: passed for the valid replacement question.
+- Task-branch commits: `b01b859` and `2923cbc`.
+- `develop` integration merge: `0000798`, pushed to `origin/develop`.
+- Initial `main` release merge: `bfa2277`, pushed to `origin/main`.
 
 ## Failure Policy
 

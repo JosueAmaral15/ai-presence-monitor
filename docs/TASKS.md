@@ -1,12 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-09-13
+## Concluidas em 2026-09-13
 
 ### Task 021 - E2E nativo Discord e release Linux
 
 **Prioridade**: Critica
-**Status**: E2E real e estabilizacao aprovados; release 0.7.0 pronta para
-integracao final
+**Status**: concluida; release 0.7.0 integrada e publicada em `develop` e
+`main`
 **Objetivo**: provar uma entrega unica da resposta Discord para a sessao exata
 do Codex, estabilizar o observer e promover o resultado validado ate `main`.
 
@@ -21,15 +21,14 @@ do Codex, estabilizar o observer e promover o resultado validado ate `main`.
 - [x] Hook da mesma sessao produz `delivery_confirmed`.
 - [x] Observer reiniciado e estavel depois do teste.
 - [x] Gate local completo passa com 171 testes e 86% de cobertura.
-- [ ] Evidencia final integrada em `develop` e promovida a `main`.
+- [x] Evidencia final integrada em `develop` e promovida a `main`.
 
 **Plano**: `docs/planning/TASK-021-native-discord-e2e-release.md`.
 
 ### Task 020 - Entrega nativa de respostas Discord
 
 **Prioridade**: Alta
-**Status**: implementacao e E2E real validados; integracao da evidencia da
-Task 021 em andamento
+**Status**: concluida; implementacao e E2E real publicados na release 0.7.0
 **Objetivo**: devolver cada resposta autorizada do Discord para a sessao exata
 do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
 
