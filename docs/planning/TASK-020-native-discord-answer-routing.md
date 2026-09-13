@@ -81,10 +81,10 @@ the reply to an immutable Codex session.
 - [x] Run focused tests while implementing.
 - [x] Run the complete quality gate, build, and isolated installation checks.
 - [x] Review the diff for secrets, unrelated changes, and documentation drift.
-- [ ] Commit the completed session on the task branch.
-- [ ] Merge into `develop` only when the implementation is functional and all
+- [x] Commit the completed session on the task branch.
+- [x] Merge into `develop` only when the implementation is functional and all
       local gates pass.
-- [ ] Keep `main` unchanged until release gates permit promotion.
+- [x] Keep `main` unchanged until release gates permit promotion.
 
 ## Acceptance Criteria
 
@@ -118,6 +118,10 @@ later hook from that same session, and no retry.
 - Installed `ask-user --help` exposed transport, session, and destination.
 - An installed dry-run selected native local delivery without network, SQLite,
   GUI input, or a real Codex queue invocation.
+- Implementation commit: `4605476` on
+  `codex/native-discord-answer-routing` after rebasing onto `develop`.
+- The validated task branch was selected for local integration into `develop`;
+  `main` remains unchanged because the real E2E is still pending.
 - No real Discord question or Codex input was sent in this session. That E2E
   remains a publication gate requiring separate, exact authorization.
 

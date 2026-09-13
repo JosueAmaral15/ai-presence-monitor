@@ -5,7 +5,8 @@
 ### Task 020 - Entrega nativa de respostas Discord
 
 **Prioridade**: Alta
-**Status**: implementacao e gate local concluidos; integracao e E2E pendentes
+**Status**: implementacao validada e integrada localmente em `develop`; E2E
+real pendente antes de promover `main`
 **Objetivo**: devolver cada resposta autorizada do Discord para a sessao exata
 do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
 
@@ -20,7 +21,7 @@ do Codex que publicou a pergunta, sem depender de foco, mouse ou teclado.
 - [x] Migracao SQLite preserva perguntas existentes.
 - [x] CLI, `.env.example`, arquitetura, seguranca e guias foram atualizados.
 - [x] Gate local completo, build e instalacao isolada passam.
-- [ ] Commit da sessao e integracao funcional em `develop`.
+- [x] Commit da sessao e integracao funcional em `develop`.
 - [ ] E2E Discord-Codex real com marcador exclusivo e nova autorizacao.
 
 **Plano**: `docs/planning/TASK-020-native-discord-answer-routing.md`.
