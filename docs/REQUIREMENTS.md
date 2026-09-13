@@ -16,6 +16,28 @@
 - Deve evitar gravar transcript completo ou secrets.
 - Deve ter exemplo de configuracao de `hooks.json`.
 
+## Diagnostico de Causa
+
+- Observers de diagnostico devem registrar fatos e nao decidir alertas ou
+  executar recuperacao diretamente.
+- Evidencia deve identificar fonte, tipo, estado, worker, sessao opcional,
+  horario e expiracao opcional sem armazenar payload bruto ou transcript.
+- Todo diagnostico deve referenciar ao menos uma evidencia persistida.
+- Evidencias de workers diferentes ou sessoes Codex conflitantes nao devem ser
+  combinadas no mesmo diagnostico.
+- Diagnosticos devem declarar causa, confianca e resumo curto.
+- Deve existir no maximo um incidente de diagnostico aberto por worker.
+- Incidentes devem preservar abertura, diagnostico atual, severidade, ultima
+  notificacao e resolucao.
+- `unexplained_inactivity` deve ser usado quando nao houver evidencia suficiente
+  para uma causa especifica; o sistema nao deve declarar inatividade genuina
+  como fato.
+- Tabelas de diagnostico devem ser aditivas e compativeis com bancos existentes.
+- Persistir evidencia ou diagnostico nao deve atualizar os relogios dos
+  Protocolos 1 e 2.
+- Recuperacao automatica deve permanecer fora da fundacao e desabilitada ate
+  possuir autorizacao, politica one-shot e validacao E2E propria.
+
 ## Portabilidade
 
 - O projeto deve gerar wheel instalavel para Python 3.10+.

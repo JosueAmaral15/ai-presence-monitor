@@ -1,5 +1,26 @@
 # Security Checklist
 
+## Task 022 - Diagnostic foundation
+
+- [x] Diagnostic tables are additive and do not alter presence clocks.
+- [x] Evidence stores typed state and a bounded summary, not raw observer
+      payloads, prompts or transcripts.
+- [x] Worker, session and state identifiers reject empty, multiline, NUL and
+      oversized values.
+- [x] A diagnosis requires persisted evidence from the same worker and cannot
+      combine conflicting Codex sessions.
+- [x] Foreign keys protect diagnosis-evidence and incident-diagnosis links.
+- [x] A partial unique index permits at most one open incident per worker.
+- [x] Phase 1 contains no network calls, notifications, Codex input, retry or
+      recovery execution.
+
+### Residual risk
+
+Future observers must map external payloads to the existing bounded vocabulary
+instead of persisting them verbatim. A concise summary can still contain a
+secret if a producer violates that contract, so observer implementations need
+source-specific allowlists and tests before live activation.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-09-13 - Evidence observers do not diagnose or recover
+
+**Decision**: diagnostic observers will persist bounded facts. A separate
+diagnosis engine will correlate evidence, and a separate incident state machine
+will own notification lifecycle. Recovery remains an optional downstream
+component that is disabled by default.
+
+**Reason**:
+
+- process, network and Codex signals can coexist or contradict one another;
+- inactivity alone cannot prove why an AI-worker stopped producing evidence;
+- one policy owner is required to deduplicate Discord notifications;
+- collection must remain safe even when a notification or recovery integration
+  is unavailable;
+- recovery needs stricter authorization and E2E evidence than observation.
+
+**Alternatives considered**:
+
+- let each observer send its own alert: rejected because it creates duplicate
+  and contradictory incidents;
+- encode the final cause directly in protocol alerts: rejected because presence
+  severity and interruption cause are independent concerns;
+- retry `continue` whenever hooks stop: rejected because network failure,
+  pending user input, sleep and usage limits require different actions.
+
+**Consequence**:
+
+Task 022 first adds an unused additive persistence foundation. Live observers,
+classification, Discord messages and recovery require later phases and their
+own validation. At most one diagnostic incident may remain open for a worker,
+while immutable diagnoses preserve why that incident changed over time.
+
 ## 2026-09-13 - Excecao de CI para release Linux privada 0.7.0
 
 **Decisao**: permitir a promocao da versao 0.7.0 para `main` sem uma execucao

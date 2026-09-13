@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from .diagnostics import initialize_diagnostic_schema
+
 CODEX_SESSION_PATTERN = re.compile(
     r"(?:^|[ |])session="
     r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
@@ -214,6 +216,7 @@ class PresenceStore:
                 )
                 """
             )
+            initialize_diagnostic_schema(conn)
 
     def get_worker(self, worker_id: str) -> WorkerState | None:
         with self.session() as conn:

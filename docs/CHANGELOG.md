@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased - Task 022 diagnostic foundation
+
+- Added typed evidence, diagnosis, confidence, severity and incident models.
+- Added additive SQLite tables for diagnostic evidence, immutable diagnosis
+  links and one open incident per worker.
+- Added validation that prevents cross-worker and cross-session diagnoses.
+- Added incident notification timestamps and explicit resolution state.
+- Kept observers, cause classification, Discord notifications and automatic
+  recovery disabled until later Task 022 phases.
+
 ## 2026-09-13 - v0.7.0
 
 - Cada pergunta passa a salvar transporte, sessao e destino antes da
