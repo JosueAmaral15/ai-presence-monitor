@@ -1,5 +1,37 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento em 2026-09-13
+
+### Task 022 - Diagnostico de causa por observers
+
+**Prioridade**: Alta
+**Status**: fase 1 implementada e validada na branch de tarefa; integracao em
+`develop` pendente
+**Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
+gerenciar um unico incidente correlacionado antes de enviar notificacoes.
+
+**Fase 1**:
+
+- [x] Tipos de evidencia, diagnostico, confianca, severidade e incidente.
+- [x] Schema SQLite aditivo e inicializacao compativel com `PresenceStore`.
+- [x] Correlacao obrigatoria por worker e sessao Codex.
+- [x] Um unico incidente aberto por worker, atualizavel e resolvivel.
+- [x] Testes focados de migracao, validacao e ciclo de incidente.
+- [x] Gate local completo: 177 testes nas versoes Python 3.10, 3.11 e 3.12,
+      87% de cobertura, Ruff, mypy, build e diff aprovados.
+- [ ] Commit da sessao e integracao em `develop`.
+
+**Fases seguintes**:
+
+- [ ] Prototipo read-only do stream de eventos da sessao Codex exata.
+- [ ] Observer de eventos Codex e classificacao de erros autoritativos.
+- [ ] Observers Linux de processo, rede, energia e saude dos servicos.
+- [ ] Motor de diagnostico, precedencia, confianca e transicoes.
+- [ ] Notificacao Discord deduplicada e testes E2E por causa.
+- [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.
+
+**Plano**: `docs/planning/TASK-022-cause-aware-diagnostics.md`.
+
 ## Concluidas em 2026-09-13
 
 ### Task 021 - E2E nativo Discord e release Linux
@@ -428,7 +460,8 @@ atrasado.
 
 ## Backlog
 
-- Criar observers adicionais para processo, workspace e logs.
+- Executar as fases restantes da Task 022 para observers de processo, rede,
+  energia, servico, workspace e eventos Codex.
 
 ## Concluida em 2026-07-27
 

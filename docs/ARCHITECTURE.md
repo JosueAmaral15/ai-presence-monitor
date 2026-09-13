@@ -31,6 +31,41 @@ SQLite workers/events
 monitor -> protocolos -> notificadores
 ```
 
+## Cause-aware Diagnostic Foundation
+
+Task 022 extends the observer boundary without changing the existing presence
+protocols:
+
+```text
+source observers -> diagnostic evidence -> diagnosis engine
+                                             |
+                                             v
+                                      incident lifecycle
+                                             |
+                                             v
+                                      notification policy
+```
+
+Observers remain fact producers. They do not choose severity, notify Discord or
+trigger recovery. `DiagnosticStore` persists three separate concepts:
+
+- `DiagnosticEvidence`: a bounded fact, source, state, worker, optional exact
+  session, observation time and optional expiry;
+- `Diagnosis`: a typed interpretation with confidence and immutable ordered
+  links to one or more evidence records;
+- `DiagnosticIncident`: one open episode per worker, with current diagnosis,
+  severity, notification timestamp and resolution state.
+
+Evidence and diagnoses are append-only. An open incident can change its current
+diagnosis as stronger evidence arrives, preventing parallel observers from
+creating contradictory user notifications. This foundation does not yet run
+observers, classify evidence or send notifications.
+
+The diagnostic tables are additive to the same SQLite database and do not
+modify `workers.last_activity_at`, `workers.last_signal_at`, protocol alerts or
+remote-question delivery. They store concise summaries rather than raw Codex
+events or transcripts.
+
 ## Tipos de Sinal
 
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.
