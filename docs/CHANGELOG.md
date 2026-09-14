@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Task 022 diagnostic foundation
+## Unreleased - Task 022 diagnostic foundation and App Server probe
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.
 - Added additive SQLite tables for diagnostic evidence, immutable diagnosis
@@ -9,6 +9,14 @@
 - Added incident notification timestamps and explicit resolution state.
 - Kept observers, cause classification, Discord notifications and automatic
   recovery disabled until later Task 022 phases.
+- Added a hard-allowlisted `probe-codex-app-server` command for metadata-only
+  thread reads, structured rate-limit reads and explicit subscription tests.
+- Sanitized App Server output to bounded status, error and aggregate usage
+  fields without retaining prompts, transcript, commands, account IDs or raw
+  errors.
+- Verified that a separate stdio App Server sees the active GUI thread as
+  `notLoaded` and cannot resume it; live shared-session observation therefore
+  remains disabled pending a managed-endpoint E2E.
 
 ## 2026-09-13 - v0.7.0
 

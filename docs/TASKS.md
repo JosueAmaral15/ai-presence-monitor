@@ -1,11 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-09-13
+## Em andamento em 2026-09-14
 
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fase 1 implementada, validada e integrada localmente em `develop`;
+**Status**: fase 1 integrada localmente em `develop`; fase 2 implementada e
+validada na branch de tarefa, com limite de assinatura exata documentado;
 fases de observers e notificacao permanecem pendentes
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
@@ -21,10 +22,22 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
       87% de cobertura, Ruff, mypy, build e diff aprovados.
 - [x] Commit da sessao e integracao local em `develop`.
 
+**Fase 2**:
+
+- [x] Cliente stdio com allowlist que nao oferece envio de input.
+- [x] `thread/read(includeTurns=false)` da sessao exata validado localmente.
+- [x] Leitura estruturada e sanitizada dos limites da conta validada.
+- [x] Sanitizacao de status, erros, uso agregado e compactacao testada.
+- [x] Tentativa controlada de assinatura rejeitada com
+      `thread_already_active`; child separado nao observa sessao ativa da GUI.
+- [x] Limite arquitetural e instrucoes para humanos e AI-workers documentados.
+- [x] Gate completo: 189 testes nas versoes Python 3.10, 3.11 e 3.12,
+      86% de cobertura, Ruff, mypy, build e diff aprovados.
+
 **Fases seguintes**:
 
-- [ ] Prototipo read-only do stream de eventos da sessao Codex exata.
-- [ ] Observer de eventos Codex e classificacao de erros autoritativos.
+- [ ] Observer Codex por hooks mais polling estruturado de limites.
+- [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
 - [ ] Observers Linux de processo, rede, energia e saude dos servicos.
 - [ ] Motor de diagnostico, precedencia, confianca e transicoes.
 - [ ] Notificacao Discord deduplicada e testes E2E por causa.

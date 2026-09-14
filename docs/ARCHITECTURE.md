@@ -66,6 +66,21 @@ modify `workers.last_activity_at`, `workers.last_signal_at`, protocol alerts or
 remote-question delivery. They store concise summaries rather than raw Codex
 events or transcripts.
 
+### Codex App Server feasibility boundary
+
+The Task 022 Phase 2 probe uses a dedicated `codex app-server --stdio` child
+with a hard method allowlist. Metadata-only `thread/read` and structured
+`account/rateLimits/read` work from that process. An active GUI-owned thread is
+`notLoaded` in the child, and `thread/resume` is rejected as
+`thread_already_active`; therefore the child cannot receive the live event
+stream for that existing session.
+
+The supported near-term Codex evidence path is existing same-session hooks plus
+safe account-limit polling. A live event adapter requires the Codex session to
+be hosted through the same managed/multiplexed App Server boundary and remains
+disabled until that topology passes its own E2E. The probe never records
+evidence, updates presence clocks, sends notifications or performs recovery.
+
 ## Tipos de Sinal
 
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.

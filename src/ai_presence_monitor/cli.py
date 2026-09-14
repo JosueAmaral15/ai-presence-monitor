@@ -14,6 +14,7 @@ from .background_service import (
     BackgroundServiceError,
     print_background_service_result,
 )
+from .codex_app_server import CodexAppServerError, probe_codex_app_server
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
@@ -765,6 +766,34 @@ def _stop_alarm(args: argparse.Namespace) -> int:
     return 0
 
 
+def _probe_codex_app_server(args: argparse.Namespace) -> int:
+    result = probe_codex_app_server(
+        args.thread,
+        subscription_seconds=args.subscribe_seconds,
+        codex_executable=args.codex_executable,
+        request_timeout=args.request_timeout,
+    )
+    payload = result.to_dict()
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+        return 0
+
+    print(
+        "Codex app-server probe: "
+        f"thread={result.thread.thread_id} status={result.thread.status or 'unknown'}"
+    )
+    print(
+        "Rate limits: "
+        f"ordinary_usage_allowed={result.rate_limits.ordinary_usage_allowed} "
+        f"reached_type={result.rate_limits.reached_type or 'none'}"
+    )
+    print(
+        "Separate stdio subscription: "
+        f"seconds={result.subscription_seconds:g} events={len(result.events)}"
+    )
+    return 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -853,6 +882,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Nao forca a arvore se o processo ignorar a parada normal.",
     )
     stop_alarm_parser.set_defaults(func=lambda args, config: _stop_alarm(args))
+
+    app_server_parser = subparsers.add_parser(
+        "probe-codex-app-server",
+        help="Inspeciona metadados Codex por um app-server filho sem enviar entrada.",
+    )
+    app_server_parser.add_argument(
+        "--thread",
+        required=True,
+        help="ID exato da sessao Codex persistida.",
+    )
+    app_server_parser.add_argument(
+        "--subscribe-seconds",
+        type=float,
+        default=0.0,
+        help="Janela observacional via thread/resume. Padrao: 0 (sem assinatura).",
+    )
+    app_server_parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout de cada requisicao JSON-RPC. Padrao: 10 segundos.",
+    )
+    app_server_parser.add_argument(
+        "--codex-executable",
+        default="codex",
+        help="Executavel Codex. Padrao: codex no PATH.",
+    )
+    app_server_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente campos sanitizados em JSON.",
+    )
+    app_server_parser.set_defaults(
+        func=lambda args, config: _probe_codex_app_server(args)
+    )
 
     ask_parser = subparsers.add_parser(
         "ask-user",
@@ -1229,6 +1293,7 @@ def main(argv: list[str] | None = None) -> None:
         _enforce_runtime_policy(args, config)
         raise_code = args.func(args, config)
     except (
+        CodexAppServerError,
         ControlError,
         UnsupportedPlatformError,
         ValueError,

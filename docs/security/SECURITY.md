@@ -21,6 +21,30 @@ instead of persisting them verbatim. A concise summary can still contain a
 secret if a producer violates that contract, so observer implementations need
 source-specific allowlists and tests before live activation.
 
+## Task 022 - Codex App Server feasibility probe
+
+- [x] Requests use an argument vector and dedicated stdio child without a
+      shell, remote listener or inherited input transport.
+- [x] `turn/start`, `turn/steer`, item injection, queue and GUI input have no
+      allowed request path.
+- [x] `thread/read` forces `includeTurns=false`; rate-limit reads exclude reset
+      credit details.
+- [x] Message, reasoning, command, patch, plan, transcript and audio deltas are
+      opted out; unknown notifications are dropped.
+- [x] Output uses typed allowlisted fields and excludes account ID, balances,
+      titles, previews, items, raw errors and arbitrary server messages.
+- [x] Metadata must match the requested thread, and cross-thread events are
+      discarded.
+- [x] The probe does not write SQLite, update activity, notify, alarm or recover.
+- [x] A failed subscription is not retried automatically.
+
+### Residual risk
+
+`thread/resume` is observational but still loads or rejoins a thread inside the
+child App Server. Keep positive `--subscribe-seconds` values limited to explicit
+development tests. A future shared-daemon adapter needs authentication, local
+socket permissions, client isolation and exact-session E2E before activation.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection
