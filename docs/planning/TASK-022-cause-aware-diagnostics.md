@@ -104,11 +104,36 @@ managed App Server endpoint before enabling a live adapter.
 
 See `docs/CODEX-APP-SERVER-PROBE.md` for operation and AI-worker rules.
 
+## Phase 3 - Codex Evidence Observers
+
+Status: implemented and validated on
+`codex/task-022-codex-evidence-observers`, then integrated locally into
+`develop`.
+
+Recognized same-session hooks now write two independent records after a worker
+has been explicitly started: the existing presence observation and a bounded,
+expiring diagnostic fact. Unknown hook types may preserve their legacy presence
+observation but do not become diagnostic evidence. Hook evidence uses constant
+summaries and never retains the hook payload, prompt, message, command or tool
+name.
+
+`observe-codex-limits` starts a dedicated stdio child and calls only
+`account/rateLimits/read`. It classifies the sanitized response as usage
+available, usage blocked, a documented or future account limit, spend control,
+or unknown state. `ordinary_usage_allowed` takes precedence over credit
+availability because a false credit balance alone does not prove a usage limit.
+
+The command is one-shot by default. `--watch` rechecks the exact worker before
+each poll and exits when `finish` makes that worker idle. Both paths store only
+diagnostic evidence: they do not update activity clocks, diagnose a cause,
+open an incident, notify, alarm, send input or perform recovery. Live App
+Server subscription remains disabled.
+
 ## Remaining Phases
 
 - [x] Phase 2: prototype an exact-session Codex app-server event subscription
       and document the separate-process ownership boundary.
-- [ ] Phase 3: implement hook-backed Codex evidence plus sanitized account-limit
+- [x] Phase 3: implement hook-backed Codex evidence plus sanitized account-limit
       polling; keep shared-endpoint live events disabled.
 - [ ] Phase 4: add Linux process, network, power and service observers.
 - [ ] Phase 5: implement diagnosis precedence, confidence and incident
@@ -133,7 +158,7 @@ experimental runtime gate. Task 022 targets the supported Linux runtime first.
 - Opening a new diagnosis updates the worker's current open incident instead of
   creating parallel contradictory incidents.
 - No automatic recovery, retry, GUI fallback or `continue` dispatch is present
-  in Phase 1 or Phase 2.
+  in Phase 1, Phase 2 or Phase 3.
 - Evidence summaries must remain brief and must not contain secrets or
   transcript content.
 
@@ -144,6 +169,7 @@ Phase 1 and Phase 2 require:
 ```bash
 PYTHONPATH=src python3 -m unittest tests.test_diagnostics -v
 PYTHONPATH=src python3 -m unittest tests.test_codex_app_server -v
+PYTHONPATH=src python3 -m unittest tests.test_codex_evidence -v
 python3 scripts/quality_check.py
 ```
 
@@ -177,6 +203,18 @@ Phase 2 validation result on 2026-09-14:
 - no prompt, turn, queue input, GUI action, Discord notification, database
   evidence or recovery action was emitted.
 
+Phase 3 validation result on 2026-09-14:
+
+- 203 tests passed on Python 3.10, 3.11 and 3.12;
+- the complete Python 3.12 gate passed with 86% coverage;
+- Ruff, mypy, compileall, wheel/sdist build and `git diff --check` passed;
+- a live bounded dry-run returned `usage_available` from the installed Codex
+  App Server without creating or writing SQLite evidence;
+- focused tests prove hook allowlisting, TTLs, one-shot and watch behavior,
+  worker rechecks, unknown-value collapse and unchanged presence clocks;
+- no live subscription, Discord notification, local alarm, Codex input,
+  incident, diagnosis or recovery action was emitted.
+
 ## Rollback
 
 Before release integration, switch away from or delete the task branch. The
@@ -189,8 +227,8 @@ explicitly authorized.
 
 ## Next Implementation Step
 
-Phase 3 should implement a polling observer for structured rate-limit state and
-map existing same-session hooks into diagnostic evidence. It must not infer
-that Codex is closed from child-local `notLoaded`, and it must not start a turn
-or retry input. A separate live-event adapter remains disabled until a session
-hosted through a shared managed endpoint proves exact-thread events E2E.
+Phase 4 should add independent Linux process, network, power and service-health
+observers. Each observer must persist only bounded facts, use explicit TTLs and
+remain unable to update presence clocks, notify or recover. The separate live
+Codex event adapter remains disabled until a session hosted through a shared
+managed endpoint proves exact-thread events E2E.

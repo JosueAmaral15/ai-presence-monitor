@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Task 022 diagnostic foundation and App Server probe
+## Unreleased - Task 022 Codex evidence observers
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.
 - Added additive SQLite tables for diagnostic evidence, immutable diagnosis
@@ -17,6 +17,12 @@
 - Verified that a separate stdio App Server sees the active GUI thread as
   `notLoaded` and cannot resume it; live shared-session observation therefore
   remains disabled pending a managed-endpoint E2E.
+- Added bounded, expiring diagnostic evidence for recognized same-session Codex
+  hooks without changing their existing presence observations.
+- Added `observe-codex-limits` for one-shot or explicit continuous sanitized
+  `account/rateLimits/read` evidence tied to an exact active worker.
+- Kept live subscriptions, cause diagnosis, incidents, notifications, alarms,
+  input and recovery disabled while later Task 022 phases remain pending.
 
 ## 2026-09-13 - v0.7.0
 

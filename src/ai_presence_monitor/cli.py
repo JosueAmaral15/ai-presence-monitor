@@ -15,6 +15,10 @@ from .background_service import (
     print_background_service_result,
 )
 from .codex_app_server import CodexAppServerError, probe_codex_app_server
+from .codex_evidence import (
+    collect_codex_limit_observation,
+    record_codex_limit_observation,
+)
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
     install_codex_hook,
@@ -794,6 +798,73 @@ def _probe_codex_app_server(args: argparse.Namespace) -> int:
     return 0
 
 
+def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    interval = (
+        args.interval
+        if args.interval is not None
+        else config.codex_limit_poll_interval_seconds
+    )
+    evidence_ttl = (
+        args.evidence_ttl
+        if args.evidence_ttl is not None
+        else config.codex_limit_evidence_ttl_seconds
+    )
+    if interval <= 0:
+        raise ValueError("Codex limit poll interval must be greater than zero.")
+    if evidence_ttl <= 0:
+        raise ValueError("Codex limit evidence TTL must be greater than zero.")
+
+    while True:
+        if not args.dry_run:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None:
+                raise ValueError(
+                    f"Worker not found: {worker_id}. Run start before recording evidence."
+                )
+            if worker.status != "active":
+                if args.watch:
+                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker is not active: {worker_id}. Run start before recording evidence."
+                )
+        observation = collect_codex_limit_observation(
+            codex_executable=args.codex_executable,
+            request_timeout=args.request_timeout,
+            ttl_seconds=evidence_ttl,
+        )
+        if args.dry_run:
+            print(
+                "[dry-run:codex-limit] "
+                f"worker={worker_id} state={observation.state}"
+            )
+            return 0
+        else:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None or worker.status != "active":
+                if args.watch:
+                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker became inactive before evidence was recorded: {worker_id}."
+                )
+            evidence = record_codex_limit_observation(
+                db_path=config.db_path,
+                worker_id=worker_id,
+                session_id=args.session,
+                observation=observation,
+            )
+            print(
+                "codex-limit: "
+                f"worker={worker_id} state={evidence.state} "
+                f"evidence={evidence.evidence_id}"
+            )
+        if not args.watch:
+            return 0
+        time.sleep(interval)
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -916,6 +987,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     app_server_parser.set_defaults(
         func=lambda args, config: _probe_codex_app_server(args)
+    )
+
+    codex_limits_parser = subparsers.add_parser(
+        "observe-codex-limits",
+        help="Registra evidencia sanitizada dos limites da conta Codex.",
+    )
+    _add_identity_args(codex_limits_parser, include_task_message=False)
+    codex_limits_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Repete a leitura no intervalo configurado. Padrao: uma leitura.",
+    )
+    codex_limits_parser.add_argument(
+        "--interval",
+        type=int,
+        help="Intervalo do modo watch em segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--evidence-ttl",
+        type=int,
+        help="Validade da evidencia em segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout da leitura JSON-RPC. Padrao: 10 segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--codex-executable",
+        default="codex",
+        help="Executavel Codex. Padrao: codex no PATH.",
+    )
+    codex_limits_parser.set_defaults(
+        func=lambda args, config: _observe_codex_limits(args, config)
     )
 
     ask_parser = subparsers.add_parser(

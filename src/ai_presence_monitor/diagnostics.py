@@ -28,6 +28,7 @@ class EvidenceKind(str, Enum):
     THREAD_STATUS = "thread_status"
     CODEX_ERROR = "codex_error"
     TOKEN_USAGE = "token_usage"
+    ACCOUNT_LIMIT = "account_limit"
     CONTEXT_COMPACTION = "context_compaction"
     PROCESS_STATE = "process_state"
     NETWORK_STATE = "network_state"

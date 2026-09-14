@@ -5,9 +5,8 @@
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fase 1 integrada localmente em `develop`; fase 2 implementada e
-validada na branch de tarefa, com limite de assinatura exata documentado;
-fases de observers e notificacao permanecem pendentes
+**Status**: fases 1, 2 e 3 implementadas, validadas e integradas localmente em
+`develop`; observers Linux, diagnostico e notificacao permanecem pendentes
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -34,9 +33,25 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Gate completo: 189 testes nas versoes Python 3.10, 3.11 e 3.12,
       86% de cobertura, Ruff, mypy, build e diff aprovados.
 
+**Fase 3**:
+
+- [x] Hooks Codex reconhecidos tambem registram evidencia diagnostica curta e
+      expiram sem armazenar payload, prompt, mensagem ou nome de ferramenta.
+- [x] `observe-codex-limits` consulta somente `account/rateLimits/read` em um
+      App Server filho e persiste estado sanitizado para o worker exato.
+- [x] Polling e TTL possuem configuracao positiva, modo one-shot padrao e
+      `--watch` explicito que encerra quando o worker deixa de estar ativo.
+- [x] Evidencia diagnostica nao atualiza `last_activity_at`, `last_signal_at`
+      nem rearma alertas de presenca.
+- [x] Live subscription, diagnostico, incidentes, notificacao, alarme, input e
+      recuperacao permanecem desabilitados.
+- [x] Gate completo: 203 testes nas versoes Python 3.10, 3.11 e 3.12,
+      86% de cobertura, Ruff, mypy, build e diff aprovados.
+- [x] Dry-run real do App Server retornou `usage_available` sem escrever SQLite.
+- [x] Commit da sessao e integracao local em `develop`.
+
 **Fases seguintes**:
 
-- [ ] Observer Codex por hooks mais polling estruturado de limites.
 - [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
 - [ ] Observers Linux de processo, rede, energia e saude dos servicos.
 - [ ] Motor de diagnostico, precedencia, confianca e transicoes.

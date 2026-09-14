@@ -47,6 +47,16 @@
 - Uma sessao `notLoaded` no app-server filho nao deve ser classificada como
   Codex fechado, e conflito `thread_already_active` nao deve ser classificado
   como inatividade.
+- Somente hooks Codex reconhecidos devem produzir evidencia diagnostica; o
+  estado e o resumo devem vir de uma allowlist constante e possuir TTL.
+- O observer de limites deve chamar somente `account/rateLimits/read`, exigir
+  worker exato ativo, sanitizar o resultado e ser one-shot por padrao.
+- O modo continuo de limites deve ser explicito, revalidar o worker antes de
+  cada poll e encerrar quando o worker ficar idle.
+- Creditos indisponiveis isoladamente nao devem sobrepor
+  `ordinary_usage_allowed=true` nem provar limite excedido.
+- Hook evidence e account-limit evidence nao devem atualizar
+  `last_activity_at`, `last_signal_at` ou rearmar alertas de presenca.
 - O observer live do App Server deve permanecer desabilitado enquanto a sessao
   monitorada nao compartilhar o mesmo endpoint/daemon validado.
 

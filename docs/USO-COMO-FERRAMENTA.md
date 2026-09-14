@@ -38,7 +38,8 @@ Os componentes sao independentes:
 | Componente | Responsabilidade |
 |---|---|
 | CLI `ai-presence` | interface deterministica para humanos, scripts e IAs |
-| hooks do Codex | registrar atividade local silenciosa |
+| hooks do Codex | registrar atividade local silenciosa e evidencia diagnostica reconhecida |
+| observer de limites | registrar estado sanitizado da conta sem alterar presenca |
 | monitor | avaliar atrasos e produzir alertas |
 | observer Discord | receber respostas correlacionadas de usuarios permitidos |
 | `codex queue` | enviar texto para uma sessao sem mouse ou teclado |
@@ -143,6 +144,35 @@ No Protocolo 1, o worker publica heartbeat a cada cinco minutos. No Protocolo
 2, publica `start` e `finish`; hooks ou `touch` significativo registram
 atividade silenciosa durante a tarefa.
 
+### Observar evidencia diagnostica do Codex
+
+Depois de iniciar o worker do projeto, uma leitura unica dos limites da conta
+pode ser registrada com:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+Use `--watch` somente quando houver uma atribuicao explicita para manter esse
+observer continuo. Ele confirma que o worker exato continua ativo antes de cada
+poll e termina depois de `finish`:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --watch
+```
+
+O comando consulta somente `account/rateLimits/read`. A evidencia expira e nao
+atualiza `last_activity_at`, nao evita alertas do Protocolo 2 e nao envia
+Discord, alarme, `continue` ou recuperacao. Hooks reconhecidos registram a sua
+propria evidencia diagnostica curta, alem da observacao de presenca existente.
+Isso ainda nao constitui um diagnostico final; a correlacao de causas sera uma
+fase separada.
+
 ### Enviar texto sem usar mouse ou teclado
 
 ```bash
@@ -233,6 +263,12 @@ ai-presence touch \
 ```
 
 `touch` baseado apenas em relogio e proibido porque simula atividade.
+
+Hooks reconhecidos tambem registram evidencia diagnostica com TTL. Quando a
+tarefa incluir observacao de limites, a IA pode executar uma leitura one-shot
+com `observe-codex-limits --project "$PROJECT" --session SESSAO_EXATA`. Ela nao
+deve manter `--watch` sem essa responsabilidade ter sido atribuida e nao deve
+interpretar a evidencia como autorizacao para notificar ou recuperar.
 
 ### Perguntar ao usuario
 

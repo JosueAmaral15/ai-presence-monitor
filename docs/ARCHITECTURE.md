@@ -20,12 +20,15 @@ Codex lifecycle hook
         |
         v
 python absoluto -m ai_presence_monitor.codex_hook
-        |
-        v
-PresenceStore.record_observation()
-        |
-        v
-SQLite workers/events
+        +-----------------------------+
+        |                             |
+        v                             v
+PresenceStore.record_observation()  DiagnosticStore.record_evidence()
+        |                             |
+        +---------------+-------------+
+                        |
+                        v
+              SQLite workers/events/diagnostics
         |
         v
 monitor -> protocolos -> notificadores
@@ -58,8 +61,9 @@ trigger recovery. `DiagnosticStore` persists three separate concepts:
 
 Evidence and diagnoses are append-only. An open incident can change its current
 diagnosis as stronger evidence arrives, preventing parallel observers from
-creating contradictory user notifications. This foundation does not yet run
-observers, classify evidence or send notifications.
+creating contradictory user notifications. Phase 3 runs only Codex evidence
+producers; the diagnosis engine, notification policy and recovery coordinator
+remain disabled.
 
 The diagnostic tables are additive to the same SQLite database and do not
 modify `workers.last_activity_at`, `workers.last_signal_at`, protocol alerts or
@@ -80,6 +84,32 @@ safe account-limit polling. A live event adapter requires the Codex session to
 be hosted through the same managed/multiplexed App Server boundary and remains
 disabled until that topology passes its own E2E. The probe never records
 evidence, updates presence clocks, sends notifications or performs recovery.
+
+### Codex evidence observers
+
+Phase 3 maps only recognized lifecycle hooks to constant diagnostic states.
+These facts have a configured TTL and contain neither raw hook payloads nor
+prompt, message, command or tool text. The legacy presence observation remains
+separate and continues to update Protocol 2 activity only when the worker was
+explicitly started.
+
+The account-limit observer uses a fresh dedicated App Server child per poll and
+calls only `account/rateLimits/read`. It stores an allowlisted account state as
+diagnostic evidence for an exact active worker. The default mode performs one
+poll; `--watch` revalidates the worker before every poll and stops after
+`finish`.
+
+```text
+observe-codex-limits -> account/rateLimits/read -> sanitize/classify
+                                                   |
+                                                   v
+                                      diagnostic_evidence only
+```
+
+Neither source updates `last_activity_at` or `last_signal_at` through its
+diagnostic record. The limit observer does not subscribe to thread events,
+diagnose a cause, create an incident, notify Discord, play an alarm or send
+Codex input.
 
 ## Tipos de Sinal
 
@@ -125,6 +155,7 @@ atividade valida.
 - aceita `hook_event_name` e `hookEventName`;
 - extrai metadata segura e curta;
 - grava `observation:codex:<evento>` no SQLite;
+- para hooks reconhecidos, grava tambem evidencia diagnostica curta e com TTL;
 - nao envia notificacoes nem faz chamadas de rede.
 
 Por padrao, `PRESENCE_CODEX_AUTO_START=false`. Assim, o observer nao cria ou reativa worker sozinho. Isso preserva o Protocolo 2: `start` e `finish` continuam sendo os sinais publicos de ciclo de tarefa.

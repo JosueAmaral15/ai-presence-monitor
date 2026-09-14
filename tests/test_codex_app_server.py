@@ -17,6 +17,7 @@ from ai_presence_monitor.codex_app_server import (
     SanitizedCodexEvent,
     ThreadSnapshot,
     probe_codex_app_server,
+    read_codex_rate_limits,
     sanitize_codex_message,
 )
 
@@ -274,6 +275,53 @@ class CodexAppServerClientTests(unittest.TestCase):
 
         self.assertEqual(result.thread.status, "idle")
         self.assertTrue(transport.closed)
+
+    def test_rate_limit_reader_does_not_require_or_read_a_thread(self) -> None:
+        transport = FakeTransport(
+            [
+                {"id": 1, "result": {}},
+                {
+                    "id": 2,
+                    "result": {
+                        "ordinaryUsageAllowed": True,
+                        "rateLimits": {"planType": "plus"},
+                    },
+                },
+            ]
+        )
+
+        limits = read_codex_rate_limits(
+            transport_factory=lambda executable: cast(JsonRpcTransport, transport),
+        )
+
+        self.assertTrue(limits.ordinary_usage_allowed)
+        self.assertEqual(
+            [message["method"] for message in transport.sent],
+            ["initialize", "initialized", "account/rateLimits/read"],
+        )
+        self.assertTrue(transport.closed)
+
+    def test_unknown_rate_limit_type_is_collapsed_to_bounded_fallback(self) -> None:
+        transport = FakeTransport(
+            [
+                {"id": 1, "result": {}},
+                {
+                    "id": 2,
+                    "result": {
+                        "ordinaryUsageAllowed": True,
+                        "rateLimits": {
+                            "rateLimitReachedType": "future_private_limit"
+                        },
+                    },
+                },
+            ]
+        )
+
+        limits = read_codex_rate_limits(
+            transport_factory=lambda executable: cast(JsonRpcTransport, transport),
+        )
+
+        self.assertEqual(limits.reached_type, "other")
 
     def test_json_rpc_error_does_not_expose_server_message(self) -> None:
         client, _ = initialized_client(
