@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-14 - App Server polling and live observation are separate adapters
+
+**Decision**: use a dedicated stdio App Server only for bounded persisted
+thread and account-limit reads. Do not treat it as a live observer for a Codex
+GUI/CLI session owned by another process. Keep a shared-endpoint live adapter
+disabled until its session topology and exact-thread events pass E2E.
+
+**Reason**:
+
+- metadata-only `thread/read` and `account/rateLimits/read` succeeded locally;
+- the child reported the current GUI-owned thread as `notLoaded`;
+- explicit `thread/resume(excludeTurns=true)` was rejected with JSON-RPC
+  `-32600`, classified without raw text as `thread_already_active`;
+- connection-scoped event subscriptions cannot prove activity in an
+  independently owned GUI session;
+- existing same-session hooks already provide authoritative lifecycle evidence
+  without taking ownership of the session.
+
+**Consequence**:
+
+Task 022 Phase 3 may combine Codex hooks with sanitized account-limit polling.
+It must not infer `codex_closed` from the child-local `notLoaded` state. Live
+App Server events require sessions intentionally hosted by a managed or
+multiplexed endpoint, and no failed attach may trigger retry or recovery.
+
 ## 2026-09-13 - Evidence observers do not diagnose or recover
 
 **Decision**: diagnostic observers will persist bounded facts. A separate

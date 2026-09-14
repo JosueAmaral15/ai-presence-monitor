@@ -61,6 +61,7 @@ Detailed operational documentation is currently available in Portuguese:
 - [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
 - [System tray and native Codex input](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md)
+- [Read-only Codex App Server probe](docs/CODEX-APP-SERVER-PROBE.md)
 - [Portability](docs/PORTABILIDADE.md)
 - [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Security checklist](docs/security/SECURITY.md)

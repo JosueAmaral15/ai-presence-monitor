@@ -37,6 +37,18 @@
   Protocolos 1 e 2.
 - Recuperacao automatica deve permanecer fora da fundacao e desabilitada ate
   possuir autorizacao, politica one-shot e validacao E2E propria.
+- O probe do Codex App Server deve permitir somente inicializacao, leitura de
+  metadata sem turns, leitura de limites e assinatura/desassinatura
+  observacional explicita.
+- O probe nao deve expor `turn/start`, `turn/steer`, injecao de itens, queue ou
+  fallback GUI e nao deve persistir payload bruto.
+- Metadata retornada deve corresponder a sessao solicitada; eventos de outra
+  sessao devem ser descartados.
+- Uma sessao `notLoaded` no app-server filho nao deve ser classificada como
+  Codex fechado, e conflito `thread_already_active` nao deve ser classificado
+  como inatividade.
+- O observer live do App Server deve permanecer desabilitado enquanto a sessao
+  monitorada nao compartilhar o mesmo endpoint/daemon validado.
 
 ## Portabilidade
 

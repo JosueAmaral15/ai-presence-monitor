@@ -5,6 +5,7 @@
 - [Uso como ferramenta para humanos e AI-workers](USO-COMO-FERRAMENTA.md)
 - [Configuracao rapida do `.env`](CONFIGURANDO-ENV.md)
 - [Protocolo de comandos para AI-workers](AI-WORKER-COMMAND-PROTOCOL.md)
+- [Probe read-only do Codex App Server](CODEX-APP-SERVER-PROBE.md)
 - [Guia completo do ambiente](ENVIRONMENT-GUIDE.md)
 - [Continue integrado para o Codex](CONTINUE-CODEX.md)
 - [Bandeja do sistema e entrada nativa](SYSTEM-TRAY-NATIVE-INPUT.md)

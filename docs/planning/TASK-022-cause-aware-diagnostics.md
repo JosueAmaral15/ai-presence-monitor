@@ -76,10 +76,40 @@ The foundation stores concise state labels and summaries. It does not store
 Codex transcripts, prompts, arbitrary app-server payloads, tokens, webhooks or
 environment values.
 
+## Phase 2 - Codex App Server Feasibility
+
+Status: implemented and locally validated on
+`codex/task-022-app-server-probe`.
+
+The bounded prototype adds `probe-codex-app-server`. Its request allowlist is
+limited to initialization, metadata-only thread reads, structured account
+limit reads and explicit observational resume/unsubscribe. It does not expose
+turn input, queue, GUI automation, persistence, notification or recovery.
+
+Local Codex CLI 0.154.0 results for the exact current session:
+
+- separate stdio App Server initialization passed;
+- `thread/read(includeTurns=false)` passed and returned `notLoaded` in the
+  child process;
+- `account/rateLimits/read` passed with sanitized structured data;
+- `thread/resume(excludeTurns=true)` failed with `-32600`, sanitized as
+  `thread_already_active`;
+- no live event claim is possible because the existing GUI-owned session could
+  not be subscribed from the independent child.
+
+The result disproves the assumption that an arbitrary second stdio process can
+observe an already-active GUI session. Production work must use hooks and safe
+rate-limit polling now, or intentionally host future sessions through a shared
+managed App Server endpoint before enabling a live adapter.
+
+See `docs/CODEX-APP-SERVER-PROBE.md` for operation and AI-worker rules.
+
 ## Remaining Phases
 
-- [ ] Phase 2: prototype an exact-session Codex app-server event subscription.
-- [ ] Phase 3: implement the Codex event observer and map authoritative errors.
+- [x] Phase 2: prototype an exact-session Codex app-server event subscription
+      and document the separate-process ownership boundary.
+- [ ] Phase 3: implement hook-backed Codex evidence plus sanitized account-limit
+      polling; keep shared-endpoint live events disabled.
 - [ ] Phase 4: add Linux process, network, power and service observers.
 - [ ] Phase 5: implement diagnosis precedence, confidence and incident
       transitions.
@@ -103,16 +133,17 @@ experimental runtime gate. Task 022 targets the supported Linux runtime first.
 - Opening a new diagnosis updates the worker's current open incident instead of
   creating parallel contradictory incidents.
 - No automatic recovery, retry, GUI fallback or `continue` dispatch is present
-  in Phase 1.
+  in Phase 1 or Phase 2.
 - Evidence summaries must remain brief and must not contain secrets or
   transcript content.
 
 ## Validation
 
-Phase 1 requires:
+Phase 1 and Phase 2 require:
 
 ```bash
 PYTHONPATH=src python3 -m unittest tests.test_diagnostics -v
+PYTHONPATH=src python3 -m unittest tests.test_codex_app_server -v
 python3 scripts/quality_check.py
 ```
 
@@ -135,6 +166,17 @@ Integration result:
   Discord integration phases;
 - no remote push was performed without a separate request.
 
+Phase 2 validation result on 2026-09-14:
+
+- 189 tests passed on Python 3.10, 3.11 and 3.12;
+- the complete Python 3.12 gate passed with 86% coverage;
+- Ruff, mypy, compileall, wheel/sdist build and `git diff --check` passed;
+- live metadata and rate-limit reads succeeded against Codex CLI 0.154.0;
+- the exact active-thread subscription failed closed with the sanitized
+  `thread_already_active` reason;
+- no prompt, turn, queue input, GUI action, Discord notification, database
+  evidence or recovery action was emitted.
+
 ## Rollback
 
 Before release integration, switch away from or delete the task branch. The
@@ -147,9 +189,8 @@ explicitly authorized.
 
 ## Next Implementation Step
 
-Phase 2 should be a read-only feasibility spike. It must determine whether an
-external client can subscribe to the exact Codex GUI session and receive
-`turn/completed`, `thread/status/changed`, `thread/tokenUsage/updated`,
-`contextCompaction` and structured `codexErrorInfo` events without taking over
-the session. No production observer should be built until that capability is
-demonstrated locally.
+Phase 3 should implement a polling observer for structured rate-limit state and
+map existing same-session hooks into diagnostic evidence. It must not infer
+that Codex is closed from child-local `notLoaded`, and it must not start a turn
+or retry input. A separate live-event adapter remains disabled until a session
+hosted through a shared managed endpoint proves exact-thread events E2E.
