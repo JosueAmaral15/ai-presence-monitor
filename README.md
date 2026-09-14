@@ -9,6 +9,8 @@ inactivity protocols, and sends alerts through Discord and optionally Telegram.
 The project also provides:
 
 - passive Codex activity observation through hooks;
+- bounded Codex diagnostic evidence from recognized hooks and sanitized
+  account-limit polling, without changing presence clocks;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with
@@ -61,7 +63,7 @@ Detailed operational documentation is currently available in Portuguese:
 - [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
 - [System tray and native Codex input](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md)
-- [Read-only Codex App Server probe](docs/CODEX-APP-SERVER-PROBE.md)
+- [Codex App Server probe and account-limit observer](docs/CODEX-APP-SERVER-PROBE.md)
 - [Portability](docs/PORTABILIDADE.md)
 - [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Security checklist](docs/security/SECURITY.md)

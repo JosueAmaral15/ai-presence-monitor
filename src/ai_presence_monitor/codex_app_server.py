@@ -482,6 +482,21 @@ def probe_codex_app_server(
         transport.close()
 
 
+def read_codex_rate_limits(
+    *,
+    codex_executable: str = "codex",
+    request_timeout: float = 10.0,
+    transport_factory: Callable[[str], JsonRpcTransport] = SubprocessJsonRpcTransport,
+) -> RateLimitSnapshot:
+    transport = transport_factory(codex_executable)
+    try:
+        client = CodexAppServerClient(transport, request_timeout=request_timeout)
+        client.initialize()
+        return client.read_rate_limits()
+    finally:
+        transport.close()
+
+
 def sanitize_codex_message(
     message: dict[str, object],
     *,
@@ -606,7 +621,7 @@ def _sanitize_rate_limits(result: dict[str, object]) -> RateLimitSnapshot:
         ordinary_usage_allowed=(
             ordinary_usage_allowed if isinstance(ordinary_usage_allowed, bool) else None
         ),
-        reached_type=_enum_string(
+        reached_type=_enum_string_or_other(
             limits.get("rateLimitReachedType"),
             CodexAppServerClient._RATE_LIMIT_REACHED_TYPES,
         ),
@@ -661,6 +676,12 @@ def _is_valid_identifier(value: object) -> bool:
 
 def _enum_string(value: object, allowed: frozenset[str]) -> str | None:
     return value if isinstance(value, str) and value in allowed else None
+
+
+def _enum_string_or_other(value: object, allowed: frozenset[str]) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return value if value in allowed else "other"
 
 
 def _optional_bool(value: object) -> bool | None:

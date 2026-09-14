@@ -45,6 +45,29 @@ child App Server. Keep positive `--subscribe-seconds` values limited to explicit
 development tests. A future shared-daemon adapter needs authentication, local
 socket permissions, client isolation and exact-session E2E before activation.
 
+## Task 022 - Codex evidence observers
+
+- [x] Recognized hooks map to constant evidence states and summaries; raw hook
+      payloads, prompts, messages, commands and tool names are not persisted.
+- [x] Unknown hooks do not create diagnostic evidence.
+- [x] Hook and account-limit evidence use positive configurable TTLs.
+- [x] The account observer exposes only `account/rateLimits/read` through the
+      existing hard allowlist and discards raw App Server payloads.
+- [x] The observer requires the exact active worker and rechecks it before each
+      continuous poll.
+- [x] Dry-run performs no SQLite write, and an idle or missing worker fails
+      before a persisted read.
+- [x] Diagnostic evidence does not modify presence clocks or worker state.
+- [x] Phase 3 has no thread subscription, notification, alarm, Codex input,
+      automatic retry, diagnosis or recovery path.
+
+### Residual risk
+
+Account-limit fields and classifications may evolve in future Codex versions.
+Unknown documented values are collapsed into bounded fallback states instead
+of being persisted verbatim. The diagnosis engine must still correlate this
+evidence with independent observers before notifying the user.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

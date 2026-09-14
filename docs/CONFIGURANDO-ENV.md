@@ -61,11 +61,20 @@ PRESENCE_CODEX_TASK=
 PRESENCE_CODEX_WORKER_SCOPE=project
 PRESENCE_CODEX_AUTO_START=false
 PRESENCE_CODEX_HOOK_FAIL_CLOSED=false
+PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS=300
+PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS=300
+PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=600
 ```
 
 Desde a versao 0.2.0, um caminho relativo em `PRESENCE_DB_PATH` e resolvido em
 relacao ao diretorio do `.env`. Portanto, hooks executados em outros diretorios
 continuam usando o mesmo banco.
+
+As tres ultimas variaveis controlam somente evidencia diagnostica. O TTL do
+hook define por quanto tempo um fato de lifecycle permanece atual; o intervalo
+define a espera entre polls no modo `observe-codex-limits --watch`; o TTL de
+limites define a validade de cada leitura sanitizada. Todos devem ser inteiros
+positivos. Eles nao alteram os thresholds nem os relogios dos Protocolos 1 e 2.
 
 ## Expediente e Repeticao de Alertas
 

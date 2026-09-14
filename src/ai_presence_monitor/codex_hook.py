@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .codex_evidence import record_codex_hook_evidence
 from .config import AppConfig, load_config
 from .identity import scoped_worker_id
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
@@ -173,6 +174,14 @@ def record_codex_hook_payload(
             observed_at=worker.last_activity_at,
             timeout_seconds=config.gui_confirmation_timeout_seconds,
             session_id=observation.session_id,
+        )
+        record_codex_hook_evidence(
+            db_path=config.db_path,
+            worker_id=worker.worker_id,
+            session_id=observation.session_id,
+            event_name=observation.event_name,
+            observed_at=worker.last_activity_at,
+            ttl_seconds=config.codex_hook_evidence_ttl_seconds,
         )
     return worker
 

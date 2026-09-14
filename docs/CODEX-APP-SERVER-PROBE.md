@@ -102,12 +102,41 @@ Events from a different thread ID are also dropped.
 8. Do not translate a failed probe into `continue`, recovery, Discord, or alarm
    actions.
 
-## Next Architecture Step
+## Production Account-limit Evidence
 
-Task 022 should now split Codex evidence collection into two sources:
+Task 022 Phase 3 implements the bounded polling half of the architecture. Start
+the exact project worker first, then perform one read:
 
-- a safe polling observer for structured account limit state plus existing
-  same-session Codex hooks;
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+For an explicitly assigned continuous observer:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --watch
+```
+
+The command calls only `account/rateLimits/read`, persists a sanitized and
+expiring fact, and never updates presence clocks. The default is one-shot.
+`--watch` revalidates the exact worker before every poll and stops when the
+worker becomes idle. A dry run performs the safe read but does not create or
+write the SQLite database.
+
+This observer does not diagnose the final cause, open an incident, send a
+notification, play an alarm, dispatch input or recover a session. In
+particular, unavailable credits do not override `ordinary_usage_allowed=true`.
+
+## Remaining Architecture Boundary
+
+Codex evidence collection remains split into two sources:
+
+- implemented safe account-limit polling plus existing same-session hooks;
 - a live App Server event adapter that remains disabled until sessions are
   intentionally hosted through a shared managed endpoint and validated E2E.
 

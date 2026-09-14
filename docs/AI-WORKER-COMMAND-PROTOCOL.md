@@ -76,8 +76,10 @@ heartbeat.
 ### 2. Durante o Trabalho
 
 Os hooks `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse` e
-`Stop` registram observacoes silenciosas. Com hooks funcionando, a IA nao
-precisa executar `touch` em cada comando.
+`Stop` registram observacoes silenciosas. Hooks reconhecidos tambem registram
+um fato diagnostico curto e com TTL. Esse segundo registro nao atualiza os
+relogios dos protocolos. Com hooks funcionando, a IA nao precisa executar
+`touch` em cada comando.
 
 Quando os hooks estiverem indisponiveis, registre somente atividade real:
 
@@ -91,6 +93,20 @@ ai-presence touch \
 
 Nao execute `touch` apenas porque um temporizador expirou. O objetivo e reduzir
 falsos positivos sem criar presenca artificial sem trabalho correspondente.
+
+Quando a tarefa atribuida exigir observacao dos limites Codex, execute uma
+leitura estruturada para o worker ja iniciado:
+
+```bash
+ai-presence observe-codex-limits \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA
+```
+
+O modo padrao e one-shot. Use `--watch` somente quando o observer continuo for
+parte explicita da tarefa; ele revalida o worker a cada poll e encerra depois
+de `finish`. O comando consulta apenas `account/rateLimits/read` e nao atualiza
+presenca, diagnostica a causa final, notifica, toca alarme ou envia input.
 
 ### 3. Pergunta ao Usuario
 

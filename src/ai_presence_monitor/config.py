@@ -192,6 +192,9 @@ class AppConfig:
     continue_transport: str = "auto"
     continue_destination: str = "local"
     experimental_windows_enabled: bool = False
+    codex_hook_evidence_ttl_seconds: int = 300
+    codex_limit_poll_interval_seconds: int = 300
+    codex_limit_evidence_ttl_seconds: int = 600
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -330,5 +333,17 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         experimental_windows_enabled=_env_bool(
             "PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED",
             False,
+        ),
+        codex_hook_evidence_ttl_seconds=_env_int(
+            "PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS",
+            300,
+        ),
+        codex_limit_poll_interval_seconds=_env_int(
+            "PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS",
+            300,
+        ),
+        codex_limit_evidence_ttl_seconds=_env_int(
+            "PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS",
+            600,
         ),
     )

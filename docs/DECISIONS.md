@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-14 - Diagnostic evidence never extends presence
+
+**Decision**: recognized Codex hooks may produce both their existing presence
+observation and a separate expiring diagnostic fact. Account-limit polling
+produces only diagnostic evidence. Persisting either diagnostic record must not
+update protocol clocks, worker lifecycle, alert rearming or public heartbeat.
+
+**Reason**:
+
+- a hook is direct evidence of session activity and already owns a presence
+  observation, while its diagnostic interpretation has a separate lifetime;
+- an account limit is context about a possible interruption, not proof that the
+  worker performed useful work;
+- coupling observer polling to `last_activity_at` would hide genuine Protocol 2
+  inactivity indefinitely;
+- diagnosis, notification and recovery still need correlation and dedicated
+  policies in later phases.
+
+**Consequence**:
+
+Hook diagnostic evidence uses constant allowlisted mappings and a configured
+TTL. `observe-codex-limits` is one-shot by default; explicit `--watch` rechecks
+the exact worker and stops after `finish`. Neither path can subscribe to live
+thread events, notify, alarm, send input or recover a session.
+
 ## 2026-09-14 - App Server polling and live observation are separate adapters
 
 **Decision**: use a dedicated stdio App Server only for bounded persisted

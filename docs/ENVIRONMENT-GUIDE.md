@@ -513,6 +513,9 @@ PRESENCE_CODEX_AI_NAME=codex
 PRESENCE_CODEX_PROTOCOL=protocol2
 PRESENCE_CODEX_AUTO_START=false
 PRESENCE_CODEX_HOOK_FAIL_CLOSED=false
+PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS=300
+PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS=300
+PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=600
 ```
 
 ### `PRESENCE_CODEX_WORKER_ID`
@@ -630,6 +633,35 @@ PRESENCE_CODEX_HOOK_FAIL_CLOSED=true
 ```
 
 Risco do `true`: problema no banco ou no `.env` pode atrapalhar execucoes do Codex.
+
+### `PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS`
+
+Validade, em segundos, da evidencia diagnostica produzida por hooks Codex
+reconhecidos. O padrao e `300`. O valor deve ser positivo.
+
+Essa evidencia e adicional a observacao de presenca. Sua persistencia nao
+atualiza `last_activity_at` nem `last_signal_at`, e o conteudo usa estados e
+resumos constantes em vez do payload do hook.
+
+### `PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS`
+
+Intervalo, em segundos, entre leituras no comando
+`observe-codex-limits --watch`. O padrao e `300`; o modo sem `--watch` executa
+uma unica leitura. O valor deve ser positivo.
+
+### `PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS`
+
+Validade, em segundos, de cada leitura sanitizada dos limites da conta Codex.
+O padrao e `600` e o valor deve ser positivo. A leitura chama somente
+`account/rateLimits/read`, nao mantem o worker ativo e nao envia notificacao.
+
+Exemplo one-shot para um worker previamente iniciado:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
 
 ## Como Criar Webhooks no Discord
 
