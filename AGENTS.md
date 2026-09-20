@@ -23,8 +23,11 @@ Operational rules:
    work when hooks are unavailable; do not emit timer-only activity.
 5. Prefer a native user-input mechanism when one exists. Use Discord questions
    as a fallback, with correlation and allowlist enabled.
-6. Do not execute `continue`, `dispatch-answer`, or any GUI automation without
-   explicit user authorization for that action.
+6. Ordinary native `continue` may use either the user's persistent
+   `task-automation` grant or an explicit `--authorize-once`, after the
+   normative continuation checks pass. Diagnostic recovery, `dispatch-answer`
+   and GUI automation always require explicit one-invocation authorization;
+   never infer it from a persistent control.
 7. Treat `dispatch_started` and `input_emitted` as preliminary transport
    states, not proof that Codex processed the input. A later hook is necessary;
    an E2E claim also requires a unique marker that the human did not type.

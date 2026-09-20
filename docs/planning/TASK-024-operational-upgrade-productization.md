@@ -59,8 +59,8 @@ It contains no committed secrets and remains outside the repository.
 - Monitor and reply-observer installer dry-runs: passed.
 - Both user services: enabled, active and stable with zero restarts after the
   deployment observation window.
-- Existing controls preserved: native input enabled; task automation, GUI
-  fallback, remote input and activity synchronization disabled.
+- Existing controls preserved: native input and activity synchronization
+  enabled; task automation, GUI fallback and remote input disabled.
 
 No real `continue`, recovery, GUI input, Discord notification or alarm was
 executed during the upgrade.
@@ -96,4 +96,3 @@ repeatable release and support surface. Recommended next work:
    hooks, controls and service health.
 7. Define installation, upgrade and support policies before any public
    distribution.
-

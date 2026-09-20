@@ -81,6 +81,37 @@ ai-presence-tray
 O processo precisa permanecer em execucao. **Exit** encerra somente o processo
 da bandeja; monitor, hooks e observer de respostas continuam independentes.
 
+### Inicio automatico no Linux Mint
+
+Uma bandeja grafica deve iniciar dentro da sessao do desktop, nao como servico
+headless do sistema. No Cinnamon, crie
+`$HOME/.config/autostart/ai-presence-tray.desktop` com caminhos absolutos:
+
+```ini
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=AI Presence Monitor
+Comment=AI Presence Monitor system tray
+Exec="/home/usuario/.local/share/ai-presence-monitor/venv/bin/ai-presence" --env-file "/caminho/absoluto/ai-presence-monitor/.env" tray
+TryExec=/home/usuario/.local/share/ai-presence-monitor/venv/bin/ai-presence
+Terminal=false
+Hidden=false
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=X-Cinnamon;Cinnamon;GNOME;
+```
+
+Proteja o arquivo com modo `600`. O valor de `.env` nao e copiado para o
+arquivo; somente o caminho aparece no comando. Valide antes com:
+
+```bash
+ai-presence tray --check
+```
+
+O autostart entra em vigor no proximo login grafico. Para iniciar na sessao
+atual, execute `ai-presence tray` em segundo plano dentro do proprio desktop.
+Nao use uma unidade systemd sem acesso ao barramento grafico.
+
 ## Menu da Bandeja
 
 O menu de contexto possui os tres comandos solicitados:
@@ -267,7 +298,8 @@ relativo explicito e resolvido a partir do diretorio do `.env`.
 ## Limites
 
 - A bandeja precisa de sessao grafica com system tray disponivel.
-- Ela nao e iniciada automaticamente no login nesta versao.
+- Ela inicia automaticamente somente quando o usuario configura um mecanismo
+  da sessao grafica, como a entrada XDG acima.
 - O envio nativo depende do comando experimental `codex queue` instalado no
   mesmo computador que executa `ai-presence`.
 - Um processo destacado pode falhar depois de `dispatch_started`; um hook
