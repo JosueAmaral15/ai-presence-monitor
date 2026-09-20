@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-09-20 - Private Linux 0.8.0 may use local gates while CI is billing-locked
+
+**Decision**: allow the private Linux 0.8.0 release to proceed to `main` after
+the authorized recovery E2E, complete local Python 3.10/3.11/3.12 matrix,
+package build, isolated installation and Linux smokes passed. Treat GitHub run
+`35514873721` as externally blocked, not as a successful CI run.
+
+**Reason**:
+
+- all three required Ubuntu jobs ended in about two seconds with zero steps;
+- GitHub annotated each job with `account is locked due to a billing issue`;
+- the exact `develop` candidate passed 271 tests on all three supported Python
+  versions locally, 88% coverage, Ruff, mypy, build and diff checks;
+- the 0.8.0 wheel passed a fresh isolated installation and no-input Linux
+  runtime smokes;
+- the release is private, Linux-only and explicitly authorized by the user.
+
+**Limit**:
+
+This exception applies only to private Linux version 0.8.0. It does not call
+the hosted jobs successful, does not cover public publication, Windows enablement
+or another release, and must be reconsidered when the billing lock changes.
+
 ## 2026-09-20 - Release 0.8.0 defers shared-endpoint live observation
 
 **Decision**: release the completed cause-aware diagnostic pipeline and

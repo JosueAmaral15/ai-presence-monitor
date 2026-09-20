@@ -120,6 +120,16 @@ GUI-owned session, and changing session hosting is not required for the
 private Linux 0.8.0 release. Windows remains preserved, experimental,
 default-disabled, and non-blocking.
 
+## Hosted CI Result
+
+Push of `develop` commit `6e8c1c3` created Quality run `35514873721`. The
+Python 3.10, 3.11 and 3.12 Ubuntu jobs each failed before executing any step.
+GitHub reported `account is locked due to a billing issue`; Windows remained
+the expected manual/skipped experimental job. The user had explicitly
+authorized a narrow private Linux 0.8.0 exception if this external condition
+persisted. `docs/DECISIONS.md` records that exception and does not classify the
+hosted run as passed.
+
 ## Rollback
 
 - Before publication: delete the temporary E2E directory and return to
@@ -139,8 +149,8 @@ default-disabled, and non-blocking.
 - [x] No retry, GUI fallback, remote input or presence synchronization occurs.
 - [x] Version 0.8.0 and documentation are complete.
 - [x] Full local, matrix, package and isolated-install gates pass.
-- [ ] Private Linux CI decision is recorded.
+- [x] Private Linux CI decision is recorded for blocked run `35514873721`.
 - [x] Task commit `063287e` is merged locally into `develop`.
-- [ ] Validated `develop` is pushed to its remote branch.
+- [x] Validated `develop` commit `6e8c1c3` is pushed to its remote branch.
 - [ ] Validated `develop` is merged and pushed to `main`.
 - [ ] AI-worker is finished exactly once.

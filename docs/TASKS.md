@@ -5,8 +5,8 @@
 ### Task 023 - E2E de recuperacao e release Linux privada 0.8.0
 
 **Prioridade**: Critica
-**Status**: E2E e candidato 0.8.0 validados; task commit `063287e` integrado
-localmente em `develop`; publicacao remota e promocao para `main` pendentes
+**Status**: E2E e candidato 0.8.0 validados; `develop` publicado em `6e8c1c3`;
+excecao CI privada registrada; promocao para `main` pendente
 **Objetivo**: comprovar um unico recovery nativo na sessao Codex exata,
 validar o pacote instalado e promover a release Linux privada 0.8.0.
 
@@ -16,8 +16,8 @@ validar o pacote instalado e promover a release Linux privada 0.8.0.
 - [x] Versao, changelog, decisoes, seguranca e rollback sao atualizados.
 - [x] Gate completo, matriz Python, build, instalacao isolada e smokes Linux
       passam no candidato final.
-- [ ] Excecao de CI privada 0.8.0 e registrada somente se o CI hospedado
-      continuar bloqueado externamente.
+- [x] Excecao de CI privada 0.8.0 e registrada porque o run `35514873721`
+      continuou bloqueado externamente.
 - [ ] Task branch e integrada e publicada em `develop`; `main` recebe somente
       o candidato integralmente validado.
 
