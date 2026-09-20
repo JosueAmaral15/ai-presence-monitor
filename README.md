@@ -428,7 +428,9 @@ The recovery ledger is reserved before `codex queue`. Any pending,
 dispatch for the same incident. Transport state does not prove that Codex
 processed the message, does not update presence clocks, and does not resolve
 the incident; a later hook and diagnosis must provide that evidence. Real
-recovery E2E remains a separate, explicitly authorized gate.
+recovery E2E was validated for the private Linux 0.8.0 release with one unique
+marker, one native dispatch, an unchanged isolated activity clock, and a later
+hook from the exact target session.
 
 ### Install Codex hooks
 

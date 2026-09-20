@@ -2,11 +2,32 @@
 
 ## Em andamento em 2026-09-20
 
+### Task 023 - E2E de recuperacao e release Linux privada 0.8.0
+
+**Prioridade**: Critica
+**Status**: E2E e candidato 0.8.0 validados; task commit `063287e` integrado
+localmente em `develop`; publicacao remota e promocao para `main` pendentes
+**Objetivo**: comprovar um unico recovery nativo na sessao Codex exata,
+validar o pacote instalado e promover a release Linux privada 0.8.0.
+
+- [x] E2E isolado usa marcador unico, banco temporario e um unico despacho.
+- [x] Usuario confirma uma notificacao Discord e o marcador automatico no
+      Codex; hook posterior da mesma sessao confirma atividade.
+- [x] Versao, changelog, decisoes, seguranca e rollback sao atualizados.
+- [x] Gate completo, matriz Python, build, instalacao isolada e smokes Linux
+      passam no candidato final.
+- [ ] Excecao de CI privada 0.8.0 e registrada somente se o CI hospedado
+      continuar bloqueado externamente.
+- [ ] Task branch e integrada e publicada em `develop`; `main` recebe somente
+      o candidato integralmente validado.
+
+**Plano**: `docs/planning/TASK-023-recovery-e2e-release-080.md`.
+
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fases 1 a 8 implementadas, validadas e integradas localmente em
-`develop`; adapter live e E2E real de recuperacao permanecem gates separados
+**Status**: fases 1 a 8 e E2E real de recuperacao concluidos; adapter live
+deferido como tarefa futura nao bloqueante da release Linux privada 0.8.0
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -68,11 +89,13 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
       87% de cobertura, Ruff, mypy, build e diff aprovados.
 - [x] Commit da sessao e integracao local em `develop`.
 
-**Fases seguintes**:
+**Fases finais e escopo deferido**:
 
-- [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
-- [ ] E2E real de recuperacao em sessao exata nao critica, com marcador unico e
-      autorizacao explicita separada para um unico despacho.
+- [ ] **Deferido, nao bloqueante**: adapter live somente para sessoes hospedadas
+      em endpoint compartilhado, com autenticacao e E2E proprios.
+- [x] E2E real de recuperacao usou sessao exata nao critica, marcador unico,
+      autorizacao explicita, um despacho, relogio de presenca inalterado e hook
+      posterior da mesma sessao.
 - [x] Motor de diagnostico, precedencia, confianca e transicoes, com 242 testes
       aprovados em Python 3.10, 3.11 e 3.12, 87% de cobertura total e dry-run
       real sem escrita.
@@ -517,8 +540,9 @@ atrasado.
 
 ## Backlog
 
-- Executar as fases restantes da Task 022 para observers de processo, rede,
-  energia, servico, workspace e eventos Codex.
+- Projetar o adapter live somente quando as sessoes Codex puderem ser
+  hospedadas em endpoint compartilhado autenticado; manter desabilitado ate
+  passar isolamento e E2E de sessao exata.
 
 ## Concluida em 2026-07-27
 

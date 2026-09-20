@@ -447,8 +447,9 @@ A reserva ocorre antes do envio e qualquer tentativa reservada bloqueia novo
 despacho para o mesmo incidente, inclusive apos resultado incerto ou
 interrupcao. O comando nao usa GUI ou transporte remoto, nao atualiza os
 relogios de presenca e nao resolve o incidente. Um hook posterior e novo
-diagnostico devem comprovar a retomada. O E2E real de recuperacao continua
-dependendo de autorizacao separada e marcador unico.
+diagnostico devem comprovar a retomada. O E2E real da release Linux privada
+0.8.0 confirmou um marcador unico, um despacho nativo, relogio isolado
+inalterado e hook posterior da sessao exata.
 
 ### Instalar hook no Codex
 

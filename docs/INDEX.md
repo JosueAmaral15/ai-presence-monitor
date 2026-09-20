@@ -24,6 +24,7 @@
 - [Plano de entrega nativa de respostas Discord](planning/TASK-020-native-discord-answer-routing.md)
 - [Plano do E2E nativo Discord e release Linux](planning/TASK-021-native-discord-e2e-release.md)
 - [Plano de diagnostico de causa por observers](planning/TASK-022-cause-aware-diagnostics.md)
+- [Plano do E2E de recovery e release 0.8.0](planning/TASK-023-recovery-e2e-release-080.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
 - [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)
