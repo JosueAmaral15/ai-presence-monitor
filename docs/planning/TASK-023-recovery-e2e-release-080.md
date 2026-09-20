@@ -130,6 +130,11 @@ authorized a narrow private Linux 0.8.0 exception if this external condition
 persisted. `docs/DECISIONS.md` records that exception and does not classify the
 hosted run as passed.
 
+Final release merge `655e04b` was pushed to `main`. Quality run `35515010277`
+was likewise rejected before any step by the same billing lock. Remote branch
+verification confirmed `main` at the release merge and `develop` at the
+validated integration history before this closeout documentation commit.
+
 ## Rollback
 
 - Before publication: delete the temporary E2E directory and return to
@@ -153,5 +158,5 @@ hosted run as passed.
 - [x] Task commit `063287e` is merged locally into `develop`.
 - [x] Validated `develop` commit `6e8c1c3` is pushed to its remote branch.
 - [x] Validated `develop` is merged locally into `main`.
-- [ ] Release 0.8.0 `main` is pushed and remote heads are verified.
-- [ ] AI-worker is finished exactly once.
+- [x] Release merge `655e04b` is pushed to `main` and remote heads are verified.
+- [x] AI-worker finish is the final operational action of this release session.

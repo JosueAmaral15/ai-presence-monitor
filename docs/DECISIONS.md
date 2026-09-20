@@ -22,6 +22,8 @@ package build, isolated installation and Linux smokes passed. Treat GitHub run
 This exception applies only to private Linux version 0.8.0. It does not call
 the hosted jobs successful, does not cover public publication, Windows enablement
 or another release, and must be reconsidered when the billing lock changes.
+The final `main` Quality run `35515010277` showed the same zero-step billing
+rejection and is covered by this exact exception.
 
 ## 2026-09-20 - Release 0.8.0 defers shared-endpoint live observation
 

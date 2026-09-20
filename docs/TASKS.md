@@ -1,12 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-09-20
+## Concluidas em 2026-09-20
 
 ### Task 023 - E2E de recuperacao e release Linux privada 0.8.0
 
 **Prioridade**: Critica
-**Status**: E2E e candidato 0.8.0 validados; `develop` publicado; excecao CI
-privada registrada; integrado localmente em `main`, com push remoto pendente
+**Status**: concluida; release privada Linux 0.8.0 validada, publicada em
+`develop` e `main`, com excecao CI externa limitada e documentada
 **Objetivo**: comprovar um unico recovery nativo na sessao Codex exata,
 validar o pacote instalado e promover a release Linux privada 0.8.0.
 
@@ -18,7 +18,7 @@ validar o pacote instalado e promover a release Linux privada 0.8.0.
       passam no candidato final.
 - [x] Excecao de CI privada 0.8.0 e registrada porque o run `35514873721`
       continuou bloqueado externamente.
-- [ ] Task branch e integrada e publicada em `develop`; `main` recebe somente
+- [x] Task branch e integrada e publicada em `develop`; `main` recebe somente
       o candidato integralmente validado.
 
 **Plano**: `docs/planning/TASK-023-recovery-e2e-release-080.md`.
