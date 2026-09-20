@@ -53,7 +53,7 @@ the currently installed runtime.
 - [x] Built-wheel isolated installation passes version, init, schema, doctor
   and updater command-help smokes.
 - [ ] Authorized real installed-runtime upgrade and rollback E2E passes.
-- [ ] Validated work is committed and integrated into `develop`.
+- [x] Validated work is committed and integrated into `develop`.
 
 ## Release Boundary
 

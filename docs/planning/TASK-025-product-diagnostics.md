@@ -34,5 +34,4 @@ input, contact notification endpoints or perform rollback.
 - [x] Add sanitized `doctor` with strict mode.
 - [x] Add focused migration, future-version and sanitization tests.
 - [x] Pass the complete local quality gate.
-- [ ] Commit and integrate the validated phase into `develop`.
-
+- [x] Commit and integrate the validated phase into `develop`.
