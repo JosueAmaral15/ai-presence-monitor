@@ -32,6 +32,19 @@ Fallback Linux quando o comando nao estiver no `PATH`:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
 ```
 
+Preflight somente leitura:
+
+```bash
+ai-presence --version
+ai-presence schema-status --json
+ai-presence doctor --json --strict
+```
+
+Uma IA pode executar esses comandos sem autorizacao para input porque eles nao
+enviam mensagens, notificam, alarmam, criam banco ou aplicam migracao. Codigo
+nao zero deve ser relatado; nao execute `init` ou uma futura atualizacao para
+ocultar o aviso sem revisar a causa.
+
 No Windows, a instalacao Python cria `ai-presence.exe` dentro de
 `%LOCALAPPDATA%\ai-presence-monitor\venv\Scripts`. Um alias de shell nao e o
 mecanismo principal porque aliases geralmente nao sao carregados por

@@ -120,6 +120,22 @@ To expose the installed command in the current user's `PATH`:
 ai-presence --help
 ```
 
+Verify the installed product and inspect local health without printing secret
+values or modifying the database:
+
+```bash
+ai-presence --version
+ai-presence schema-status
+ai-presence doctor
+ai-presence doctor --json
+ai-presence doctor --strict
+```
+
+`schema-status` opens an existing SQLite database read-only. `doctor` checks
+the runtime, configuration permissions, schema/integrity, controls, Codex
+hooks and queue support, Linux user services, and tray autostart. Warnings are
+informational by default; `--strict` returns a nonzero status for warnings.
+
 Windows PowerShell installation, without administrator privileges:
 
 ```powershell

@@ -14,16 +14,19 @@ diagnosticavel e distribuivel com rollback deterministico.
 - [x] Habilitar `task-automation` sem habilitar fallback GUI ou remoto.
 - [x] Configurar autostart XDG da bandeja no Linux Mint atual.
 - [x] Validar um unico `continue` nativo pos-upgrade na sessao exata.
-- [ ] Adicionar `ai-presence --version` deterministico.
+- [x] Adicionar `ai-presence --version` deterministico.
 - [ ] Implementar upgrade e rollback transacionais com manifesto de backup.
-- [ ] Expor versao e estado de migracao do schema SQLite.
-- [ ] Criar comando sanitizado `doctor` para saude operacional.
+- [x] Expor versao e estado de migracao do schema SQLite.
+- [x] Criar comando sanitizado `doctor` para saude operacional.
 - [ ] Publicar artefatos tagueados e checksums SHA-256.
 - [ ] Restaurar CI Linux hospedada antes de distribuicao publica.
 - [ ] Definir politicas de instalacao, upgrade, suporte e compatibilidade.
 
 **Fase imediata**:
 `docs/planning/TASK-025-immediate-product-activation.md`.
+
+**Fase de diagnostico**:
+`docs/planning/TASK-025-product-diagnostics.md`.
 
 ## Concluidas em 2026-09-20
 

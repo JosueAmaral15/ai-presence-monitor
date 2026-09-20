@@ -118,6 +118,16 @@
 
 ## Portabilidade
 
+- A CLI deve fornecer `--version` deterministico sem depender de metadata do
+  diretorio atual.
+- O schema SQLite deve possuir versao explicita e rejeitar bancos mais novos
+  que o runtime sem tentar downgrade.
+- A inspecao de schema deve ser somente leitura e nao criar banco ausente.
+- O comando `doctor` deve produzir apenas estados sanitizados, sem tokens,
+  webhooks, prompts, sessoes ou valores do `.env`.
+- O modo estrito deve retornar codigo diferente de zero para avisos, permitindo
+  preflight de automacao.
+
 - O projeto deve gerar wheel instalavel para Python 3.10+.
 - A configuracao deve funcionar com `.env` central ou por projeto.
 - Caminhos relativos do banco devem ser estaveis fora do `cwd`.

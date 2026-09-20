@@ -1,5 +1,27 @@
 # Security Checklist
 
+## Task 025 - Product diagnostics
+
+- [x] `--version` uses the package constant and does not inspect distribution
+      metadata from the current directory.
+- [x] Schema inspection uses SQLite read-only mode and does not create a
+      missing database.
+- [x] Initialization migrates legacy schema 0 additively and rejects a schema
+      newer than the runtime before applying DDL.
+- [x] Doctor serializes bounded states only and excludes `.env` values, tokens,
+      webhooks, alarm commands, prompts and session IDs.
+- [x] Codex probing is limited to the local `queue --help` argument vector.
+- [x] Service probing reuses fixed `systemctl --user show` calls without shell.
+- [x] Doctor does not send input, notify, alarm, recover, migrate or restart.
+- [x] JSON strict mode is suitable for preflight without changing state.
+
+### Residual risk
+
+Health checks are a point-in-time local observation. A service may fail after
+the report, `codex queue --help` does not prove a later delivery, and SQLite
+`quick_check` does not replace backups. A future updater must rerun preflight
+around installation and preserve a rollback manifest.
+
 ## Task 025 - Immediate product activation
 
 - [x] Persistent `task-automation` authorizes only ordinary continuation after

@@ -422,6 +422,23 @@ O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam
 adicionam `src/` explicitamente somente para preservar os entrypoints locais de
 compatibilidade.
 
+## Product Health and Schema Contract
+
+`store.py` owns `SCHEMA_VERSION` and records it in SQLite `PRAGMA user_version`
+after the idempotent schema initialization succeeds. Runtime initialization
+accepts legacy version 0, applies additive migrations and records version 1.
+It rejects a database newer than the runtime before applying DDL.
+
+`inspect_schema` opens existing databases with SQLite `mode=ro`, runs
+`quick_check`, compares required tables and never creates a missing file.
+`schema-status` exposes only bounded status fields.
+
+`product_health.py` composes read-only checks for runtime, platform,
+configuration permissions, SQLite, controls, hooks, `codex queue`, user
+services and tray autostart. It receives sanitized states from existing
+adapters and never serializes `.env` values, webhook URLs, tokens, prompts or
+session IDs. Default exit status fails errors; strict mode also fails warnings.
+
 ## Fronteira de Plataforma
 
 O entrypoint `ai-presence` e gerado pelo empacotamento Python no Linux e no

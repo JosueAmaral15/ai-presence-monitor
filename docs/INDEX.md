@@ -27,6 +27,7 @@
 - [Plano do E2E de recovery e release 0.8.0](planning/TASK-023-recovery-e2e-release-080.md)
 - [Upgrade operacional 0.8.0 e proximos passos de produto](planning/TASK-024-operational-upgrade-productization.md)
 - [Ativacao imediata do produto e E2E pos-upgrade](planning/TASK-025-immediate-product-activation.md)
+- [Diagnostico de produto e contrato de schema](planning/TASK-025-product-diagnostics.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
 - [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)

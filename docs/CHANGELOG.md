@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased - Task 025 product diagnostics
+
+- Added deterministic `ai-presence --version` output independent of checkout
+  metadata and invocation style.
+- Added SQLite schema version 1 through `PRAGMA user_version`, additive legacy
+  migration and fail-closed rejection of newer schemas.
+- Added read-only `schema-status` with migration, integrity and required-table
+  state in text or sanitized JSON.
+- Added read-only `doctor` checks for runtime, configuration permissions,
+  SQLite, controls, hooks, Codex queue, Linux services and tray autostart.
+- Added strict warning exit status without adding network access, input,
+  notifications, alarms or state mutation.
+
 ## 2026-09-20 - v0.8.0
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.

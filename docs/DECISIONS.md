@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-09-20 - Product preflight is read-only and schema-versioned
+
+**Decision**: use SQLite `PRAGMA user_version` as the explicit database schema
+contract and expose product health through read-only `schema-status` and
+`doctor` commands.
+
+Legacy databases at version 0 are migrated additively to version 1 during
+normal initialization. A newer database fails closed before DDL. Inspection
+uses read-only SQLite mode and does not initialize a missing database.
+
+Doctor reports only bounded states. It may execute local `codex queue --help`
+and fixed `systemctl --user show` commands, but it does not access Discord,
+Telegram or another network endpoint and cannot send input, notify, alarm,
+recover, migrate or restart services.
+
 ## 2026-09-20 - Persistent permission covers ordinary native continuation only
 
 **Decision**: a user-enabled `task-automation` control is sufficient

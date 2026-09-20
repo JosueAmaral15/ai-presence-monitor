@@ -1,5 +1,16 @@
 # Rollback
 
+## Task 025 - Product diagnostics and schema version 1
+
+The schema marker uses SQLite `PRAGMA user_version=1`; tables and columns remain
+additive. The prior 0.8.0 runtime ignores this marker. To roll back this phase,
+install the preserved 0.8.0 wheel and restart the existing services. Do not
+delete tables or reset `user_version` merely to hide a compatibility warning.
+
+Before rollback, run `schema-status`. If it reports a database newer than the
+runtime, stop and restore only from a reviewed backup; do not force a
+downgrade. `doctor` itself needs no rollback because it performs no writes.
+
 ## Task 025 - Ativacao imediata do produto
 
 Para revogar continuidade persistente sem desabilitar entrada nativa:

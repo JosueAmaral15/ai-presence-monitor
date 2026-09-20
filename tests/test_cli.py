@@ -191,6 +191,22 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertEqual(background_args.component, "reply-observer")
         self.assertTrue(background_args.dry_run)
 
+        schema_args = parser.parse_args(["schema-status", "--json"])
+        self.assertTrue(schema_args.json)
+
+        doctor_args = parser.parse_args(["doctor", "--json", "--strict"])
+        self.assertTrue(doctor_args.json)
+        self.assertTrue(doctor_args.strict)
+
+    def test_global_version_does_not_require_configuration(self) -> None:
+        with redirect_stdout(StringIO()) as output, self.assertRaises(
+            SystemExit
+        ) as exit_context:
+            build_parser().parse_args(["--version"])
+
+        self.assertEqual(exit_context.exception.code, 0)
+        self.assertEqual(output.getvalue().strip(), "ai-presence 0.8.0")
+
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = make_config(Path(tmp))
@@ -690,9 +706,11 @@ class CliBehaviorTests(unittest.TestCase):
 
     def test_disabled_runtime_preserves_only_diagnostics_and_recovery(self) -> None:
         for command in (
+            "doctor",
             "finish",
             "protocols",
             "questions",
+            "schema-status",
             "status",
             "stop-alarm",
             "uninstall-background-service",

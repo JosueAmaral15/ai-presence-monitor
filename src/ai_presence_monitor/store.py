@@ -8,6 +8,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 from .diagnostics import initialize_diagnostic_schema
 
@@ -16,6 +17,92 @@ CODEX_SESSION_PATTERN = re.compile(
     r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=$|[ |])"
 )
+
+SCHEMA_VERSION = 1
+REQUIRED_TABLES = frozenset(
+    {
+        "workers",
+        "events",
+        "alerts",
+        "remote_questions",
+        "observer_state",
+        "diagnostic_evidence",
+        "diagnostic_diagnoses",
+        "diagnostic_diagnosis_evidence",
+        "diagnostic_incidents",
+        "diagnostic_notifications",
+        "diagnostic_recoveries",
+    }
+)
+
+
+@dataclass(frozen=True)
+class SchemaStatus:
+    database_exists: bool
+    current_version: int | None
+    expected_version: int
+    migration_status: str
+    integrity: str
+    missing_tables: tuple[str, ...]
+
+    @property
+    def healthy(self) -> bool:
+        return (
+            self.database_exists
+            and self.current_version == self.expected_version
+            and self.migration_status == "current"
+            and self.integrity == "ok"
+            and not self.missing_tables
+        )
+
+
+def inspect_schema(db_path: Path) -> SchemaStatus:
+    path = db_path.expanduser()
+    if not path.is_file():
+        return SchemaStatus(
+            database_exists=False,
+            current_version=None,
+            expected_version=SCHEMA_VERSION,
+            migration_status="missing",
+            integrity="not_checked",
+            missing_tables=tuple(sorted(REQUIRED_TABLES)),
+        )
+
+    uri = f"file:{quote(str(path.resolve()), safe='/')}?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True) as conn:
+            current_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
+            integrity = str(conn.execute("PRAGMA quick_check").fetchone()[0])
+            tables = {
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+    except (OSError, sqlite3.Error, TypeError, ValueError):
+        return SchemaStatus(
+            database_exists=True,
+            current_version=None,
+            expected_version=SCHEMA_VERSION,
+            migration_status="unreadable",
+            integrity="unreadable",
+            missing_tables=(),
+        )
+
+    if current_version < SCHEMA_VERSION:
+        migration_status = "outdated"
+    elif current_version > SCHEMA_VERSION:
+        migration_status = "newer"
+    else:
+        migration_status = "current"
+    return SchemaStatus(
+        database_exists=True,
+        current_version=current_version,
+        expected_version=SCHEMA_VERSION,
+        migration_status=migration_status,
+        integrity=integrity,
+        missing_tables=tuple(sorted(REQUIRED_TABLES - tables)),
+    )
 
 
 @dataclass
@@ -92,6 +179,12 @@ class PresenceStore:
 
     def _init_db(self) -> None:
         with self.session() as conn:
+            current_version = int(conn.execute("PRAGMA user_version").fetchone()[0])
+            if current_version > SCHEMA_VERSION:
+                raise ValueError(
+                    "Database schema is newer than this runtime: "
+                    f"database={current_version} runtime={SCHEMA_VERSION}."
+                )
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS workers (
@@ -217,6 +310,7 @@ class PresenceStore:
                 """
             )
             initialize_diagnostic_schema(conn)
+            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def get_worker(self, worker_id: str) -> WorkerState | None:
         with self.session() as conn:

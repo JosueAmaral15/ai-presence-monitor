@@ -9,6 +9,7 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
+from . import __version__
 from .alarm import AlarmControlError, AlarmController
 from .background_service import (
     BACKGROUND_COMPONENTS,
@@ -52,6 +53,7 @@ from .platform_integration import (
     ensure_runtime_enabled,
     get_platform_factory,
 )
+from .product_health import collect_doctor_report
 from .protocols import (
     PROTOCOLS,
     choose_threshold,
@@ -66,7 +68,7 @@ from .remote_questions import (
     observe_discord_replies_once,
     retry_answer_dispatch,
 )
-from .store import PresenceStore, WorkerState
+from .store import SCHEMA_VERSION, PresenceStore, WorkerState, inspect_schema
 from .systemd_service import (
     install_reply_observer_service,
     install_user_service,
@@ -88,8 +90,10 @@ DEFAULT_EVENT_MESSAGES = {
 DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
     {
         "finish",
+        "doctor",
         "protocols",
         "questions",
+        "schema-status",
         "status",
         "stop-alarm",
         "uninstall-background-service",
@@ -749,6 +753,41 @@ def _show_status(config: AppConfig) -> int:
     return 0
 
 
+def _show_schema_status(args: argparse.Namespace, config: AppConfig) -> int:
+    schema = inspect_schema(config.db_path)
+    payload = {
+        "database_exists": schema.database_exists,
+        "current_version": schema.current_version,
+        "expected_version": schema.expected_version,
+        "migration_status": schema.migration_status,
+        "integrity": schema.integrity,
+        "missing_table_count": len(schema.missing_tables),
+        "healthy": schema.healthy,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(
+            "schema: "
+            f"status={schema.migration_status} "
+            f"current={schema.current_version if schema.current_version is not None else '-'} "
+            f"expected={schema.expected_version} integrity={schema.integrity} "
+            f"missing_tables={len(schema.missing_tables)}"
+        )
+    return 0 if schema.healthy else 1
+
+
+def _doctor(args: argparse.Namespace, config: AppConfig) -> int:
+    report = collect_doctor_report(config)
+    if args.json:
+        print(report.render_json())
+    else:
+        for check in report.checks:
+            print(f"[{check.status}] {check.name}: {check.summary}")
+        print(f"doctor: {report.status}")
+    return report.exit_code(strict=args.strict)
+
+
 def _show_protocols() -> int:
     for protocol in PROTOCOLS.values():
         print(f"{protocol.protocol_id}: {protocol.title}")
@@ -1138,6 +1177,11 @@ def _add_identity_args(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Monitor de presenca artificial com alertas Discord/Telegram."
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"ai-presence {__version__}",
     )
     parser.add_argument(
         "--env-file",
@@ -1746,12 +1790,39 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser = subparsers.add_parser("status", help="Mostra estado dos workers.")
     status_parser.set_defaults(func=lambda args, config: _show_status(config))
 
+    schema_parser = subparsers.add_parser(
+        "schema-status",
+        help="Inspeciona versao, migracao e integridade do banco sem altera-lo.",
+    )
+    schema_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    schema_parser.set_defaults(func=lambda args, config: _show_schema_status(args, config))
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Verifica saude local sem imprimir segredos ou alterar estado.",
+    )
+    doctor_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o relatorio sanitizado em JSON.",
+    )
+    doctor_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Retorna codigo 1 quando houver avisos.",
+    )
+    doctor_parser.set_defaults(func=lambda args, config: _doctor(args, config))
+
     return parser
 
 
 def _init_db(config: AppConfig) -> int:
     PresenceStore(config.db_path)
-    print(f"Banco pronto: {config.db_path}")
+    print(f"Banco pronto: {config.db_path} schema={SCHEMA_VERSION}")
     return 0
 
 

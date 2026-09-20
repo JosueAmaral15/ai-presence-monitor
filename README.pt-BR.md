@@ -2,6 +2,23 @@
 
 [English documentation](README.md)
 
+## Diagnostico do produto
+
+Os comandos abaixo identificam a versao instalada e inspecionam a saude local
+sem imprimir segredos nem alterar o banco durante a leitura:
+
+```bash
+ai-presence --version
+ai-presence schema-status
+ai-presence doctor
+ai-presence doctor --json
+ai-presence doctor --strict
+```
+
+`schema-status` informa a versao esperada, a versao atual, a necessidade de
+migracao e a integridade SQLite. `doctor --strict` tambem retorna codigo
+diferente de zero quando houver avisos.
+
 Monitor local para presencas artificiais de trabalho. Ele registra atividade de uma IA/agente, mantém estado em SQLite e envia notificacoes automáticas por Discord e, opcionalmente, Telegram.
 
 Esta release possui suporte operacional oficial somente para Linux. O codigo

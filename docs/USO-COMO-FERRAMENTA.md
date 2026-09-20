@@ -64,6 +64,19 @@ Se ele nao estiver no `PATH`:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
 ```
 
+Antes de operar ou atualizar, execute:
+
+```bash
+ai-presence --version
+ai-presence schema-status --json
+ai-presence doctor --json
+```
+
+`--version` usa a constante do pacote e nao metadata gerada no checkout.
+`schema-status` e `doctor` inspecionam o banco sem inicializa-lo ou migra-lo.
+O relatorio nao inclui tokens, URLs de webhook, comandos de alarme, IDs de
+sessao ou valores do `.env`.
+
 No Windows PowerShell:
 
 ```powershell
