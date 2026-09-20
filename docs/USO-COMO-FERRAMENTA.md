@@ -41,6 +41,8 @@ Os componentes sao independentes:
 | hooks do Codex | registrar atividade local silenciosa e evidencia diagnostica reconhecida |
 | observer de limites | registrar estado sanitizado da conta sem alterar presenca |
 | observer Linux | registrar processo, rota local, retomada e servicos selecionados |
+| motor de diagnostico | correlacionar fatos atuais e manter um incidente por worker |
+| politica de notificacao diagnostica | enviar uma mensagem Discord deduplicada por mudanca semantica |
 | monitor | avaliar atrasos e produzir alertas |
 | observer Discord | receber respostas correlacionadas de usuarios permitidos |
 | `codex queue` | enviar texto para uma sessao sem mouse ou teclado |
@@ -233,6 +235,44 @@ confianca.
 causas atrasadas abrem ou atualizam um unico incidente. A Fase 5 nao envia
 Discord/Telegram, nao toca alarme, nao envia input, nao repete uma acao e nao
 recupera a sessao.
+
+### Notificar um incidente diagnosticado
+
+Revise primeiro a mensagem sem gravar uma tentativa nem acessar a rede:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Somente depois de confirmar worker, causa, confianca e severidade, execute uma
+tentativa real explicitamente:
+
+```bash
+ai-presence notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Amarelo e laranja usam `DISCORD_ALERT_WEBHOOK_URL`. Vermelho usa
+`DISCORD_RED_WEBHOOK_URL` quando configurado e, caso contrario, o webhook
+de alertas. Nao ha nova variavel de ambiente para esta fase.
+
+O comando reserva no banco uma chave formada por incidente, causa, confianca e
+severidade antes do unico POST. Uma repeticao equivalente retorna
+`deduplicated`, mesmo que um novo diagnostico tenha outro UUID. Mudanca de
+causa, confianca ou severidade permite uma nova tentativa no mesmo incidente;
+um incidente novo tambem possui ciclo proprio.
+
+Somente uma resposta HTTP confirmada marca `delivered` e atualiza
+`last_notified_at`. Rejeicao HTTP, timeout, erro de rede ou interrupcao ficam
+registrados como `rejected`, `uncertain` ou `pending` e nao sao repetidos
+automaticamente. Corrija a causa e aguarde uma mudanca semantica ou um novo
+incidente; nao transforme um resultado incerto em retry manual cego. Este
+fluxo nao usa Telegram, alarme local, telefonia, input do Codex ou recuperacao.
 
 ### Enviar texto sem usar mouse ou teclado
 

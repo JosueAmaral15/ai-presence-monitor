@@ -369,12 +369,64 @@ Phase 5 rollback also requires no schema reversal. Revert its task and merge
 commits to remove classification and the CLI command. Historical diagnostic
 rows remain inert; no monitor or notification path consumes them in Phase 5.
 
+## Phase 6 - Deduplicated Cause-Aware Discord Notifications
+
+Status: implemented and validated on
+`codex/task-022-diagnostic-notifications`, then integrated locally into
+`develop`.
+
+This phase adds one explicit notification policy owner for open diagnostic
+incidents. It does not allow evidence observers or the diagnosis engine to send
+messages. A semantic notification key contains the incident, diagnosis kind,
+confidence and severity, so a repeated diagnosis with the same meaning is
+deduplicated while a cause or severity change can produce one new message.
+
+Delivery safety is fail-closed:
+
+- reserve a bounded notification record before any network request;
+- use only the configured Discord alert webhook, or the red webhook for red
+  severity when present;
+- send one POST with mentions disabled and no automatic retry;
+- mark the notification delivered and update `last_notified_at` only after a
+  confirmed successful HTTP response;
+- record only bounded status/failure codes for rejected or uncertain results;
+- treat an existing `pending`, `rejected` or `uncertain` semantic key as already
+  attempted so later runs do not duplicate it automatically;
+- keep Telegram, local alarm, phone webhook, Codex input and recovery outside
+  this phase.
+
+Operational guidance requires a dry-run review before an explicitly invoked
+real call. Dry-run must not reserve rows or access the network. A missing
+webhook must fail before reservation so configuration can be corrected safely.
+Live Discord E2E remains Phase 7 work and requires explicit authorization for
+the external message.
+
+Implementation checkpoints:
+
+- [x] additive notification-attempt schema and bounded persistence API;
+- [x] semantic deduplication independent of diagnosis UUID churn;
+- [x] diagnostic-only Discord payload and single-attempt transport;
+- [x] one-shot CLI with exact worker selection, dry-run and JSON output;
+- [x] atomic confirmed-delivery update of notification and incident state;
+- [x] focused tests for success, rejection, uncertainty, crash-safe pending
+      state, repeated diagnosis, cause/severity change and no-side-effect dry-run;
+- [x] 259 tests on Python 3.10, 3.11 and 3.12, 87% total coverage,
+      98% notification-module coverage, Ruff, mypy, build and diff gates;
+- [x] real active-worker dry-run returned `no_open_incident`, made no external
+      request and left the notification ledger at zero rows;
+- [x] documentation completed;
+- [x] task commit and local `develop` integration.
+
+Rollback: before integration, switch back to `develop` and delete the task
+branch. After integration, revert the Phase 6 task and merge commits. The new
+ledger table is additive and inert when the command is absent; do not delete it
+from a live database without a backup and a separate destructive migration.
+
 ## Next Implementation Step
 
-Phase 6 should consume open incident state to produce deduplicated cause-aware
-Discord notifications. It must preserve diagnosis confidence, send only from a
-single notification policy owner, update `last_notified_at` only after a
-confirmed webhook success, and never notify directly from an observer. Alarm,
-Codex input, retry and recovery remain outside that phase. The separate live
-Codex event adapter remains disabled until a session hosted through a shared
-managed endpoint proves exact-thread events E2E.
+Phase 7 should validate one authorized real Discord message for each selected
+cause/severity scenario and confirm semantic deduplication against the external
+channel. Fault injection must also retain rejection, timeout and interrupted
+states without retry. Alarm, Codex input and recovery remain outside that
+phase. The separate live Codex event adapter remains disabled until a session
+hosted through a shared managed endpoint proves exact-thread events E2E.

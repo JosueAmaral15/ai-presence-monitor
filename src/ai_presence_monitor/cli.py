@@ -37,6 +37,7 @@ from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
 from .diagnosis_engine import diagnose_worker
+from .diagnostic_notifications import notify_diagnostic_incident
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .linux_evidence import (
     LinuxPowerObserver,
@@ -1033,6 +1034,41 @@ def _diagnose(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _notify_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = notify_diagnostic_incident(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        discord_alert_webhook_url=config.discord_alert_webhook_url,
+        discord_red_webhook_url=config.discord_red_webhook_url,
+        dry_run=args.dry_run,
+        timeout_seconds=args.timeout,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "status": result.status,
+        "event_key": result.event_key,
+        "incident_id": result.incident_id,
+        "diagnosis_id": result.diagnosis_id,
+        "notification_id": result.notification_id,
+        "diagnosis_kind": result.diagnosis_kind,
+        "confidence": result.confidence,
+        "severity": result.severity,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnostic-notification]" if args.dry_run else "diagnostic-notification:"
+        print(
+            f"{prefix} worker={result.worker_id} status={result.status} "
+            f"cause={result.diagnosis_kind or '-'} "
+            f"confidence={result.confidence or '-'} "
+            f"severity={result.severity or '-'}"
+        )
+    return 2 if result.status in {"rejected", "uncertain"} else 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -1273,6 +1309,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emite somente o resultado sanitizado em JSON.",
     )
     diagnose_parser.set_defaults(func=lambda args, config: _diagnose(args, config))
+
+    diagnostic_notification_parser = subparsers.add_parser(
+        "notify-diagnostic-incident",
+        help="Envia uma notificacao Discord deduplicada para o incidente atual.",
+    )
+    _add_identity_args(
+        diagnostic_notification_parser,
+        include_task_message=False,
+    )
+    diagnostic_notification_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=15.0,
+        help="Timeout do unico POST Discord. Padrao: 15 segundos.",
+    )
+    diagnostic_notification_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    diagnostic_notification_parser.set_defaults(
+        func=lambda args, config: _notify_diagnostic_incident(args, config)
+    )
 
     ask_parser = subparsers.add_parser(
         "ask-user",

@@ -178,6 +178,41 @@ This phase does not call notification, alarm, Codex input or recovery code.
 policy. `--dry-run` computes the same assessment and transition without adding
 evidence, diagnosis or incident rows.
 
+## Diagnostic Notification Policy
+
+Phase 6 adds `diagnostic_notifications.py` as the only owner of cause-aware
+Discord delivery:
+
+```text
+open diagnostic incident + current diagnosis
+                    |
+                    v
+ semantic key(kind, confidence, severity)
+                    |
+                    v
+ reserve diagnostic_notifications row
+                    |
+                    v
+ one Discord POST -> delivered | rejected | uncertain
+```
+
+The database uniqueness boundary combines `incident_id`, semantic event key
+and channel. It therefore ignores diagnosis UUID churn but rearms for a changed
+cause, confidence, severity, or a new incident. Reservation happens before
+network access, so concurrent commands and interrupted processes cannot create
+an automatic duplicate. Existing `pending`, `rejected`, `uncertain` and
+`delivered` rows are terminal for automatic dispatch of that event key.
+
+Only confirmed delivery atomically updates both the ledger row and the
+incident's `last_notified_at`. HTTP rejection and transport uncertainty retain
+bounded status/failure codes without raw response bodies. Dry-run constructs
+the same bounded payload but neither reserves a row nor accesses the network.
+Missing webhook configuration fails before reservation.
+
+This policy uses the existing alert webhook, with the configured red webhook
+preferred for red severity. It does not call the general multi-channel
+notifier, Telegram, alarm, phone, Codex input or recovery paths.
+
 ## Tipos de Sinal
 
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.

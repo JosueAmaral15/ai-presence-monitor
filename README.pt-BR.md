@@ -15,7 +15,9 @@ explicito, rota e links locais, retomada depois de suspensao e unidades
 alertas e nao acionam recuperacao automaticamente. O comando one-shot
 `diagnose` correlaciona os fatos atuais, registra confianca e mantem no maximo
 um incidente aberto por worker. Ele ainda nao envia notificacao nem executa
-recuperacao.
+recuperacao. O comando separado `notify-diagnostic-incident` pode enviar uma
+mensagem Discord deduplicada para o incidente, sem tocar alarme, enviar input
+ou recuperar a sessao.
 
 ## Protocolos
 
@@ -395,6 +397,27 @@ A severidade vem do relogio do protocolo do worker. O comando registra um fato
 limitado desse relogio, um diagnostico imutavel e abre, atualiza ou resolve o
 unico incidente do worker. Ele nao envia Discord/Telegram, nao toca alarme, nao
 envia input ao Codex e nao executa retry ou recuperacao.
+
+### Notificar o incidente diagnostico atual
+
+Revise primeiro sem rede e sem criar registro de entrega:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+Sem `--dry-run`, amarelo e laranja usam `DISCORD_ALERT_WEBHOOK_URL`; vermelho
+usa `DISCORD_RED_WEBHOOK_URL` quando configurado e, do contrario, usa o webhook
+de alerta. A chave semantica combina incidente, causa, confianca e severidade.
+Um novo UUID com o mesmo significado nao envia novamente; mudanca de causa,
+confianca ou severidade pode enviar uma nova mensagem uma unica vez.
+
+O registro e reservado antes do HTTP. Somente sucesso confirmado atualiza
+`last_notified_at`. Rejeicao, resultado incerto ou interrupcao ficam registrados
+sem retry automatico. Esse fluxo nao usa Telegram, alarme, telefone, input do
+Codex ou recuperacao.
 
 ### Instalar hook no Codex
 

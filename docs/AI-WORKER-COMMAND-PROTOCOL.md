@@ -145,6 +145,33 @@ resultar em `unexplained_inactivity`, nao em uma causa inventada. A IA nao deve
 usar o incidente como autorizacao para notificar, alarmar, reenviar input ou
 recuperar a sessao; essas integracoes permanecem em fases separadas.
 
+Quando a tarefa atribuida incluir a notificacao do incidente, a IA deve
+inspecionar primeiro o payload sem efeitos:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+```
+
+O comando real produz uma mensagem externa no Discord. Uma IA so pode
+executa-lo quando a tarefa ou a autorizacao do usuario incluir esse envio:
+
+```bash
+ai-presence notify-diagnostic-incident \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+```
+
+`delivered` confirma a resposta do webhook e atualiza o incidente.
+`deduplicated` significa que a mesma combinacao de incidente, causa, confianca
+e severidade ja foi tentada e nao autoriza novo envio. `rejected`, `uncertain`
+ou uma tentativa interrompida tambem bloqueiam retry automatico. A IA deve
+relatar o estado sem usar Telegram, alarme, telefonia, input do Codex ou outro
+canal como fallback.
+
 ### 3. Pergunta ao Usuario
 
 Quando a superficie do Codex oferecer entrada nativa do usuario, prefira esse
@@ -255,6 +282,7 @@ O monitor e o observer de respostas sao componentes diferentes:
 | hooks do Codex | registram evidencia local de atividade |
 | monitor | avalia atrasos e envia alertas |
 | observer de respostas | consulta o Discord e processa respostas |
+| politica diagnostica | envia no maximo um POST por chave semantica reservada |
 | transporte nativo | enfileira texto em uma sessao exata com `codex queue` |
 | dispatcher GUI | fallback opcional de mouse e teclado |
 

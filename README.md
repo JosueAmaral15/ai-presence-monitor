@@ -15,6 +15,8 @@ The project also provides:
   through an explicit read-only observer;
 - deterministic cause diagnosis with confidence and one correlated incident
   per worker, without notification or recovery side effects;
+- one-shot, semantically deduplicated Discord notifications for diagnostic
+  incidents, isolated from alarms, input, and recovery;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with
@@ -369,6 +371,30 @@ immutable diagnosis, and opens, updates, or resolves the worker's single
 diagnostic incident. `--dry-run` writes no diagnostic rows. This command does
 not send Discord or Telegram messages, play an alarm, dispatch Codex input,
 retry, or recover the worker.
+
+### Notify the current diagnostic incident
+
+Review the exact worker and semantic event without network access or a
+notification-attempt record:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --json
+```
+
+Run the command without `--dry-run` only when one external Discord message is
+intended. Yellow and orange use `DISCORD_ALERT_WEBHOOK_URL`; red uses
+`DISCORD_RED_WEBHOOK_URL` when configured and otherwise falls back to the alert
+webhook.
+
+The notification key contains the incident, cause, confidence, and severity.
+Repeating an equivalent diagnosis does not send again, even when it has a new
+diagnosis UUID. A changed cause, confidence, or severity can send one new
+message. The delivery record is reserved before HTTP. Confirmed success updates
+`last_notified_at`; rejected, uncertain, or interrupted delivery is retained
+without automatic retry. This path does not call Telegram, local alarm, phone,
+Codex input, or recovery.
 
 ### Install Codex hooks
 
