@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-09-20 - Diagnostic recovery is explicit, local and one-shot
+
+**Decision**: expose one recovery coordinator only through the explicit
+`recover-diagnostic-incident` command. It may reserve and dispatch one local
+native `continue` for an eligible incident, and every real invocation requires
+`--authorize-once` even when persistent task automation is enabled.
+
+**Reason**:
+
+- inactivity does not itself authorize input;
+- closed and crashed Codex states are the only current causes for which one
+  local continuation attempt has a bounded interpretation;
+- confirmed notification ensures the human-visible incident precedes recovery;
+- reservation before transport prevents concurrent or uncertainty-driven
+  duplicate input;
+- presence synchronization would turn attempted recovery into false evidence
+  of work.
+
+**Consequence**:
+
+The ledger permits one `native_continue` reservation per incident. Pending,
+detached, emitted, uncertain and interrupted attempts all suppress another
+dispatch. No observer or background service calls the coordinator. GUI,
+remote input, delay, alarms, Telegram and phone paths are absent. Transport
+does not resolve the incident; same-session hook evidence and a later diagnosis
+must establish recovery. A real recovery E2E requires separate authorization.
+
 ## 2026-09-20 - Diagnostic Discord delivery is reserved and one-shot
 
 **Decision**: add one explicit diagnostic notification policy that reserves a

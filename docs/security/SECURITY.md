@@ -169,6 +169,37 @@ visibility therefore depends on webhook delivery plus explicit human channel
 confirmation until the bot is intentionally granted read access or webhook
 delivery is changed to return and persist a bounded Discord message ID.
 
+## Task 022 - One-shot diagnostic recovery
+
+- [x] Recovery has no observer, monitor-loop, diagnosis, notification or
+      background-service trigger.
+- [x] Eligibility is allowlisted by cause/confidence and requires a current,
+      unexpired diagnosis for an active worker and open incident.
+- [x] Incident and diagnosis must carry the same exact persisted Codex session.
+- [x] A delivered Discord notification for the current semantic event is a
+      prerequisite, not authorization.
+- [x] Every real invocation requires `--authorize-once`; persistent automation
+      permission is intentionally insufficient.
+- [x] One incident/action row is reserved before native transport and prevents
+      concurrent or later duplicate dispatch.
+- [x] Uncertain transport stores only a bounded failure code; interruption
+      leaves `pending`, and neither state is retried automatically.
+- [x] Dry-run does not check the executable, reserve a row, send input or
+      mutate worker state.
+- [x] Only local `codex queue` is reachable; GUI, remote, delay, Telegram,
+      alarm, phone and fallback paths are absent.
+- [x] Recovery does not update presence clocks or resolve the incident.
+
+### Residual risk
+
+`dispatch_started` and `input_emitted` do not prove that Codex accepted or
+processed the message. An interruption after the child starts may leave only a
+`pending` row. Both outcomes deliberately block another automatic attempt and
+require operator inspection plus later same-session hook/diagnosis evidence.
+The implementation has fake-transport and dry-run validation only; a real
+recovery E2E must use a noncritical exact session, a unique marker the human
+does not type, and separate explicit authorization for that one dispatch.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

@@ -59,6 +59,7 @@ from .protocols import (
     get_protocol,
     should_escalate,
 )
+from .recovery_coordinator import recover_diagnostic_incident
 from .remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
@@ -1069,6 +1070,43 @@ def _notify_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> 
     return 2 if result.status in {"rejected", "uncertain"} else 0
 
 
+def _recover_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = recover_diagnostic_incident(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        controls=ControlStore.from_config(config).load(),
+        message=config.continue_message,
+        authorized=args.authorize_once,
+        dry_run=args.dry_run,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "status": result.status,
+        "incident_id": result.incident_id,
+        "diagnosis_id": result.diagnosis_id,
+        "recovery_id": result.recovery_id,
+        "diagnosis_kind": result.diagnosis_kind,
+        "confidence": result.confidence,
+        "severity": result.severity,
+        "session_id": result.session_id,
+        "stored_status": result.stored_status,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnostic-recovery]" if args.dry_run else "diagnostic-recovery:"
+        print(
+            f"{prefix} worker={result.worker_id} status={result.status} "
+            f"cause={result.diagnosis_kind or '-'} "
+            f"confidence={result.confidence or '-'} "
+            f"severity={result.severity or '-'} "
+            f"session={result.session_id or '-'}"
+        )
+    return 2 if result.status == "uncertain" else 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -1331,6 +1369,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diagnostic_notification_parser.set_defaults(
         func=lambda args, config: _notify_diagnostic_incident(args, config)
+    )
+
+    recovery_parser = subparsers.add_parser(
+        "recover-diagnostic-incident",
+        help="Executa uma recuperacao nativa one-shot para um incidente elegivel.",
+    )
+    _add_identity_args(recovery_parser, include_task_message=False)
+    recovery_parser.add_argument(
+        "--authorize-once",
+        action="store_true",
+        help="Autoriza somente esta tentativa real de recuperacao.",
+    )
+    recovery_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    recovery_parser.set_defaults(
+        func=lambda args, config: _recover_diagnostic_incident(args, config)
     )
 
     ask_parser = subparsers.add_parser(

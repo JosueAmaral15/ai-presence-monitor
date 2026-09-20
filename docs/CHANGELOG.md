@@ -50,6 +50,18 @@
   one user-confirmed marker in the configured alert channel.
 - Confirmed through local fault injection that HTTP rejection, raw timeout,
   transport uncertainty and interruption do not trigger an automatic retry.
+- Added `recover-diagnostic-incident` as an explicitly authorized, local
+  native-only, one-shot recovery for narrowly eligible closed/crashed Codex
+  incidents.
+- Added an additive recovery ledger reserved before transport, with permanent
+  per-incident deduplication across success, detached dispatch, uncertainty and
+  interruption.
+- Required an active worker, current unexpired diagnosis, exact session and
+  delivered semantic Discord notification while keeping persistent automation
+  permission insufficient for real dispatch.
+- Kept recovery disconnected from observers and services, excluded GUI/remote
+  fallback and presence synchronization, and left real recovery E2E as a
+  separately authorized gate.
 
 ## 2026-09-13 - v0.7.0
 

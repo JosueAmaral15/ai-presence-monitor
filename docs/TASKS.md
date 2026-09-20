@@ -5,8 +5,8 @@
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fases 1 a 7 implementadas, validadas e integradas localmente em
-`develop`; recuperacao one-shot opcional da Fase 8 permanece pendente
+**Status**: fases 1 a 8 implementadas, validadas e integradas localmente em
+`develop`; adapter live e E2E real de recuperacao permanecem gates separados
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -71,6 +71,8 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 **Fases seguintes**:
 
 - [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
+- [ ] E2E real de recuperacao em sessao exata nao critica, com marcador unico e
+      autorizacao explicita separada para um unico despacho.
 - [x] Motor de diagnostico, precedencia, confianca e transicoes, com 242 testes
       aprovados em Python 3.10, 3.11 e 3.12, 87% de cobertura total e dry-run
       real sem escrita.
@@ -80,7 +82,10 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Teste Discord E2E autorizado entregou uma mensagem, deduplicou a
       repeticao e teve exatamente um marcador confirmado pelo usuario no canal
       `warnings-worker-robot`; fault injection e gates passaram.
-- [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.
+- [x] Recuperacao one-shot opcional implementada e validada com 271 testes em
+      Python 3.10, 3.11 e 3.12, 88% de cobertura total, 93% no coordenador e
+      dry-run real `no_open_incident`; nenhum input real foi autorizado ou
+      emitido. Integrada localmente em `develop` pelo commit de task `e526782`.
 
 **Plano**: `docs/planning/TASK-022-cause-aware-diagnostics.md`.
 

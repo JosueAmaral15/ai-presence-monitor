@@ -492,3 +492,58 @@ Sanitized evidence:
 - the user confirmed exactly one matching marker in the Discord channel
   `warnings-worker-robot`;
 - task-branch validation and local `develop` integration are complete.
+
+## Phase 8 - Optional One-Shot Recovery Coordinator
+
+Status: implementation validated and integrated locally into `develop` from
+`codex/task-022-recovery-coordinator`.
+
+This phase adds an explicitly invoked, disabled-by-default recovery consumer.
+It does not run from an observer, diagnosis, notification, monitor timer or
+background service. A real attempt always requires `--authorize-once`; the
+persistent task-automation control is intentionally insufficient.
+
+The first recovery action is deliberately narrow:
+
+- action: one local native `continue` through `codex queue`;
+- eligible causes: `codex_closed` with medium/high confidence or
+  `codex_crashed` with high confidence;
+- prerequisites: active worker, open incident, current unexpired diagnosis,
+  exact persisted session and confirmed Discord delivery for the same semantic
+  diagnostic event;
+- excluded paths: GUI, remote input, delay, Telegram, alarm, phone, recovery
+  chaining and presence-clock synchronization;
+- deduplication: at most one reserved `native_continue` action per incident,
+  regardless of later diagnosis UUID or severity changes;
+- completion states: `dispatch_started`, `input_emitted` or `uncertain`;
+  every reserved state is terminal for automatic dispatch and cannot retry.
+
+`dispatch_started` and `input_emitted` remain transport evidence only. Neither
+resolves the incident. Recovery requires a later same-session hook and a new
+diagnosis transition to healthy state. Dry-run evaluates the same eligibility
+without reserving a row, checking the executable or sending input.
+
+Acceptance checklist:
+
+- [x] additive recovery ledger and race-safe one-attempt persistence API;
+- [x] cause, confidence, expiry, session and delivered-notification gates;
+- [x] explicit one-invocation authorization enforced in the domain workflow;
+- [x] local native-only dispatch with no activity synchronization;
+- [x] terminal deduplication after success, detached start, uncertainty or
+      interruption;
+- [x] one-shot CLI with dry-run and bounded JSON output;
+- [x] focused tests for eligibility, authorization, success, deduplication,
+      uncertainty, stale diagnosis, missing notification and no-side-effect
+      dry-run;
+- [x] full coverage, lint, type, build and Python-version gates: 271 tests on
+      Python 3.10, 3.11 and 3.12, 88% total coverage and 93% coordinator
+      coverage;
+- [x] human/AI-worker, architecture, decision, requirement and security docs;
+- [x] task commit `e526782` and local `develop` integration.
+
+The exact active-worker source dry-run returned `no_open_incident` with exit
+status zero. It reserved no recovery and emitted no input.
+
+No real recovery input is authorized by this implementation phase. A separate
+E2E must use a unique marker, exact noncritical test session and explicit user
+authorization for that single dispatch.

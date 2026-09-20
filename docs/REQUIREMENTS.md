@@ -96,6 +96,25 @@
   tabela de tentativas.
 - Webhook ausente deve falhar antes da reserva; o fluxo nao deve chamar
   Telegram, alarme, telefone, input do Codex ou recuperacao.
+- Recuperacao diagnostica nao deve ser iniciada por observer, motor de
+  diagnostico, notificacao, monitor continuo ou timer.
+- A recuperacao one-shot deve aceitar somente `codex_closed` com confianca
+  media/alta ou `codex_crashed` com confianca alta.
+- A tentativa deve exigir worker ativo, incidente aberto, diagnostico atual nao
+  expirado, sessao exata coincidente e entrega Discord confirmada para o mesmo
+  evento semantico.
+- Cada execucao real deve exigir `--authorize-once`; autorizacao persistente de
+  automacao nao deve substituir esse consentimento.
+- O dry-run deve avaliar os gates sem procurar executavel, reservar tentativa,
+  enviar input ou atualizar presenca.
+- A reserva `(incident_id, action)` deve ocorrer antes do transporte e suprimir
+  repeticao apos `pending`, `dispatch_started`, `input_emitted`, `uncertain` ou
+  interrupcao.
+- A recuperacao deve usar somente `codex queue` local, sem GUI, remoto, delay,
+  Telegram, alarme, telefone, fallback ou encadeamento.
+- Estado de transporte nao deve atualizar `last_activity_at`/`last_signal_at`,
+  resolver o incidente ou provar processamento; hook posterior e novo
+  diagnostico devem fornecer essa evidencia.
 
 ## Portabilidade
 

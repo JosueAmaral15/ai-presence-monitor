@@ -17,6 +17,8 @@ The project also provides:
   per worker, without notification or recovery side effects;
 - one-shot, semantically deduplicated Discord notifications for diagnostic
   incidents, isolated from alarms, input, and recovery;
+- an explicitly authorized, local native-only, one-shot recovery command for
+  narrowly eligible closed or crashed Codex incidents;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with
@@ -395,6 +397,38 @@ message. The delivery record is reserved before HTTP. Confirmed success updates
 `last_notified_at`; rejected, uncertain, or interrupted delivery is retained
 without automatic retry. This path does not call Telegram, local alarm, phone,
 Codex input, or recovery.
+
+### Recover one eligible diagnostic incident
+
+Recovery is never started by an observer, monitor timer, diagnosis, or
+notification. First inspect eligibility without reserving an attempt or
+dispatching input:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --json
+```
+
+A real attempt is limited to one local native `continue` for the exact session
+stored in an open incident. It accepts only `codex_closed` with medium/high
+confidence or `codex_crashed` with high confidence, requires an unexpired
+current diagnosis and confirmed Discord delivery for that semantic event, and
+always requires explicit one-invocation authorization:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --authorize-once \
+  --json
+```
+
+The recovery ledger is reserved before `codex queue`. Any pending,
+`dispatch_started`, `input_emitted`, or uncertain attempt suppresses another
+dispatch for the same incident. Transport state does not prove that Codex
+processed the message, does not update presence clocks, and does not resolve
+the incident; a later hook and diagnosis must provide that evidence. Real
+recovery E2E remains a separate, explicitly authorized gate.
 
 ### Install Codex hooks
 
