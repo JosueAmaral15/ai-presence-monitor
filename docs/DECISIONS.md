@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-09-20 - Release 0.8.0 defers shared-endpoint live observation
+
+**Decision**: release the completed cause-aware diagnostic pipeline and
+one-shot recovery coordinator for the private supported Linux runtime as
+version 0.8.0. Keep the shared-endpoint App Server event adapter disabled and
+move it to a separate future task.
+
+**Reason**:
+
+- the existing child-process probe cannot observe an already GUI-owned Codex
+  session;
+- same-session hooks, sanitized account-limit polling and Linux observers
+  already provide bounded evidence without changing session ownership;
+- changing how Codex sessions are hosted is an independent architecture and
+  security project, not a safe incremental release requirement;
+- recovery now has one authorized exact-session E2E with a unique marker,
+  one dispatch, unchanged presence clock and later hook evidence.
+
+**Consequence**:
+
+Version 0.8.0 does not claim shared-daemon live event support. The adapter
+remains unreachable until endpoint authentication, ownership, isolation and a
+separate exact-session E2E pass. This deferral is not a Linux release blocker.
+
 ## 2026-09-20 - Diagnostic recovery is explicit, local and one-shot
 
 **Decision**: expose one recovery coordinator only through the explicit
@@ -26,6 +50,10 @@ dispatch. No observer or background service calls the coordinator. GUI,
 remote input, delay, alarms, Telegram and phone paths are absent. Transport
 does not resolve the incident; same-session hook evidence and a later diagnosis
 must establish recovery. A real recovery E2E requires separate authorization.
+
+Task 023 later consumed that separate authorization and validated one isolated
+dispatch with marker
+`[AI-PRESENCE-RECOVERY-E2E:d0f7c884-428c-49bd-a903-0989a5616a10] continue`.
 
 ## 2026-09-20 - Diagnostic Discord delivery is reserved and one-shot
 

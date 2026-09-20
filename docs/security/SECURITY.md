@@ -196,9 +196,12 @@ delivery is changed to return and persist a bounded Discord message ID.
 processed the message. An interruption after the child starts may leave only a
 `pending` row. Both outcomes deliberately block another automatic attempt and
 require operator inspection plus later same-session hook/diagnosis evidence.
-The implementation has fake-transport and dry-run validation only; a real
-recovery E2E must use a noncritical exact session, a unique marker the human
-does not type, and separate explicit authorization for that one dispatch.
+The private Linux 0.8.0 E2E used a noncritical exact session, a unique marker
+the human did not type, and separate explicit authorization for one dispatch.
+It produced one delivered Discord notification, one `dispatch_started`
+recovery row, no presence-clock change and later same-session hooks. This does
+not change the residual rule: transport state alone is insufficient, and no
+uncertain or interrupted attempt may be retried.
 
 ## Task 001 - Codex Hook Observer
 

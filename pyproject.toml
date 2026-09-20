@@ -1,6 +1,6 @@
 [project]
 name = "ai-presence-monitor"
-version = "0.7.0"
+version = "0.8.0"
 description = "Monitor local de presenca artificial com alertas por Discord e Telegram."
 readme = "README.md"
 requires-python = ">=3.10"

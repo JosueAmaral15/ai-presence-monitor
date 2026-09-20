@@ -544,6 +544,7 @@ Acceptance checklist:
 The exact active-worker source dry-run returned `no_open_incident` with exit
 status zero. It reserved no recovery and emitted no input.
 
-No real recovery input is authorized by this implementation phase. A separate
-E2E must use a unique marker, exact noncritical test session and explicit user
-authorization for that single dispatch.
+No real recovery input was authorized by the implementation phase itself.
+Task 023 later received separate authorization and validated one unique marker
+in the exact noncritical session, one `dispatch_started` row, an unchanged
+isolated activity clock and later same-session hook evidence without retry.

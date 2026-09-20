@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Task 022 cause-aware diagnostics
+## 2026-09-20 - v0.8.0
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.
 - Added additive SQLite tables for diagnostic evidence, immutable diagnosis
@@ -60,8 +60,13 @@
   delivered semantic Discord notification while keeping persistent automation
   permission insufficient for real dispatch.
 - Kept recovery disconnected from observers and services, excluded GUI/remote
-  fallback and presence synchronization, and left real recovery E2E as a
-  separately authorized gate.
+  fallback and presence synchronization.
+- Validated one authorized isolated recovery E2E with a unique marker: one
+  Discord diagnostic delivery, one local native dispatch to the exact current
+  session, one `dispatch_started` ledger row, unchanged isolated presence
+  activity and later same-session hook evidence.
+- Deferred the shared-endpoint App Server event adapter as a separate future
+  task because a child process cannot observe an already GUI-owned session.
 
 ## 2026-09-13 - v0.7.0
 
