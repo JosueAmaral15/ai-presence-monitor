@@ -78,6 +78,13 @@ class NotificationDeliveryStatus(str, Enum):
     UNCERTAIN = "uncertain"
 
 
+class RecoveryStatus(str, Enum):
+    PENDING = "pending"
+    DISPATCH_STARTED = "dispatch_started"
+    INPUT_EMITTED = "input_emitted"
+    UNCERTAIN = "uncertain"
+
+
 @dataclass(frozen=True)
 class DiagnosticEvidence:
     evidence_id: str
@@ -129,6 +136,18 @@ class DiagnosticNotification:
     status: NotificationDeliveryStatus
     attempted_at: float
     delivered_at: float | None
+    failure_code: str | None
+
+
+@dataclass(frozen=True)
+class DiagnosticRecovery:
+    recovery_id: str
+    incident_id: str
+    diagnosis_id: str
+    action: str
+    status: RecoveryStatus
+    attempted_at: float
+    result_at: float | None
     failure_code: str | None
 
 
@@ -254,6 +273,31 @@ def initialize_diagnostic_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_diagnostic_notifications_status_time
         ON diagnostic_notifications(status, attempted_at DESC)
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS diagnostic_recoveries (
+            recovery_id TEXT PRIMARY KEY,
+            incident_id TEXT NOT NULL,
+            diagnosis_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            status TEXT NOT NULL,
+            attempted_at REAL NOT NULL,
+            result_at REAL,
+            failure_code TEXT,
+            UNIQUE (incident_id, action),
+            FOREIGN KEY (incident_id)
+                REFERENCES diagnostic_incidents(incident_id) ON DELETE RESTRICT,
+            FOREIGN KEY (diagnosis_id)
+                REFERENCES diagnostic_diagnoses(diagnosis_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_diagnostic_recoveries_status_time
+        ON diagnostic_recoveries(status, attempted_at DESC)
         """
     )
 
@@ -878,6 +922,157 @@ class DiagnosticStore:
             ).fetchall()
         return [self._row_to_notification(row) for row in rows]
 
+    def find_recovery(
+        self,
+        *,
+        incident_id: str,
+        action: str,
+    ) -> DiagnosticRecovery | None:
+        clean_incident = _identifier(incident_id, "incident_id")
+        clean_action = _identifier(action, "recovery action", max_length=80)
+        with self.session() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM diagnostic_recoveries
+                WHERE incident_id = ? AND action = ?
+                """,
+                (clean_incident, clean_action),
+            ).fetchone()
+        return self._row_to_recovery(row) if row else None
+
+    def reserve_recovery(
+        self,
+        *,
+        incident_id: str,
+        diagnosis_id: str,
+        action: str,
+        now: float | None = None,
+    ) -> tuple[DiagnosticRecovery, bool]:
+        clean_incident = _identifier(incident_id, "incident_id")
+        clean_diagnosis = _identifier(diagnosis_id, "diagnosis_id")
+        clean_action = _identifier(action, "recovery action", max_length=80)
+        timestamp = time.time() if now is None else _timestamp(now, "now")
+        recovery_id = str(uuid.uuid4())
+        with self.session() as conn:
+            incident = conn.execute(
+                """
+                SELECT status, current_diagnosis_id
+                FROM diagnostic_incidents
+                WHERE incident_id = ?
+                """,
+                (clean_incident,),
+            ).fetchone()
+            if incident is None or incident["status"] != IncidentStatus.OPEN.value:
+                raise ValueError(f"Open incident not found: {clean_incident}")
+            if incident["current_diagnosis_id"] != clean_diagnosis:
+                raise ValueError("Recovery diagnosis is not current for the incident.")
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO diagnostic_recoveries (
+                    recovery_id, incident_id, diagnosis_id, action, status,
+                    attempted_at, result_at, failure_code
+                ) VALUES (?, ?, ?, ?, 'pending', ?, NULL, NULL)
+                """,
+                (
+                    recovery_id,
+                    clean_incident,
+                    clean_diagnosis,
+                    clean_action,
+                    timestamp,
+                ),
+            )
+            created = cursor.rowcount == 1
+            row = conn.execute(
+                """
+                SELECT * FROM diagnostic_recoveries
+                WHERE incident_id = ? AND action = ?
+                """,
+                (clean_incident, clean_action),
+            ).fetchone()
+        assert row is not None
+        return self._row_to_recovery(row), created
+
+    def complete_recovery(
+        self,
+        recovery_id: str,
+        *,
+        status: RecoveryStatus | str,
+        failure_code: str | None = None,
+        now: float | None = None,
+    ) -> DiagnosticRecovery:
+        clean_id = _identifier(recovery_id, "recovery_id")
+        normalized_status = _enum_value(RecoveryStatus, status, "recovery status")
+        if normalized_status is RecoveryStatus.PENDING:
+            raise ValueError("A completed recovery cannot remain pending.")
+        clean_failure = _optional_identifier(failure_code, "recovery failure code")
+        if normalized_status is RecoveryStatus.UNCERTAIN:
+            if clean_failure is None:
+                raise ValueError("An uncertain recovery requires a failure code.")
+        else:
+            clean_failure = None
+        timestamp = time.time() if now is None else _timestamp(now, "now")
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE diagnostic_recoveries
+                SET status = ?, result_at = ?, failure_code = ?
+                WHERE recovery_id = ? AND status = 'pending'
+                """,
+                (
+                    normalized_status.value,
+                    timestamp,
+                    clean_failure,
+                    clean_id,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError(f"Pending recovery not found: {clean_id}")
+        return self.require_recovery(clean_id)
+
+    def get_recovery(self, recovery_id: str) -> DiagnosticRecovery | None:
+        clean_id = _identifier(recovery_id, "recovery_id")
+        with self.session() as conn:
+            row = conn.execute(
+                "SELECT * FROM diagnostic_recoveries WHERE recovery_id = ?",
+                (clean_id,),
+            ).fetchone()
+        return self._row_to_recovery(row) if row else None
+
+    def require_recovery(self, recovery_id: str) -> DiagnosticRecovery:
+        recovery = self.get_recovery(recovery_id)
+        if recovery is None:
+            raise ValueError(f"Recovery not found: {recovery_id}")
+        return recovery
+
+    def list_recoveries(
+        self,
+        *,
+        incident_id: str | None = None,
+        status: RecoveryStatus | str | None = None,
+        limit: int = 100,
+    ) -> list[DiagnosticRecovery]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if incident_id is not None:
+            clauses.append("incident_id = ?")
+            params.append(_identifier(incident_id, "incident_id"))
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(_enum_value(RecoveryStatus, status, "recovery status").value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(_limit(limit))
+        with self.session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT * FROM diagnostic_recoveries
+                {where}
+                ORDER BY attempted_at DESC, recovery_id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_recovery(row) for row in rows]
+
     @staticmethod
     def _row_to_evidence(row: sqlite3.Row) -> DiagnosticEvidence:
         return DiagnosticEvidence(
@@ -936,6 +1131,19 @@ class DiagnosticStore:
             status=NotificationDeliveryStatus(row["status"]),
             attempted_at=row["attempted_at"],
             delivered_at=row["delivered_at"],
+            failure_code=row["failure_code"],
+        )
+
+    @staticmethod
+    def _row_to_recovery(row: sqlite3.Row) -> DiagnosticRecovery:
+        return DiagnosticRecovery(
+            recovery_id=row["recovery_id"],
+            incident_id=row["incident_id"],
+            diagnosis_id=row["diagnosis_id"],
+            action=row["action"],
+            status=RecoveryStatus(row["status"]),
+            attempted_at=row["attempted_at"],
+            result_at=row["result_at"],
             failure_code=row["failure_code"],
         )
 

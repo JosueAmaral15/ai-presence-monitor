@@ -172,6 +172,33 @@ ou uma tentativa interrompida tambem bloqueiam retry automatico. A IA deve
 relatar o estado sem usar Telegram, alarme, telefonia, input do Codex ou outro
 canal como fallback.
 
+Quando a tarefa incluir recuperacao, a IA deve executar somente o dry-run sem
+autorizacao adicional:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project "$PROJECT" \
+  --json
+```
+
+A forma real e uma acao de input separada e exige autorizacao explicita do
+usuario para uma unica invocacao:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project "$PROJECT" \
+  --authorize-once \
+  --json
+```
+
+A IA nao deve inferir essa autorizacao de `task-automation`, de uma notificacao
+Discord entregue ou de uma autorizacao anterior. `would_dispatch` nao e prova
+de envio. `dispatch_started`, `input_emitted`, `uncertain` e `pending` nao
+autorizam repeticao e nao comprovam que o Codex processou `continue`. A IA deve
+aguardar um hook posterior da mesma sessao e executar novamente `diagnose`; nao
+deve emitir `touch`, sincronizar presenca, usar GUI/remoto ou resolver o
+incidente por conta propria.
+
 ### 3. Pergunta ao Usuario
 
 Quando a superficie do Codex oferecer entrada nativa do usuario, prefira esse

@@ -17,7 +17,8 @@ alertas e nao acionam recuperacao automaticamente. O comando one-shot
 um incidente aberto por worker. Ele ainda nao envia notificacao nem executa
 recuperacao. O comando separado `notify-diagnostic-incident` pode enviar uma
 mensagem Discord deduplicada para o incidente, sem tocar alarme, enviar input
-ou recuperar a sessao.
+ou recuperar a sessao. Uma recuperacao restrita existe somente no comando
+explicito `recover-diagnostic-incident`: ela nunca e iniciada automaticamente.
 
 ## Protocolos
 
@@ -418,6 +419,36 @@ O registro e reservado antes do HTTP. Somente sucesso confirmado atualiza
 `last_notified_at`. Rejeicao, resultado incerto ou interrupcao ficam registrados
 sem retry automatico. Esse fluxo nao usa Telegram, alarme, telefone, input do
 Codex ou recuperacao.
+
+### Recuperar um incidente diagnostico elegivel
+
+Primeiro avalie a elegibilidade sem reservar tentativa nem enviar input:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+A tentativa real envia um unico `continue` local por `codex queue` para a
+sessao exata persistida no incidente e exige autorizacao desta invocacao:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --authorize-once \
+  --json
+```
+
+Somente `codex_closed` com confianca media/alta e `codex_crashed` com confianca
+alta sao elegiveis. O worker deve estar ativo, o diagnostico atual deve estar
+valido e a notificacao Discord do mesmo evento semantico deve estar confirmada.
+A reserva ocorre antes do envio e qualquer tentativa reservada bloqueia novo
+despacho para o mesmo incidente, inclusive apos resultado incerto ou
+interrupcao. O comando nao usa GUI ou transporte remoto, nao atualiza os
+relogios de presenca e nao resolve o incidente. Um hook posterior e novo
+diagnostico devem comprovar a retomada. O E2E real de recuperacao continua
+dependendo de autorizacao separada e marcador unico.
 
 ### Instalar hook no Codex
 

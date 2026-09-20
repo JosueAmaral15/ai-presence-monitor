@@ -274,6 +274,52 @@ automaticamente. Corrija a causa e aguarde uma mudanca semantica ou um novo
 incidente; nao transforme um resultado incerto em retry manual cego. Este
 fluxo nao usa Telegram, alarme local, telefonia, input do Codex ou recuperacao.
 
+### Recuperar um incidente elegivel uma unica vez
+
+Este comando nao e observer nem servico continuo. Ele nunca e chamado por
+`diagnose`, `notify-diagnostic-incident`, `monitor` ou por um timer. Avalie
+primeiro sem escrita e sem transporte:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+O resultado `would_dispatch` significa somente que os gates atuais permitem
+uma tentativa. Ele nao reserva o ledger, nao procura o executavel Codex e nao
+envia input. A execucao real exige autorizacao explicita e descartavel:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --authorize-once \
+  --json
+```
+
+Pre-condicoes:
+
+- worker exato ativo e um incidente aberto;
+- diagnostico atual nao expirado;
+- `codex_closed` com confianca media/alta ou `codex_crashed` com confianca alta;
+- mesma sessao Codex explicita no incidente e no diagnostico;
+- notificacao Discord `delivered` para o mesmo evento semantico;
+- controle `native-input` habilitado e `codex` disponivel no `PATH`.
+
+O coordenador reserva `native_continue` antes de chamar `codex queue`. Os
+estados `pending`, `dispatch_started`, `input_emitted` e `uncertain` suprimem
+qualquer repeticao no mesmo incidente. Timeout, falha incerta ou interrupcao
+nao autorizam retry manual cego. A mensagem vem de
+`PRESENCE_CONTINUE_MESSAGE`; nao ha opcao de mensagem, GUI, remoto, delay,
+Telegram, alarme ou telefonia neste comando.
+
+`dispatch_started` e `input_emitted` provam somente transporte. A recuperacao
+nao atualiza `last_activity_at` ou `last_signal_at` e nao resolve o incidente.
+Um hook posterior da mesma sessao e uma nova execucao de `diagnose` devem
+comprovar a retomada. Uma IA nao pode executar a forma real sem autorizacao
+especifica do usuario para aquela tentativa, mesmo quando a automacao de tarefa
+persistente estiver habilitada.
+
 ### Enviar texto sem usar mouse ou teclado
 
 ```bash

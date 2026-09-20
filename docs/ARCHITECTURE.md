@@ -47,10 +47,13 @@ source observers -> diagnostic evidence -> diagnosis engine
                                              |
                                              v
                                       notification policy
+                                             |
+                                             v
+                              explicit recovery coordinator
 ```
 
 Observers remain fact producers. They do not choose severity, notify Discord or
-trigger recovery. `DiagnosticStore` persists three separate concepts:
+trigger recovery. `DiagnosticStore` persists four separate concepts:
 
 - `DiagnosticEvidence`: a bounded fact, source, state, worker, optional exact
   session, observation time and optional expiry;
@@ -58,12 +61,14 @@ trigger recovery. `DiagnosticStore` persists three separate concepts:
   links to one or more evidence records;
 - `DiagnosticIncident`: one open episode per worker, with current diagnosis,
   severity, notification timestamp and resolution state.
+- `DiagnosticRecovery`: one reserved action per incident/action pair, with
+  bounded transport state and failure code.
 
 Evidence and diagnoses are append-only. An open incident can change its current
 diagnosis as stronger evidence arrives, preventing parallel observers from
-creating contradictory user notifications. Phase 3 runs only Codex evidence
-producers; the diagnosis engine, notification policy and recovery coordinator
-remain disabled.
+creating contradictory user notifications. Each downstream stage remains an
+explicit consumer: evidence collection cannot diagnose, diagnosis cannot
+notify, and notification cannot invoke recovery.
 
 The diagnostic tables are additive to the same SQLite database and do not
 modify `workers.last_activity_at`, `workers.last_signal_at`, protocol alerts or
@@ -212,6 +217,41 @@ Missing webhook configuration fails before reservation.
 This policy uses the existing alert webhook, with the configured red webhook
 preferred for red severity. It does not call the general multi-channel
 notifier, Telegram, alarm, phone, Codex input or recovery paths.
+
+## One-Shot Recovery Coordinator
+
+Phase 8 adds `recovery_coordinator.py` as an explicitly invoked consumer. It is
+not called by observers, the diagnosis engine, notification delivery, the
+monitor loop, or a background service:
+
+```text
+active worker + eligible current diagnosis + exact session
+                         +
+        delivered semantic Discord notification
+                         |
+                         v
+       reserve diagnostic_recoveries(incident, native_continue)
+                         |
+                         v
+        one local codex queue dispatch -> transport state
+```
+
+Eligibility is intentionally narrow: `codex_closed` at medium/high confidence
+or `codex_crashed` at high confidence, with an unexpired diagnosis and matching
+incident/diagnosis session. Real execution also requires the one-invocation
+`--authorize-once` flag; persistent task automation is not authorization.
+
+The unique boundary is `(incident_id, action)`. Reservation precedes transport,
+so a concurrent invocation, interruption, detached dispatch, success, or
+uncertain result cannot cause a second dispatch for that incident. Dry-run
+evaluates the same domain gates without checking the Codex executable,
+reserving a row, or sending input.
+
+Only local native input is reachable. GUI, remote input, delay, Telegram,
+alarm, phone and chained recovery are absent. A recovery attempt never mutates
+presence clocks or resolves the incident. `dispatch_started` and
+`input_emitted` remain transport evidence; a later same-session hook plus a new
+diagnosis transition is required to establish resumed work.
 
 ## Tipos de Sinal
 
