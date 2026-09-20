@@ -72,6 +72,7 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/AI-WORKER-COMMAND-PROTOCOL.md](docs/AI-WORKER-COMMAND-PROTOCOL.md)
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
+- [docs/TRANSACTIONAL-UPGRADE.md](docs/TRANSACTIONAL-UPGRADE.md)
 
 Instalacao portatil recomendada:
 
@@ -80,6 +81,21 @@ python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
 "$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /caminho/para/ai-presence-monitor
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
 ```
+
+Para uma futura atualizacao privada no Linux, valide primeiro os dois wheels
+locais sem alterar a instalacao:
+
+```bash
+ai-presence --dry-run upgrade \
+  --package /caminho/absoluto/novo.whl \
+  --rollback-package /caminho/absoluto/instalado.whl \
+  --json
+```
+
+A execucao real exige `--authorize-once` e cria manifesto, hashes e snapshot
+SQLite privados antes de parar os servicos gerenciados. O rollback manual
+restaura o banco anterior, descarta dados posteriores e exige tambem
+`--restore-database`. Leia o guia transacional antes dessas operacoes.
 
 No Windows PowerShell, sem privilegios administrativos:
 

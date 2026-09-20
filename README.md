@@ -30,6 +30,8 @@ The project also provides:
 - one-shot red alerts with a bounded local alarm;
 - stable Linux operational adapters, with preserved Windows adapters behind an
   explicit experimental opt-in.
+- transactional local-wheel upgrades with a private manifest, SQLite snapshot,
+  service-state preservation, and deterministic rollback.
 
 ## Presence Protocols
 
@@ -76,6 +78,7 @@ Detailed operational documentation is currently available in Portuguese:
 - [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Security checklist](docs/security/SECURITY.md)
 - [Rollback procedures](docs/rollback/ROLLBACK.md)
+- [Transactional upgrade and rollback](docs/TRANSACTIONAL-UPGRADE.md)
 
 The Portuguese version of this README is preserved in
 [README.pt-BR.md](README.pt-BR.md).
@@ -135,6 +138,25 @@ ai-presence doctor --strict
 the runtime, configuration permissions, schema/integrity, controls, Codex
 hooks and queue support, Linux user services, and tray autostart. Warnings are
 informational by default; `--strict` returns a nonzero status for warnings.
+
+For a future private Linux package upgrade, preserve the currently installed
+wheel and validate the transaction first:
+
+```bash
+ai-presence --dry-run upgrade \
+  --package /absolute/path/ai_presence_monitor-NEW-py3-none-any.whl \
+  --rollback-package /absolute/path/ai_presence_monitor-OLD-py3-none-any.whl \
+  --json
+```
+
+A real upgrade additionally requires `--authorize-once`. It uses local wheels
+only, creates a private manifest and SQLite snapshot, preserves the active state
+of the monitor and reply-observer services, and automatically restores the old
+wheel and database if postflight fails. Manual database rollback is destructive
+to data created after the snapshot and requires both `--authorize-once` and
+`--restore-database`. Read
+[Transactional upgrade and rollback](docs/TRANSACTIONAL-UPGRADE.md) before
+either operation.
 
 Windows PowerShell installation, without administrator privileges:
 

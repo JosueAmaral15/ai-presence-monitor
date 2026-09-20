@@ -12,6 +12,15 @@
   SQLite, controls, hooks, Codex queue, Linux services and tray autostart.
 - Added strict warning exit status without adding network access, input,
   notifications, alarms or state mutation.
+- Added Linux-only local-wheel `upgrade` with private wheel copies, SQLite
+  snapshot, SHA-256 manifest and preservation of active managed services.
+- Added one-attempt automatic package/database rollback for failed postflight,
+  including recovery from partial service stops and starts.
+- Added explicit `rollback-upgrade` with managed-manifest and checksum
+  validation, a pre-rollback database snapshot, one-attempt recovery and
+  separate authorization for destructive database restoration.
+- Documented dry-run, AI-worker authorization boundaries, tray restart,
+  support limits and transaction states.
 
 ## 2026-09-20 - v0.8.0
 

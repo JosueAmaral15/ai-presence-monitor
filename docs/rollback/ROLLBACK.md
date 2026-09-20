@@ -1,5 +1,32 @@
 # Rollback
 
+## Task 025 - Transactional package lifecycle
+
+Use only a `completed` manifest created by the installed runtime. Inspect first:
+
+```bash
+ai-presence --dry-run rollback-upgrade \
+  --manifest /absolute/path/to/manifest.json \
+  --json
+```
+
+The real command restores both the old wheel and the pre-upgrade SQLite
+snapshot, discarding newer operational database writes:
+
+```bash
+ai-presence rollback-upgrade \
+  --manifest /absolute/path/to/manifest.json \
+  --authorize-once \
+  --restore-database \
+  --json
+```
+
+The command creates a pre-rollback snapshot of the upgraded database, verifies
+artifact checksums, preserves original service state and attempts to recover
+the upgraded state once if manual rollback fails. Do not retry automatically
+after an uncertain state. Inspect the manifest, package version, schema,
+services and `doctor` output. Restart the tray separately.
+
 ## Task 025 - Product diagnostics and schema version 1
 
 The schema marker uses SQLite `PRAGMA user_version=1`; tables and columns remain

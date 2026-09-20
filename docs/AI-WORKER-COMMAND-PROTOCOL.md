@@ -45,6 +45,22 @@ enviam mensagens, notificam, alarmam, criam banco ou aplicam migracao. Codigo
 nao zero deve ser relatado; nao execute `init` ou uma futura atualizacao para
 ocultar o aviso sem revisar a causa.
 
+Uma IA pode executar o preflight transacional em dry-run com wheels locais ja
+fornecidos pelo operador:
+
+```bash
+ai-presence --dry-run upgrade \
+  --package /caminho/absoluto/novo.whl \
+  --rollback-package /caminho/absoluto/instalado.whl \
+  --json
+```
+
+Ela nao deve acrescentar `--authorize-once`, executar `rollback-upgrade`,
+restaurar banco ou reiniciar a bandeja sem autorizacao humana explicita para a
+operacao. Resultado falho ou incerto deve ser reportado com o manifesto e nao
+repetido automaticamente. O contrato completo esta em
+[TRANSACTIONAL-UPGRADE.md](TRANSACTIONAL-UPGRADE.md).
+
 No Windows, a instalacao Python cria `ai-presence.exe` dentro de
 `%LOCALAPPDATA%\ai-presence-monitor\venv\Scripts`. Um alias de shell nao e o
 mecanismo principal porque aliases geralmente nao sao carregados por

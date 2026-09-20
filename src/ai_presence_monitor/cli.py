@@ -78,6 +78,7 @@ from .systemd_service import (
 from .systemd_service import (
     print_result as print_systemd_result,
 )
+from .updater import UpgradeError, rollback_upgrade, upgrade_from_wheel
 from .work_window import get_work_window_status
 
 DEFAULT_EVENT_MESSAGES = {
@@ -786,6 +787,50 @@ def _doctor(args: argparse.Namespace, config: AppConfig) -> int:
             print(f"[{check.status}] {check.name}: {check.summary}")
         print(f"doctor: {report.status}")
     return report.exit_code(strict=args.strict)
+
+
+def _upgrade(args: argparse.Namespace, config: AppConfig) -> int:
+    try:
+        result = upgrade_from_wheel(
+            config=config,
+            target_wheel=args.package,
+            rollback_wheel=args.rollback_package,
+            authorized=args.authorize_once,
+            dry_run=args.dry_run,
+        )
+    except UpgradeError as exc:
+        print(f"Upgrade failed: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+    else:
+        print(
+            f"upgrade: status={result.status} from={result.from_version} "
+            f"to={result.to_version} manifest={result.manifest_path or '-'}"
+        )
+    return 0
+
+
+def _rollback_upgrade(args: argparse.Namespace, config: AppConfig) -> int:
+    try:
+        result = rollback_upgrade(
+            config=config,
+            manifest_path=args.manifest,
+            authorized=args.authorize_once,
+            restore_database=args.restore_database,
+            dry_run=args.dry_run,
+        )
+    except UpgradeError as exc:
+        print(f"Rollback failed: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+    else:
+        print(
+            f"rollback: status={result.status} from={result.from_version} "
+            f"to={result.to_version} manifest={result.manifest_path or '-'}"
+        )
+    return 0
 
 
 def _show_protocols() -> int:
@@ -1816,6 +1861,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retorna codigo 1 quando houver avisos.",
     )
     doctor_parser.set_defaults(func=lambda args, config: _doctor(args, config))
+
+    upgrade_parser = subparsers.add_parser(
+        "upgrade",
+        help="Atualiza por wheel local com backup e rollback automatico.",
+    )
+    upgrade_parser.add_argument("--package", type=Path, required=True)
+    upgrade_parser.add_argument("--rollback-package", type=Path, required=True)
+    upgrade_parser.add_argument("--authorize-once", action="store_true")
+    upgrade_parser.add_argument("--json", action="store_true")
+    upgrade_parser.set_defaults(func=lambda args, config: _upgrade(args, config))
+
+    rollback_upgrade_parser = subparsers.add_parser(
+        "rollback-upgrade",
+        help="Restaura wheel e banco de um manifesto de upgrade concluido.",
+    )
+    rollback_upgrade_parser.add_argument("--manifest", type=Path, required=True)
+    rollback_upgrade_parser.add_argument("--authorize-once", action="store_true")
+    rollback_upgrade_parser.add_argument(
+        "--restore-database",
+        action="store_true",
+        help="Confirma a restauracao destrutiva do snapshot anterior.",
+    )
+    rollback_upgrade_parser.add_argument("--json", action="store_true")
+    rollback_upgrade_parser.set_defaults(
+        func=lambda args, config: _rollback_upgrade(args, config)
+    )
 
     return parser
 

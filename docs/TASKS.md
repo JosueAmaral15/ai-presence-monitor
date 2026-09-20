@@ -5,7 +5,8 @@
 ### Task 025 - Superficie de produto e atualizacao transacional
 
 **Prioridade**: Alta
-**Status**: fase imediata concluida; superficie transacional permanece planejada
+**Status**: diagnostico e implementacao transacional concluidos localmente;
+release e E2E operacional permanecem pendentes
 **Objetivo**: transformar a instalacao tecnica em um produto atualizavel,
 diagnosticavel e distribuivel com rollback deterministico.
 
@@ -15,7 +16,7 @@ diagnosticavel e distribuivel com rollback deterministico.
 - [x] Configurar autostart XDG da bandeja no Linux Mint atual.
 - [x] Validar um unico `continue` nativo pos-upgrade na sessao exata.
 - [x] Adicionar `ai-presence --version` deterministico.
-- [ ] Implementar upgrade e rollback transacionais com manifesto de backup.
+- [x] Implementar upgrade e rollback transacionais com manifesto de backup.
 - [x] Expor versao e estado de migracao do schema SQLite.
 - [x] Criar comando sanitizado `doctor` para saude operacional.
 - [ ] Publicar artefatos tagueados e checksums SHA-256.
@@ -27,6 +28,9 @@ diagnosticavel e distribuivel com rollback deterministico.
 
 **Fase de diagnostico**:
 `docs/planning/TASK-025-product-diagnostics.md`.
+
+**Fase transacional**:
+`docs/planning/TASK-025-transactional-upgrade.md`.
 
 ## Concluidas em 2026-09-20
 

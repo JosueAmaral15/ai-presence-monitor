@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-09-20 - Upgrades are local, transactional and Linux-only
+
+**Decision**: accept only a target wheel and exact installed-version rollback
+wheel from local paths. Before mutation, preserve both wheels, a consistent
+SQLite snapshot, hashes and original managed-service state in a private atomic
+manifest. Require explicit one-operation authorization for upgrade and both
+authorization plus database-restoration acknowledgement for manual rollback.
+
+The updater uses `pip --no-index --no-deps`, fixed argument vectors and a clean
+child Python environment. A failed postflight receives one automatic rollback;
+an uncertain rollback is not retried. Partial stop/start sequences are reversed
+before package/database restoration. The tray remains outside the transaction.
+
+**Reason**: this bounds network, dependency, service and data risks while
+making recovery auditable. Restoring an old database may discard valid newer
+events and therefore cannot be implicit. Windows remains unsupported for this
+operation until it has an equivalent native lifecycle and real E2E.
+
 ## 2026-09-20 - Product preflight is read-only and schema-versioned
 
 **Decision**: use SQLite `PRAGMA user_version` as the explicit database schema

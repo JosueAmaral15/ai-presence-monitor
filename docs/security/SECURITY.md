@@ -22,6 +22,37 @@ the report, `codex queue --help` does not prove a later delivery, and SQLite
 `quick_check` does not replace backups. A future updater must rerun preflight
 around installation and preserve a rollback manifest.
 
+## Task 025 - Transactional upgrade
+
+- [x] Upgrade accepts only local `ai-presence-monitor` wheels and installs with
+      `--no-index --no-deps`.
+- [x] The rollback wheel version must match the installed runtime before any
+      package mutation.
+- [x] Database preflight rejects missing, corrupt, incomplete or newer schema.
+- [x] Target wheel, rollback wheel and SQLite snapshot are private artifacts
+      with SHA-256 values in an atomically replaced mode-0600 manifest.
+- [x] Commands use fixed argument vectors and a sanitized child Python
+      environment without shell execution.
+- [x] Partial service stop is reversed before package installation.
+- [x] Services started under a failed target package are stopped before
+      package/database restoration.
+- [x] Real upgrade requires `--authorize-once`; manual rollback additionally
+      requires `--restore-database`.
+- [x] Manual rollback accepts only a completed manifest inside the managed
+      backup root and validates every artifact checksum.
+- [x] Failure and uncertainty are persisted and never trigger an unbounded or
+      silent retry.
+
+### Residual risk
+
+The updater trusts the local user who owns the private backup directory and
+does not provide cryptographic publisher signatures. A valid but malicious
+wheel can execute code during import or service startup. Manual rollback
+intentionally discards database writes made after the pre-upgrade snapshot.
+The tray is not stopped automatically and must be restarted separately. A
+failed rollback or service restoration requires manual inspection before any
+new transaction.
+
 ## Task 025 - Immediate product activation
 
 - [x] Persistent `task-automation` authorizes only ordinary continuation after

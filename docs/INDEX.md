@@ -12,6 +12,7 @@
 - [Respostas remotas Discord para Codex](RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Portabilidade e reutilizacao](PORTABILIDADE.md)
 - [Guia operacional do Windows](WINDOWS.md)
+- [Upgrade e rollback transacionais](TRANSACTIONAL-UPGRADE.md)
 
 ## Projeto
 
@@ -28,6 +29,7 @@
 - [Upgrade operacional 0.8.0 e proximos passos de produto](planning/TASK-024-operational-upgrade-productization.md)
 - [Ativacao imediata do produto e E2E pos-upgrade](planning/TASK-025-immediate-product-activation.md)
 - [Diagnostico de produto e contrato de schema](planning/TASK-025-product-diagnostics.md)
+- [Plano do upgrade transacional](planning/TASK-025-transactional-upgrade.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
 - [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)

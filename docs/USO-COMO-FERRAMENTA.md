@@ -77,6 +77,22 @@ ai-presence doctor --json
 O relatorio nao inclui tokens, URLs de webhook, comandos de alarme, IDs de
 sessao ou valores do `.env`.
 
+Para atualizar o produto no Linux, use primeiro o dry-run e dois wheels locais
+confiaveis:
+
+```bash
+ai-presence --dry-run upgrade \
+  --package /caminho/absoluto/novo.whl \
+  --rollback-package /caminho/absoluto/instalado.whl \
+  --json
+```
+
+Uma execucao real exige `--authorize-once`. O rollback manual restaura o banco
+anterior e tambem exige `--restore-database`, pois dados gerados depois do
+snapshot serao descartados. Humanos e AI-workers devem ler
+[TRANSACTIONAL-UPGRADE.md](TRANSACTIONAL-UPGRADE.md) antes da operacao, verificar
+o status final do manifesto e nunca repetir automaticamente uma falha incerta.
+
 No Windows PowerShell:
 
 ```powershell

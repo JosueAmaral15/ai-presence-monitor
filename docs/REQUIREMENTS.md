@@ -116,6 +116,27 @@
   resolver o incidente ou provar processamento; hook posterior e novo
   diagnostico devem fornecer essa evidencia.
 
+## Ciclo de Vida do Produto
+
+- Upgrade suportado deve usar somente wheels locais e nunca resolver
+  dependencias ou acessar indice de pacotes durante a transacao.
+- O wheel de rollback deve corresponder exatamente a versao instalada antes da
+  mutacao.
+- Preflight deve validar plataforma, schema, integridade, versoes e estado dos
+  servicos sem criar backup ou instalar pacote no modo dry-run.
+- Antes da instalacao devem existir copia dos dois wheels, snapshot SQLite,
+  hashes SHA-256 e manifesto privado gravado atomicamente.
+- Somente servicos gerenciados ativos antes da transacao devem ser parados e
+  reiniciados; falha parcial deve restaurar o estado conhecido.
+- Falha depois do inicio da instalacao deve tentar exatamente um rollback
+  automatico do pacote e banco, sem retry silencioso.
+- Rollback manual deve validar manifesto e hashes, exigir autorizacao unica e
+  reconhecimento explicito de que o banco sera restaurado.
+- Upgrade transacional e suportado somente no Linux ate existir implementacao
+  e E2E nativos equivalentes no Windows.
+- Processo da bandeja deve ser reiniciado manualmente depois do upgrade porque
+  nao pertence aos servicos systemd gerenciados.
+
 ## Portabilidade
 
 - A CLI deve fornecer `--version` deterministico sem depender de metadata do

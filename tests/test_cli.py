@@ -198,6 +198,32 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertTrue(doctor_args.json)
         self.assertTrue(doctor_args.strict)
 
+        upgrade_args = parser.parse_args(
+            [
+                "--dry-run",
+                "upgrade",
+                "--package",
+                "/tmp/new.whl",
+                "--rollback-package",
+                "/tmp/old.whl",
+            ]
+        )
+        self.assertEqual(upgrade_args.command, "upgrade")
+        self.assertTrue(upgrade_args.dry_run)
+
+        rollback_args = parser.parse_args(
+            [
+                "rollback-upgrade",
+                "--manifest",
+                "/tmp/manifest.json",
+                "--authorize-once",
+                "--restore-database",
+            ]
+        )
+        self.assertEqual(rollback_args.command, "rollback-upgrade")
+        self.assertTrue(rollback_args.authorize_once)
+        self.assertTrue(rollback_args.restore_database)
+
     def test_global_version_does_not_require_configuration(self) -> None:
         with redirect_stdout(StringIO()) as output, self.assertRaises(
             SystemExit

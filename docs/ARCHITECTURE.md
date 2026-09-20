@@ -439,6 +439,27 @@ services and tray autostart. It receives sanitized states from existing
 adapters and never serializes `.env` values, webhook URLs, tokens, prompts or
 session IDs. Default exit status fails errors; strict mode also fails warnings.
 
+## Transactional Package Lifecycle
+
+`updater.py` implements the supported Linux package transaction around the
+dedicated runtime interpreter. It accepts only local wheels, validates the
+rollback version against the installed module from a clean child process, and
+uses fixed argument vectors without a shell. Package installation uses
+`--no-index --no-deps`.
+
+Before mutation it copies target and rollback wheels, creates a SQLite backup
+through the backup API, computes SHA-256 values and writes an atomic mode-0600
+manifest under the user state directory. The transaction records which managed
+services were active. Partial service stops are reversed before installation;
+partial postflight starts are stopped before package/database rollback.
+
+The postflight initializes additive migrations, verifies the installed version
+and requires `doctor` not to report an error. Manual rollback validates the
+managed manifest and all checksums, snapshots the current upgraded database,
+then requires explicit acknowledgement before restoring the older snapshot.
+The tray is a desktop process rather than a managed service and remains outside
+this transaction.
+
 ## Fronteira de Plataforma
 
 O entrypoint `ai-presence` e gerado pelo empacotamento Python no Linux e no
