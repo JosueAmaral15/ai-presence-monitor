@@ -8,6 +8,12 @@ Esta release possui suporte operacional oficial somente para Linux. O codigo
 Windows foi preservado, mas fica experimental e desabilitado por padrao. Testes
 controlados no Windows exigem `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
 
+O projeto tambem registra evidencias diagnosticas com TTL sem alterar os
+relogios de presenca. No Linux, `observe-linux-state` pode observar um PID
+explicito, rota e links locais, retomada depois de suspensao e unidades
+`.service` selecionadas. Esses fatos nao constituem diagnostico, nao enviam
+alertas e nao acionam recuperacao automaticamente.
+
 ## Protocolos
 
 ### Protocolo 1

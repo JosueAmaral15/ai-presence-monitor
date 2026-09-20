@@ -11,6 +11,8 @@ The project also provides:
 - passive Codex activity observation through hooks;
 - bounded Codex diagnostic evidence from recognized hooks and sanitized
   account-limit polling, without changing presence clocks;
+- bounded Linux process, local-route, resume-gap, and user-service evidence
+  through an explicit read-only observer;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with

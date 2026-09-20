@@ -92,7 +92,12 @@ class ConfigPortabilityTests(unittest.TestCase):
                 "PRESENCE_CODEX_REMOTE_AUTH_TOKEN_ENV=REMOTE_TOKEN\n"
                 "PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS=120\n"
                 "PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS=180\n"
-                "PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=360\n",
+                "PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=360\n"
+                "PRESENCE_LINUX_OBSERVER_INTERVAL_SECONDS=10\n"
+                "PRESENCE_LINUX_EVIDENCE_TTL_SECONDS=40\n"
+                "PRESENCE_LINUX_SUSPEND_GAP_SECONDS=3.5\n"
+                "PRESENCE_LINUX_SERVICE_TIMEOUT_SECONDS=2.5\n"
+                "PRESENCE_LINUX_USER_SERVICES=Worker.service,monitor.service\n",
                 encoding="utf-8",
             )
             with patch.dict(os.environ, {}, clear=True):
@@ -124,6 +129,14 @@ class ConfigPortabilityTests(unittest.TestCase):
             self.assertEqual(config.codex_hook_evidence_ttl_seconds, 120)
             self.assertEqual(config.codex_limit_poll_interval_seconds, 180)
             self.assertEqual(config.codex_limit_evidence_ttl_seconds, 360)
+            self.assertEqual(config.linux_observer_interval_seconds, 10)
+            self.assertEqual(config.linux_evidence_ttl_seconds, 40)
+            self.assertEqual(config.linux_suspend_gap_seconds, 3.5)
+            self.assertEqual(config.linux_service_timeout_seconds, 2.5)
+            self.assertEqual(
+                config.linux_user_services,
+                ("Worker.service", "monitor.service"),
+            )
 
     def test_windows_runtime_is_disabled_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

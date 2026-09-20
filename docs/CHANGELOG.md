@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Task 022 Codex evidence observers
+## Unreleased - Task 022 Linux system evidence observers
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.
 - Added additive SQLite tables for diagnostic evidence, immutable diagnosis
@@ -23,6 +23,12 @@
   `account/rateLimits/read` evidence tied to an exact active worker.
 - Kept live subscriptions, cause diagnosis, incidents, notifications, alarms,
   input and recovery disabled while later Task 022 phases remain pending.
+- Added Linux-only `observe-linux-state` with bounded process, local-route,
+  resume-gap and explicit user-systemd service evidence.
+- Added PID name/start-time safeguards, local-only network reads, clock-based
+  resume detection and shell-free allowlisted systemd parsing.
+- Added one-shot and watch modes with exact-worker rechecks, expiring evidence,
+  dry-run isolation and no presence-clock mutation.
 
 ## 2026-09-13 - v0.7.0
 

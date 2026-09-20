@@ -111,6 +111,40 @@ diagnostic record. The limit observer does not subscribe to thread events,
 diagnose a cause, create an incident, notify Discord, play an alarm or send
 Codex input.
 
+### Linux system evidence observers
+
+Phase 4 adds `linux_evidence.py` and the Linux-only
+`observe-linux-state` command. Four collectors remain independent:
+
+```text
+explicit PID -> /proc/PID/comm + stat --------> process evidence
+/proc/net/route + /sys/class/net -------------> network evidence
+CLOCK_BOOTTIME - monotonic elapsed gap --------> power evidence
+explicit unit -> systemctl --user show --------> service evidence
+                                                      |
+                                                      v
+                                           diagnostic_evidence only
+```
+
+The process collector binds an explicit positive PID to an optional expected
+Linux process name and remembers kernel start ticks during one observer run.
+This distinguishes missing, zombie, dead, mismatched and replaced processes
+without reading command lines, environment variables or open files.
+
+The network collector sends no packet. A default route or up link describes
+only local kernel state and does not prove DNS or Internet reachability. The
+power collector cannot run while the machine is suspended; in watch mode it
+detects a resume afterward when `CLOCK_BOOTTIME` advanced farther than the
+monotonic clock. The service collector accepts only bounded `.service` unit
+names and parses allowlisted fields from `systemctl --user show` invoked without
+a shell.
+
+Network and power are enabled by default. Process and service targets are
+explicit. The default command is one-shot; `--watch` checks the worker before
+and after every sample, then stops after `finish`. Dry-run performs one local
+sample without SQLite. Persisted facts expire and cannot update protocol
+clocks, classify a cause, create incidents, notify or recover.
+
 ## Tipos de Sinal
 
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.

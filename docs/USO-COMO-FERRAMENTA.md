@@ -40,6 +40,7 @@ Os componentes sao independentes:
 | CLI `ai-presence` | interface deterministica para humanos, scripts e IAs |
 | hooks do Codex | registrar atividade local silenciosa e evidencia diagnostica reconhecida |
 | observer de limites | registrar estado sanitizado da conta sem alterar presenca |
+| observer Linux | registrar processo, rota local, retomada e servicos selecionados |
 | monitor | avaliar atrasos e produzir alertas |
 | observer Discord | receber respostas correlacionadas de usuarios permitidos |
 | `codex queue` | enviar texto para uma sessao sem mouse ou teclado |
@@ -173,6 +174,33 @@ propria evidencia diagnostica curta, alem da observacao de presenca existente.
 Isso ainda nao constitui um diagnostico final; a correlacao de causas sera uma
 fase separada.
 
+### Observar estado local do Linux
+
+Rede e energia sao coletadas por padrao. Processo e servicos exigem alvos
+explicitos:
+
+```bash
+ai-presence observe-linux-state \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --process-pid PID_EXATO \
+  --expected-process-name codex \
+  --service ai-presence-monitor.service \
+  --service ai-presence-reply-observer.service
+```
+
+Use `--watch` para repetir no intervalo configurado. `finish` torna o worker
+idle e encerra o watcher. `--skip-network`, `--skip-power` e `--no-services`
+desabilitam fontes especificas. Se um shell substituir seu proprio processo ao
+executar o ultimo comando, `$$` pode passar a identificar `python3`; confirme
+PID e `/proc/PID/comm` antes de informar o nome esperado.
+
+O observer nao testa DNS nem Internet, nao le linha de comando ou ambiente de
+processos e nao consulta journal. Uma retomada de suspensao so pode ser
+detectada entre duas coletas do mesmo watcher. Servico inativo e apenas um fato;
+ele so sera problema quando uma fase posterior souber que aquela unidade era
+obrigatoria. Nenhuma dessas evidencias atualiza presenca ou envia alertas.
+
 ### Enviar texto sem usar mouse ou teclado
 
 ```bash
@@ -269,6 +297,11 @@ tarefa incluir observacao de limites, a IA pode executar uma leitura one-shot
 com `observe-codex-limits --project "$PROJECT" --session SESSAO_EXATA`. Ela nao
 deve manter `--watch` sem essa responsabilidade ter sido atribuida e nao deve
 interpretar a evidencia como autorizacao para notificar ou recuperar.
+
+Para evidencia Linux, use `observe-linux-state --project "$PROJECT"` somente
+com PIDs e servicos confirmados. Nao descubra automaticamente outro processo
+Codex por nome, nao trate rota local como Internet disponivel e nao use um
+servico opcional inativo como diagnostico final.
 
 ### Perguntar ao usuario
 

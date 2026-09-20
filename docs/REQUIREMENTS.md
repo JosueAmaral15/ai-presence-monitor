@@ -57,6 +57,18 @@
   `ordinary_usage_allowed=true` nem provar limite excedido.
 - Hook evidence e account-limit evidence nao devem atualizar
   `last_activity_at`, `last_signal_at` ou rearmar alertas de presenca.
+- O observer Linux deve ser one-shot por padrao e oferecer `--watch` explicito
+  com revalidacao do worker antes e depois de cada coleta.
+- Processo deve exigir PID positivo, aceitar nome esperado validado e detectar
+  troca de instancia pelos start ticks durante a mesma execucao.
+- Rede deve usar apenas rota e links locais, sem DNS, HTTP ou ping, e nao deve
+  afirmar conectividade com a Internet.
+- Energia deve detectar retomada somente pela diferenca entre relogios de boot e
+  monotonic em duas amostras do mesmo watcher.
+- Servicos devem ser alvos `.service` explicitos, consultados por
+  `systemctl --user show` sem shell e sanitizados para estados permitidos.
+- Observers Linux nao devem ler `cmdline`, `environ`, journal, arquivos abertos
+  ou payload de rede, nem atualizar relogios de presenca.
 - O observer live do App Server deve permanecer desabilitado enquanto a sessao
   monitorada nao compartilhar o mesmo endpoint/daemon validado.
 
