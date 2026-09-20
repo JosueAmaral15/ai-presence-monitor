@@ -71,6 +71,13 @@ class IncidentStatus(str, Enum):
     RESOLVED = "resolved"
 
 
+class NotificationDeliveryStatus(str, Enum):
+    PENDING = "pending"
+    DELIVERED = "delivered"
+    REJECTED = "rejected"
+    UNCERTAIN = "uncertain"
+
+
 @dataclass(frozen=True)
 class DiagnosticEvidence:
     evidence_id: str
@@ -110,6 +117,19 @@ class DiagnosticIncident:
     resolved_at: float | None
     resolution: str | None
     last_notified_at: float | None
+
+
+@dataclass(frozen=True)
+class DiagnosticNotification:
+    notification_id: str
+    incident_id: str
+    diagnosis_id: str
+    event_key: str
+    channel: str
+    status: NotificationDeliveryStatus
+    attempted_at: float
+    delivered_at: float | None
+    failure_code: str | None
 
 
 def initialize_diagnostic_schema(conn: sqlite3.Connection) -> None:
@@ -208,6 +228,32 @@ def initialize_diagnostic_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_diagnostic_incidents_status_time
         ON diagnostic_incidents(status, updated_at DESC)
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS diagnostic_notifications (
+            notification_id TEXT PRIMARY KEY,
+            incident_id TEXT NOT NULL,
+            diagnosis_id TEXT NOT NULL,
+            event_key TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            status TEXT NOT NULL,
+            attempted_at REAL NOT NULL,
+            delivered_at REAL,
+            failure_code TEXT,
+            UNIQUE (incident_id, event_key, channel),
+            FOREIGN KEY (incident_id)
+                REFERENCES diagnostic_incidents(incident_id) ON DELETE RESTRICT,
+            FOREIGN KEY (diagnosis_id)
+                REFERENCES diagnostic_diagnoses(diagnosis_id) ON DELETE RESTRICT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_diagnostic_notifications_status_time
+        ON diagnostic_notifications(status, attempted_at DESC)
         """
     )
 
@@ -646,6 +692,192 @@ class DiagnosticStore:
             raise ValueError(f"Open incident not found: {clean_id}")
         return self.require_incident(clean_id)
 
+    def find_notification(
+        self,
+        *,
+        incident_id: str,
+        event_key: str,
+        channel: str = "discord",
+    ) -> DiagnosticNotification | None:
+        clean_incident = _identifier(incident_id, "incident_id")
+        clean_event = _identifier(event_key, "notification event key")
+        clean_channel = _identifier(channel, "notification channel", max_length=40)
+        with self.session() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM diagnostic_notifications
+                WHERE incident_id = ? AND event_key = ? AND channel = ?
+                """,
+                (clean_incident, clean_event, clean_channel),
+            ).fetchone()
+        return self._row_to_notification(row) if row else None
+
+    def reserve_notification(
+        self,
+        *,
+        incident_id: str,
+        diagnosis_id: str,
+        event_key: str,
+        channel: str = "discord",
+        now: float | None = None,
+    ) -> tuple[DiagnosticNotification, bool]:
+        clean_incident = _identifier(incident_id, "incident_id")
+        clean_diagnosis = _identifier(diagnosis_id, "diagnosis_id")
+        clean_event = _identifier(event_key, "notification event key")
+        clean_channel = _identifier(channel, "notification channel", max_length=40)
+        timestamp = time.time() if now is None else _timestamp(now, "now")
+        notification_id = str(uuid.uuid4())
+        with self.session() as conn:
+            incident = conn.execute(
+                """
+                SELECT status, current_diagnosis_id
+                FROM diagnostic_incidents
+                WHERE incident_id = ?
+                """,
+                (clean_incident,),
+            ).fetchone()
+            if incident is None or incident["status"] != IncidentStatus.OPEN.value:
+                raise ValueError(f"Open incident not found: {clean_incident}")
+            if incident["current_diagnosis_id"] != clean_diagnosis:
+                raise ValueError("Notification diagnosis is not current for the incident.")
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO diagnostic_notifications (
+                    notification_id, incident_id, diagnosis_id, event_key,
+                    channel, status, attempted_at, delivered_at, failure_code
+                ) VALUES (?, ?, ?, ?, ?, 'pending', ?, NULL, NULL)
+                """,
+                (
+                    notification_id,
+                    clean_incident,
+                    clean_diagnosis,
+                    clean_event,
+                    clean_channel,
+                    timestamp,
+                ),
+            )
+            created = cursor.rowcount == 1
+            row = conn.execute(
+                """
+                SELECT * FROM diagnostic_notifications
+                WHERE incident_id = ? AND event_key = ? AND channel = ?
+                """,
+                (clean_incident, clean_event, clean_channel),
+            ).fetchone()
+        assert row is not None
+        return self._row_to_notification(row), created
+
+    def complete_notification(
+        self,
+        notification_id: str,
+        *,
+        status: NotificationDeliveryStatus | str,
+        failure_code: str | None = None,
+        now: float | None = None,
+    ) -> DiagnosticNotification:
+        clean_id = _identifier(notification_id, "notification_id")
+        normalized_status = _enum_value(
+            NotificationDeliveryStatus,
+            status,
+            "notification status",
+        )
+        if normalized_status is NotificationDeliveryStatus.PENDING:
+            raise ValueError("A completed notification cannot remain pending.")
+        clean_failure = _optional_identifier(
+            failure_code,
+            "notification failure code",
+        )
+        if normalized_status is NotificationDeliveryStatus.DELIVERED:
+            clean_failure = None
+        elif clean_failure is None:
+            raise ValueError("A failed notification requires a failure code.")
+        timestamp = time.time() if now is None else _timestamp(now, "now")
+        with self.session() as conn:
+            row = conn.execute(
+                """
+                SELECT incident_id FROM diagnostic_notifications
+                WHERE notification_id = ? AND status = 'pending'
+                """,
+                (clean_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"Pending notification not found: {clean_id}")
+            conn.execute(
+                """
+                UPDATE diagnostic_notifications
+                SET status = ?, delivered_at = ?, failure_code = ?
+                WHERE notification_id = ? AND status = 'pending'
+                """,
+                (
+                    normalized_status.value,
+                    timestamp
+                    if normalized_status is NotificationDeliveryStatus.DELIVERED
+                    else None,
+                    clean_failure,
+                    clean_id,
+                ),
+            )
+            if normalized_status is NotificationDeliveryStatus.DELIVERED:
+                conn.execute(
+                    """
+                    UPDATE diagnostic_incidents
+                    SET last_notified_at = ?
+                    WHERE incident_id = ?
+                    """,
+                    (timestamp, row["incident_id"]),
+                )
+        return self.require_notification(clean_id)
+
+    def get_notification(self, notification_id: str) -> DiagnosticNotification | None:
+        clean_id = _identifier(notification_id, "notification_id")
+        with self.session() as conn:
+            row = conn.execute(
+                "SELECT * FROM diagnostic_notifications WHERE notification_id = ?",
+                (clean_id,),
+            ).fetchone()
+        return self._row_to_notification(row) if row else None
+
+    def require_notification(self, notification_id: str) -> DiagnosticNotification:
+        notification = self.get_notification(notification_id)
+        if notification is None:
+            raise ValueError(f"Notification not found: {notification_id}")
+        return notification
+
+    def list_notifications(
+        self,
+        *,
+        incident_id: str | None = None,
+        status: NotificationDeliveryStatus | str | None = None,
+        limit: int = 100,
+    ) -> list[DiagnosticNotification]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if incident_id is not None:
+            clauses.append("incident_id = ?")
+            params.append(_identifier(incident_id, "incident_id"))
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(
+                _enum_value(
+                    NotificationDeliveryStatus,
+                    status,
+                    "notification status",
+                ).value
+            )
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(_limit(limit))
+        with self.session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT * FROM diagnostic_notifications
+                {where}
+                ORDER BY attempted_at DESC, notification_id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_notification(row) for row in rows]
+
     @staticmethod
     def _row_to_evidence(row: sqlite3.Row) -> DiagnosticEvidence:
         return DiagnosticEvidence(
@@ -691,6 +923,20 @@ class DiagnosticStore:
             resolved_at=row["resolved_at"],
             resolution=row["resolution"],
             last_notified_at=row["last_notified_at"],
+        )
+
+    @staticmethod
+    def _row_to_notification(row: sqlite3.Row) -> DiagnosticNotification:
+        return DiagnosticNotification(
+            notification_id=row["notification_id"],
+            incident_id=row["incident_id"],
+            diagnosis_id=row["diagnosis_id"],
+            event_key=row["event_key"],
+            channel=row["channel"],
+            status=NotificationDeliveryStatus(row["status"]),
+            attempted_at=row["attempted_at"],
+            delivered_at=row["delivered_at"],
+            failure_code=row["failure_code"],
         )
 
 

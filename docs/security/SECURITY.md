@@ -121,6 +121,32 @@ intentionally; selecting an optional service makes its inactivity eligible as
 observer-health evidence. Phase 6 must preserve confidence and deduplicate from
 the incident state instead of notifying from raw evidence.
 
+## Task 022 - Diagnostic Discord notifications
+
+- [x] Only one explicit policy module can consume an open incident for
+      cause-aware delivery; observers and the diagnosis engine do not send.
+- [x] A unique incident/event/channel row is reserved before network access.
+- [x] Equivalent diagnoses deduplicate by bounded semantics instead of UUID.
+- [x] The payload is bounded, replaces display backticks and disables Discord
+      mention parsing.
+- [x] The transport performs one POST, reads a bounded response and has no
+      automatic retry or channel fallback.
+- [x] HTTP rejection and transport uncertainty persist only bounded codes, not
+      response bodies, URLs or raw exceptions.
+- [x] Only confirmed delivery updates the incident notification timestamp.
+- [x] Dry-run performs no network request or notification-row write; a missing
+      webhook fails before reservation.
+- [x] Telegram, local alarm, phone, Codex input and recovery are unreachable
+      from this notification path.
+
+### Residual risk
+
+A timeout can occur after Discord accepted the message. The corresponding
+`uncertain` row intentionally suppresses automatic retry, so an operator may
+need to inspect Discord. A process interruption after reservation leaves
+`pending` with the same suppression. Real Discord behavior remains a Phase 7
+E2E gate and requires explicit authorization for the external message.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

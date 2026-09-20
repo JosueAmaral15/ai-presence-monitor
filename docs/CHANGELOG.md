@@ -37,6 +37,14 @@
   cause and severity updates; healthy evidence resolves the episode.
 - Kept Discord/Telegram notifications, alarms, Codex input, retry and recovery
   outside the diagnosis engine.
+- Added a diagnostic-only Discord policy with an additive attempt ledger and
+  semantic deduplication across equivalent diagnosis UUIDs.
+- Reserved each incident/cause/confidence/severity/channel event before one
+  bounded POST; confirmed delivery alone updates `last_notified_at`.
+- Retained rejected, uncertain and interrupted attempts without automatic
+  retry, and kept Telegram, alarm, phone, Codex input and recovery disconnected.
+- Added `notify-diagnostic-incident` with exact worker selection, JSON output
+  and a network-free, ledger-write-free dry run using existing alert webhooks.
 
 ## 2026-09-13 - v0.7.0
 

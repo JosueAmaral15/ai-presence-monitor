@@ -42,6 +42,7 @@ class DiagnosticStoreTests(unittest.TestCase):
                     "diagnostic_diagnoses",
                     "diagnostic_diagnosis_evidence",
                     "diagnostic_incidents",
+                    "diagnostic_notifications",
                 }.issubset(tables)
             )
 

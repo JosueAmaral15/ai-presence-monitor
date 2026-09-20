@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-20 - Diagnostic Discord delivery is reserved and one-shot
+
+**Decision**: add one explicit diagnostic notification policy that reserves a
+semantic event before sending exactly one Discord request. The unique boundary
+is incident plus cause, confidence, severity and channel, not diagnosis UUID.
+
+**Reason**:
+
+- a new immutable diagnosis may carry the same meaning and must not duplicate
+  a user notification;
+- reservation before network access closes concurrent and crash ambiguity;
+- a timeout cannot prove whether Discord accepted the request, so retrying it
+  automatically risks duplicate external messages;
+- the existing general notifier also invokes Telegram and red escalation,
+  which is outside this phase's narrow Discord contract.
+
+**Consequence**:
+
+Confirmed webhook success marks the ledger row delivered and updates the
+incident notification timestamp atomically. Rejected, uncertain and pending
+attempts remain terminal for that semantic key. Dry-run reserves no attempt and
+makes no network request; missing configuration fails before reservation. A
+changed semantic diagnosis or a new incident can create one new attempt.
+Telegram, alarms, phone, Codex input, recovery and live E2E remain separate.
+
 ## 2026-09-20 - Diagnosis severity belongs to the protocol clock
 
 **Decision**: run diagnosis as a one-shot correlation step. Reduce current

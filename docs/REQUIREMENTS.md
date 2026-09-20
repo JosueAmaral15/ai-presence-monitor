@@ -83,6 +83,19 @@
   `usage_available` isolados nao devem provar trabalho nem conectividade.
 - `diagnose --dry-run` nao deve criar evidencia, diagnostico ou incidente.
 - A Fase 5 nao deve enviar notificacao, alarme, input, retry ou recuperacao.
+- A notificacao diagnostica deve consumir somente o incidente aberto e seu
+  diagnostico atual; observers e o motor nao devem enviar mensagens.
+- A chave de deduplicacao deve considerar incidente, causa, confianca,
+  severidade e canal sem depender do UUID mutavel do diagnostico atual.
+- A tentativa deve ser reservada antes do acesso a rede e deve executar no
+  maximo um POST Discord, sem retry automatico.
+- Somente entrega HTTP confirmada deve atualizar `last_notified_at`.
+- Rejeicao, incerteza ou interrupcao devem permanecer registradas e suprimir
+  repeticao automatica da mesma chave semantica.
+- `notify-diagnostic-incident --dry-run` nao deve acessar rede nem gravar a
+  tabela de tentativas.
+- Webhook ausente deve falhar antes da reserva; o fluxo nao deve chamar
+  Telegram, alarme, telefone, input do Codex ou recuperacao.
 
 ## Portabilidade
 
