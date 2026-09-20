@@ -95,6 +95,32 @@ availability. Suspend detection occurs only after resume and can be lost if the
 watcher is terminated. Service inactivity is not a fault unless a later policy
 knows that the selected unit was required.
 
+## Task 022 - Diagnosis engine
+
+- [x] Only non-expired evidence is considered.
+- [x] Newest-batch reduction prevents an older fact of the same source/kind
+      from overriding its replacement while retaining simultaneous services.
+- [x] Ambiguous current Codex sessions fail before diagnostic writes.
+- [x] Direct account and interaction states use bounded allowlists.
+- [x] Local network degradation is limited to low or medium confidence and
+      never claims that an upstream Internet probe succeeded or failed.
+- [x] Positive process, route, power, service and account facts do not prove
+      worker activity by themselves.
+- [x] Every persisted diagnosis links evidence; overdue causes also link a
+      bounded protocol-threshold fact.
+- [x] Dry-run does not add evidence, diagnosis or incident rows.
+- [x] Incident updates preserve `last_notified_at` and one-open-per-worker.
+- [x] Phase 5 has no notification, alarm, input, retry or recovery call path.
+
+### Residual risk
+
+The diagnosis is limited to the observers that were actually running and may
+remain `unexplained_inactivity`. A local route cannot distinguish DNS, proxy,
+firewall or upstream service failures. A required service must be selected
+intentionally; selecting an optional service makes its inactivity eligible as
+observer-health evidence. Phase 6 must preserve confidence and deduplicate from
+the incident state instead of notifying from raw evidence.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

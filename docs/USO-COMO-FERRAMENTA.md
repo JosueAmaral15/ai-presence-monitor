@@ -171,8 +171,8 @@ O comando consulta somente `account/rateLimits/read`. A evidencia expira e nao
 atualiza `last_activity_at`, nao evita alertas do Protocolo 2 e nao envia
 Discord, alarme, `continue` ou recuperacao. Hooks reconhecidos registram a sua
 propria evidencia diagnostica curta, alem da observacao de presenca existente.
-Isso ainda nao constitui um diagnostico final; a correlacao de causas sera uma
-fase separada.
+Esses producers nao decidem a causa sozinhos; a correlacao ocorre no comando
+separado `diagnose`.
 
 ### Observar estado local do Linux
 
@@ -198,8 +198,41 @@ PID e `/proc/PID/comm` antes de informar o nome esperado.
 O observer nao testa DNS nem Internet, nao le linha de comando ou ambiente de
 processos e nao consulta journal. Uma retomada de suspensao so pode ser
 detectada entre duas coletas do mesmo watcher. Servico inativo e apenas um fato;
-ele so sera problema quando uma fase posterior souber que aquela unidade era
-obrigatoria. Nenhuma dessas evidencias atualiza presenca ou envia alertas.
+o motor o interpreta como problema somente porque as unidades observadas foram
+selecionadas explicitamente como obrigatorias. Nenhuma dessas evidencias
+atualiza presenca ou envia alertas.
+
+### Correlacionar a causa atual
+
+Use primeiro o modo sem escrita:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Se o resultado e o alvo estiverem corretos, persista a transicao:
+
+```bash
+ai-presence diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+O comando considera apenas evidencia nao expirada, mantem o lote mais novo de
+cada fonte/tipo e falha fechado se encontrar sessoes Codex atuais conflitantes
+sem `--session`. A severidade continua vindo do threshold do Protocolo 1 ou 2.
+Fatos positivos isolados, como processo em execucao, rota default, sistema
+acordado ou servico ativo, nao provam que a IA esta trabalhando. Na falta de
+causa suficiente, o resultado correto e `unexplained_inactivity` com baixa
+confianca.
+
+`working` ou `long_running_operation` resolve um incidente aberto. Outras
+causas atrasadas abrem ou atualizam um unico incidente. A Fase 5 nao envia
+Discord/Telegram, nao toca alarme, nao envia input, nao repete uma acao e nao
+recupera a sessao.
 
 ### Enviar texto sem usar mouse ou teclado
 
@@ -303,6 +336,11 @@ com PIDs e servicos confirmados. Nao descubra automaticamente outro processo
 Codex por nome, nao trate rota local como Internet disponivel e nao use um
 servico opcional inativo como diagnostico final.
 
+Quando a tarefa incluir correlacao de causa, execute `ai-presence --dry-run
+diagnose --project "$PROJECT" --session SESSAO_EXATA` antes da chamada real.
+Nao interprete a criacao ou atualizacao de um incidente como autorizacao para
+notificar, tocar alarme ou enviar `continue`.
+
 ### Perguntar ao usuario
 
 Prefira o mecanismo nativo de pergunta da plataforma da IA. Quando ele nao
@@ -375,6 +413,8 @@ ai-presence finish \
 | `input_emitted` | transporte sincrono terminou com sucesso | interpretacao correta pelo agente |
 | hook posterior | houve atividade posterior naquela sessao/worker | autoria da mensagem isoladamente |
 | `delivery_confirmed` | observer correlacionou entrega e hook; nativo exige a mesma sessao | interpretacao correta ou qualidade da resposta |
+| diagnosis `high/medium/low` | precedencia deterministica sobre fatos atuais | certeza absoluta fora das fontes observadas |
+| incidente `open/resolved` | ciclo correlacionado do mesmo worker | notificacao, recuperacao ou acao automatica |
 
 Para `continue` nativo, um hook isolado nao identifica qual entrada causou a
 atividade. Nao declare E2E concluido apenas porque apareceu um hook depois do

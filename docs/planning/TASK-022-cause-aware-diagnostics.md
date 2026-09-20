@@ -176,6 +176,60 @@ Implementation checkpoints:
 - [x] complete test, coverage, lint, type, build and Python matrix gates;
 - [x] task commit and local `develop` integration.
 
+## Phase 5 - Deterministic Diagnosis Engine
+
+Status: implemented and validated on `codex/task-022-diagnosis-engine`, then
+integrated locally into `develop`.
+
+This phase adds a one-shot, side-effect-bounded diagnosis workflow. It reads
+the exact worker, derives severity from that worker's existing protocol clock,
+reduces current evidence to the newest observation batch for each source and
+kind, then records one immutable diagnosis and applies one incident transition.
+
+Deterministic precedence for an overdue worker is:
+
+1. explicit account, interaction and context-limit facts;
+2. explicit process failure or closure facts;
+3. detected suspend/resume and required-service failure facts;
+4. local network degradation, with confidence limited because local route
+   state does not prove upstream Internet availability;
+5. recent Codex activity or a recognized long-running operation;
+6. `unexplained_inactivity` when no stronger current fact is sufficient.
+
+The engine will not infer a cause from `usage_available`, a running process, a
+default route, an awake one-shot sample or an active service. Conflicting
+current Codex sessions fail closed unless the caller supplies the exact
+session. Session-neutral evidence may support one selected session, but
+session-bound evidence from another session may not be linked.
+
+Incident transitions are intentionally small:
+
+- an overdue non-healthy diagnosis opens or updates the worker's single open
+  incident at the current protocol threshold;
+- `working` or `long_running_operation` resolves an existing incident;
+- a worker inside its threshold records `working` from a bounded presence fact
+  and resolves an existing incident instead of opening a new one;
+- `--dry-run` computes and prints the transition without writing evidence,
+  diagnosis or incident rows;
+- notification timestamps are untouched and no Discord, Telegram, alarm,
+  Codex input, retry or recovery action exists in this phase.
+
+Implementation checkpoints:
+
+- [x] pure evidence reduction and precedence classifier;
+- [x] bounded presence-clock evidence for healthy/overdue decisions;
+- [x] one-shot `diagnose` CLI with exact worker/session selection and dry-run;
+- [x] deterministic open, update and resolve transitions;
+- [x] focused tests for precedence, confidence, expiry, contradictions,
+      session isolation, severity and persistence isolation;
+- [x] complete coverage, lint, type, build and Python-version gates;
+- [x] documentation, task commit and local `develop` integration.
+
+Rollback: before integration, switch back to `develop` and delete the task
+branch. After integration, revert the Phase 5 task and merge commits. The
+schema is unchanged; diagnoses and incidents already written remain historical
+rows and do not affect presence clocks, alerts or input transports.
+
 ## Remaining Phases
 
 - [x] Phase 2: prototype an exact-session Codex app-server event subscription
@@ -183,7 +237,7 @@ Implementation checkpoints:
 - [x] Phase 3: implement hook-backed Codex evidence plus sanitized account-limit
       polling; keep shared-endpoint live events disabled.
 - [x] Phase 4: add Linux process, network, power and service observers.
-- [ ] Phase 5: implement diagnosis precedence, confidence and incident
+- [x] Phase 5: implement diagnosis precedence, confidence and incident
       transitions.
 - [ ] Phase 6: add deduplicated cause-aware Discord notifications.
 - [ ] Phase 7: validate each cause with fault injection and real integration
@@ -279,6 +333,22 @@ Phase 4 validation result on 2026-09-20:
 - no external network request, diagnosis, incident, Discord notification,
   alarm, Codex input or recovery action was emitted.
 
+Phase 5 validation result on 2026-09-20:
+
+- 242 tests passed on Python 3.10, 3.11 and 3.12;
+- the complete Python 3.12 gate passed with 87% total coverage and 98% coverage
+  for `diagnosis_engine.py`;
+- Ruff, mypy across 34 source modules, compileall, wheel/sdist build and
+  `git diff --check` passed;
+- focused tests cover precedence, confidence, newest-batch reduction,
+  ambiguous-session failure, conservative network claims, unexplained
+  fallback, Protocol 1/2 severity, open/update/resolve transitions,
+  notification timestamp preservation and dry-run database isolation;
+- a real dry-run selected the exact active Codex session, returned `working`
+  with high confidence and left the real diagnosis count unchanged;
+- no Discord/Telegram notification, alarm, Codex input, retry or recovery
+  action was emitted.
+
 ## Rollback
 
 Before release integration, switch away from or delete the task branch. The
@@ -295,12 +365,16 @@ the Phase 4 task and merge commits; existing diagnostic rows remain harmless
 and expire normally. Stop any manually started `observe-linux-state --watch`
 process before package rollback.
 
+Phase 5 rollback also requires no schema reversal. Revert its task and merge
+commits to remove classification and the CLI command. Historical diagnostic
+rows remain inert; no monitor or notification path consumes them in Phase 5.
+
 ## Next Implementation Step
 
-Phase 5 should implement deterministic diagnosis precedence, confidence and
-incident transitions over current, same-worker evidence. It must preserve the
-difference between a local observation and a proven cause, prefer
-`unexplained_inactivity` when evidence is insufficient, and remain unable to
-notify or recover. The separate live Codex event adapter remains disabled until
-a session hosted through a shared managed endpoint proves exact-thread events
-E2E.
+Phase 6 should consume open incident state to produce deduplicated cause-aware
+Discord notifications. It must preserve diagnosis confidence, send only from a
+single notification policy owner, update `last_notified_at` only after a
+confirmed webhook success, and never notify directly from an observer. Alarm,
+Codex input, retry and recovery remain outside that phase. The separate live
+Codex event adapter remains disabled until a session hosted through a shared
+managed endpoint proves exact-thread events E2E.

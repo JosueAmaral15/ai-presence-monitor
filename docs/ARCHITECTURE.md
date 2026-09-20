@@ -145,6 +145,39 @@ and after every sample, then stops after `finish`. Dry-run performs one local
 sample without SQLite. Persisted facts expire and cannot update protocol
 clocks, classify a cause, create incidents, notify or recover.
 
+### Diagnosis engine and incident transitions
+
+Phase 5 adds `diagnosis_engine.py` and the one-shot `diagnose` command:
+
+```text
+worker protocol clock + current diagnostic_evidence
+                        |
+                        v
+       newest batch per source/kind + exact session filter
+                        |
+                        v
+       deterministic cause + confidence + bounded summary
+                        |
+                        v
+        immutable diagnosis -> one incident transition
+```
+
+The engine records a short workspace evidence fact for whether the worker is
+inside or beyond its current protocol threshold. An overdue cause diagnosis
+links both the cause fact and this threshold fact. Severity is not inferred by
+an observer; it is the selected Protocol 1 or Protocol 2 threshold.
+
+Multiple current session IDs fail closed unless the caller specifies one.
+Session-neutral facts may support the selected session. Facts from another
+session are excluded, and the persistence layer rejects any remaining
+cross-session link. A healthy diagnosis resolves an existing incident;
+non-healthy overdue diagnoses open or update the worker's one incident.
+
+This phase does not call notification, alarm, Codex input or recovery code.
+`last_notified_at` is preserved during updates for the Phase 6 notification
+policy. `--dry-run` computes the same assessment and transition without adding
+evidence, diagnosis or incident rows.
+
 ## Tipos de Sinal
 
 - `start`, `heartbeat`, `finish`: sinais publicos, podem postar no canal de ponto.

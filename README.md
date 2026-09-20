@@ -13,6 +13,8 @@ The project also provides:
   account-limit polling, without changing presence clocks;
 - bounded Linux process, local-route, resume-gap, and user-service evidence
   through an explicit read-only observer;
+- deterministic cause diagnosis with confidence and one correlated incident
+  per worker, without notification or recovery side effects;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with
@@ -343,6 +345,30 @@ boundaries.
 With `PRESENCE_CODEX_WORKER_SCOPE=project`, run lifecycle commands from the
 project root or pass `--project`. Other scopes are `global`, `session`, and
 `project-session`.
+
+### Diagnose current inactivity
+
+After evidence has been collected for an active worker, run a one-shot
+diagnosis. Use the exact session whenever more than one current Codex session
+may have evidence:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /absolute/path/to/project \
+  --session EXACT_SESSION_ID \
+  --json
+
+ai-presence diagnose \
+  --project /absolute/path/to/project \
+  --session EXACT_SESSION_ID
+```
+
+Severity comes from the worker's existing protocol clock. The command links a
+bounded presence-clock fact to the selected current evidence, records one
+immutable diagnosis, and opens, updates, or resolves the worker's single
+diagnostic incident. `--dry-run` writes no diagnostic rows. This command does
+not send Discord or Telegram messages, play an alarm, dispatch Codex input,
+retry, or recover the worker.
 
 ### Install Codex hooks
 
