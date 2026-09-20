@@ -20,16 +20,238 @@ Codex lifecycle hook
         |
         v
 python absoluto -m ai_presence_monitor.codex_hook
-        |
-        v
-PresenceStore.record_observation()
-        |
-        v
-SQLite workers/events
+        +-----------------------------+
+        |                             |
+        v                             v
+PresenceStore.record_observation()  DiagnosticStore.record_evidence()
+        |                             |
+        +---------------+-------------+
+                        |
+                        v
+              SQLite workers/events/diagnostics
         |
         v
 monitor -> protocolos -> notificadores
 ```
+
+## Cause-aware Diagnostic Foundation
+
+Task 022 extends the observer boundary without changing the existing presence
+protocols:
+
+```text
+source observers -> diagnostic evidence -> diagnosis engine
+                                             |
+                                             v
+                                      incident lifecycle
+                                             |
+                                             v
+                                      notification policy
+                                             |
+                                             v
+                              explicit recovery coordinator
+```
+
+Observers remain fact producers. They do not choose severity, notify Discord or
+trigger recovery. `DiagnosticStore` persists four separate concepts:
+
+- `DiagnosticEvidence`: a bounded fact, source, state, worker, optional exact
+  session, observation time and optional expiry;
+- `Diagnosis`: a typed interpretation with confidence and immutable ordered
+  links to one or more evidence records;
+- `DiagnosticIncident`: one open episode per worker, with current diagnosis,
+  severity, notification timestamp and resolution state.
+- `DiagnosticRecovery`: one reserved action per incident/action pair, with
+  bounded transport state and failure code.
+
+Evidence and diagnoses are append-only. An open incident can change its current
+diagnosis as stronger evidence arrives, preventing parallel observers from
+creating contradictory user notifications. Each downstream stage remains an
+explicit consumer: evidence collection cannot diagnose, diagnosis cannot
+notify, and notification cannot invoke recovery.
+
+The diagnostic tables are additive to the same SQLite database and do not
+modify `workers.last_activity_at`, `workers.last_signal_at`, protocol alerts or
+remote-question delivery. They store concise summaries rather than raw Codex
+events or transcripts.
+
+### Codex App Server feasibility boundary
+
+The Task 022 Phase 2 probe uses a dedicated `codex app-server --stdio` child
+with a hard method allowlist. Metadata-only `thread/read` and structured
+`account/rateLimits/read` work from that process. An active GUI-owned thread is
+`notLoaded` in the child, and `thread/resume` is rejected as
+`thread_already_active`; therefore the child cannot receive the live event
+stream for that existing session.
+
+The supported near-term Codex evidence path is existing same-session hooks plus
+safe account-limit polling. A live event adapter requires the Codex session to
+be hosted through the same managed/multiplexed App Server boundary and remains
+disabled until that topology passes its own E2E. The probe never records
+evidence, updates presence clocks, sends notifications or performs recovery.
+
+### Codex evidence observers
+
+Phase 3 maps only recognized lifecycle hooks to constant diagnostic states.
+These facts have a configured TTL and contain neither raw hook payloads nor
+prompt, message, command or tool text. The legacy presence observation remains
+separate and continues to update Protocol 2 activity only when the worker was
+explicitly started.
+
+The account-limit observer uses a fresh dedicated App Server child per poll and
+calls only `account/rateLimits/read`. It stores an allowlisted account state as
+diagnostic evidence for an exact active worker. The default mode performs one
+poll; `--watch` revalidates the worker before every poll and stops after
+`finish`.
+
+```text
+observe-codex-limits -> account/rateLimits/read -> sanitize/classify
+                                                   |
+                                                   v
+                                      diagnostic_evidence only
+```
+
+Neither source updates `last_activity_at` or `last_signal_at` through its
+diagnostic record. The limit observer does not subscribe to thread events,
+diagnose a cause, create an incident, notify Discord, play an alarm or send
+Codex input.
+
+### Linux system evidence observers
+
+Phase 4 adds `linux_evidence.py` and the Linux-only
+`observe-linux-state` command. Four collectors remain independent:
+
+```text
+explicit PID -> /proc/PID/comm + stat --------> process evidence
+/proc/net/route + /sys/class/net -------------> network evidence
+CLOCK_BOOTTIME - monotonic elapsed gap --------> power evidence
+explicit unit -> systemctl --user show --------> service evidence
+                                                      |
+                                                      v
+                                           diagnostic_evidence only
+```
+
+The process collector binds an explicit positive PID to an optional expected
+Linux process name and remembers kernel start ticks during one observer run.
+This distinguishes missing, zombie, dead, mismatched and replaced processes
+without reading command lines, environment variables or open files.
+
+The network collector sends no packet. A default route or up link describes
+only local kernel state and does not prove DNS or Internet reachability. The
+power collector cannot run while the machine is suspended; in watch mode it
+detects a resume afterward when `CLOCK_BOOTTIME` advanced farther than the
+monotonic clock. The service collector accepts only bounded `.service` unit
+names and parses allowlisted fields from `systemctl --user show` invoked without
+a shell.
+
+Network and power are enabled by default. Process and service targets are
+explicit. The default command is one-shot; `--watch` checks the worker before
+and after every sample, then stops after `finish`. Dry-run performs one local
+sample without SQLite. Persisted facts expire and cannot update protocol
+clocks, classify a cause, create incidents, notify or recover.
+
+### Diagnosis engine and incident transitions
+
+Phase 5 adds `diagnosis_engine.py` and the one-shot `diagnose` command:
+
+```text
+worker protocol clock + current diagnostic_evidence
+                        |
+                        v
+       newest batch per source/kind + exact session filter
+                        |
+                        v
+       deterministic cause + confidence + bounded summary
+                        |
+                        v
+        immutable diagnosis -> one incident transition
+```
+
+The engine records a short workspace evidence fact for whether the worker is
+inside or beyond its current protocol threshold. An overdue cause diagnosis
+links both the cause fact and this threshold fact. Severity is not inferred by
+an observer; it is the selected Protocol 1 or Protocol 2 threshold.
+
+Multiple current session IDs fail closed unless the caller specifies one.
+Session-neutral facts may support the selected session. Facts from another
+session are excluded, and the persistence layer rejects any remaining
+cross-session link. A healthy diagnosis resolves an existing incident;
+non-healthy overdue diagnoses open or update the worker's one incident.
+
+This phase does not call notification, alarm, Codex input or recovery code.
+`last_notified_at` is preserved during updates for the Phase 6 notification
+policy. `--dry-run` computes the same assessment and transition without adding
+evidence, diagnosis or incident rows.
+
+## Diagnostic Notification Policy
+
+Phase 6 adds `diagnostic_notifications.py` as the only owner of cause-aware
+Discord delivery:
+
+```text
+open diagnostic incident + current diagnosis
+                    |
+                    v
+ semantic key(kind, confidence, severity)
+                    |
+                    v
+ reserve diagnostic_notifications row
+                    |
+                    v
+ one Discord POST -> delivered | rejected | uncertain
+```
+
+The database uniqueness boundary combines `incident_id`, semantic event key
+and channel. It therefore ignores diagnosis UUID churn but rearms for a changed
+cause, confidence, severity, or a new incident. Reservation happens before
+network access, so concurrent commands and interrupted processes cannot create
+an automatic duplicate. Existing `pending`, `rejected`, `uncertain` and
+`delivered` rows are terminal for automatic dispatch of that event key.
+
+Only confirmed delivery atomically updates both the ledger row and the
+incident's `last_notified_at`. HTTP rejection and transport uncertainty retain
+bounded status/failure codes without raw response bodies. Dry-run constructs
+the same bounded payload but neither reserves a row nor accesses the network.
+Missing webhook configuration fails before reservation.
+
+This policy uses the existing alert webhook, with the configured red webhook
+preferred for red severity. It does not call the general multi-channel
+notifier, Telegram, alarm, phone, Codex input or recovery paths.
+
+## One-Shot Recovery Coordinator
+
+Phase 8 adds `recovery_coordinator.py` as an explicitly invoked consumer. It is
+not called by observers, the diagnosis engine, notification delivery, the
+monitor loop, or a background service:
+
+```text
+active worker + eligible current diagnosis + exact session
+                         +
+        delivered semantic Discord notification
+                         |
+                         v
+       reserve diagnostic_recoveries(incident, native_continue)
+                         |
+                         v
+        one local codex queue dispatch -> transport state
+```
+
+Eligibility is intentionally narrow: `codex_closed` at medium/high confidence
+or `codex_crashed` at high confidence, with an unexpired diagnosis and matching
+incident/diagnosis session. Real execution also requires the one-invocation
+`--authorize-once` flag; persistent task automation is not authorization.
+
+The unique boundary is `(incident_id, action)`. Reservation precedes transport,
+so a concurrent invocation, interruption, detached dispatch, success, or
+uncertain result cannot cause a second dispatch for that incident. Dry-run
+evaluates the same domain gates without checking the Codex executable,
+reserving a row, or sending input.
+
+Only local native input is reachable. GUI, remote input, delay, Telegram,
+alarm, phone and chained recovery are absent. A recovery attempt never mutates
+presence clocks or resolves the incident. `dispatch_started` and
+`input_emitted` remain transport evidence; a later same-session hook plus a new
+diagnosis transition is required to establish resumed work.
 
 ## Tipos de Sinal
 
@@ -75,6 +297,7 @@ atividade valida.
 - aceita `hook_event_name` e `hookEventName`;
 - extrai metadata segura e curta;
 - grava `observation:codex:<evento>` no SQLite;
+- para hooks reconhecidos, grava tambem evidencia diagnostica curta e com TTL;
 - nao envia notificacoes nem faz chamadas de rede.
 
 Por padrao, `PRESENCE_CODEX_AUTO_START=false`. Assim, o observer nao cria ou reativa worker sozinho. Isso preserva o Protocolo 2: `start` e `finish` continuam sendo os sinais publicos de ciclo de tarefa.

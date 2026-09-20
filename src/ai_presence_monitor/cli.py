@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from dataclasses import replace
@@ -13,6 +14,11 @@ from .background_service import (
     BACKGROUND_COMPONENTS,
     BackgroundServiceError,
     print_background_service_result,
+)
+from .codex_app_server import CodexAppServerError, probe_codex_app_server
+from .codex_evidence import (
+    collect_codex_limit_observation,
+    record_codex_limit_observation,
 )
 from .codex_hook import run_from_stdin as run_codex_hook_from_stdin
 from .codex_hook_installer import (
@@ -30,7 +36,16 @@ from .codex_input import (
 from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
+from .diagnosis_engine import diagnose_worker
+from .diagnostic_notifications import notify_diagnostic_incident
 from .identity import WORKER_SCOPES, scoped_worker_id
+from .linux_evidence import (
+    LinuxPowerObserver,
+    LinuxProcessObserver,
+    observe_linux_network,
+    observe_user_service,
+    record_linux_observations,
+)
 from .notify import NotificationError, Notifier
 from .platform_integration import (
     UnsupportedPlatformError,
@@ -44,6 +59,7 @@ from .protocols import (
     get_protocol,
     should_escalate,
 )
+from .recovery_coordinator import recover_diagnostic_incident
 from .remote_questions import (
     RemoteQuestionError,
     ask_remote_question,
@@ -765,6 +781,332 @@ def _stop_alarm(args: argparse.Namespace) -> int:
     return 0
 
 
+def _probe_codex_app_server(args: argparse.Namespace) -> int:
+    result = probe_codex_app_server(
+        args.thread,
+        subscription_seconds=args.subscribe_seconds,
+        codex_executable=args.codex_executable,
+        request_timeout=args.request_timeout,
+    )
+    payload = result.to_dict()
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+        return 0
+
+    print(
+        "Codex app-server probe: "
+        f"thread={result.thread.thread_id} status={result.thread.status or 'unknown'}"
+    )
+    print(
+        "Rate limits: "
+        f"ordinary_usage_allowed={result.rate_limits.ordinary_usage_allowed} "
+        f"reached_type={result.rate_limits.reached_type or 'none'}"
+    )
+    print(
+        "Separate stdio subscription: "
+        f"seconds={result.subscription_seconds:g} events={len(result.events)}"
+    )
+    return 0
+
+
+def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    interval = (
+        args.interval
+        if args.interval is not None
+        else config.codex_limit_poll_interval_seconds
+    )
+    evidence_ttl = (
+        args.evidence_ttl
+        if args.evidence_ttl is not None
+        else config.codex_limit_evidence_ttl_seconds
+    )
+    if interval <= 0:
+        raise ValueError("Codex limit poll interval must be greater than zero.")
+    if evidence_ttl <= 0:
+        raise ValueError("Codex limit evidence TTL must be greater than zero.")
+
+    while True:
+        if not args.dry_run:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None:
+                raise ValueError(
+                    f"Worker not found: {worker_id}. Run start before recording evidence."
+                )
+            if worker.status != "active":
+                if args.watch:
+                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker is not active: {worker_id}. Run start before recording evidence."
+                )
+        observation = collect_codex_limit_observation(
+            codex_executable=args.codex_executable,
+            request_timeout=args.request_timeout,
+            ttl_seconds=evidence_ttl,
+        )
+        if args.dry_run:
+            print(
+                "[dry-run:codex-limit] "
+                f"worker={worker_id} state={observation.state}"
+            )
+            return 0
+        else:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None or worker.status != "active":
+                if args.watch:
+                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker became inactive before evidence was recorded: {worker_id}."
+                )
+            evidence = record_codex_limit_observation(
+                db_path=config.db_path,
+                worker_id=worker_id,
+                session_id=args.session,
+                observation=observation,
+            )
+            print(
+                "codex-limit: "
+                f"worker={worker_id} state={evidence.state} "
+                f"evidence={evidence.evidence_id}"
+            )
+        if not args.watch:
+            return 0
+        time.sleep(interval)
+
+
+def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
+    if not sys.platform.startswith("linux"):
+        raise UnsupportedPlatformError(
+            "The Linux evidence observer is available only on Linux."
+        )
+    worker_id, _, _, _ = _identity(args, config)
+    interval = (
+        args.interval
+        if args.interval is not None
+        else config.linux_observer_interval_seconds
+    )
+    evidence_ttl = (
+        args.evidence_ttl
+        if args.evidence_ttl is not None
+        else config.linux_evidence_ttl_seconds
+    )
+    suspend_gap = (
+        args.suspend_gap
+        if args.suspend_gap is not None
+        else config.linux_suspend_gap_seconds
+    )
+    service_timeout = (
+        args.service_timeout
+        if args.service_timeout is not None
+        else config.linux_service_timeout_seconds
+    )
+    if interval <= 0:
+        raise ValueError("Linux observer interval must be greater than zero.")
+    if evidence_ttl <= 0:
+        raise ValueError("Linux evidence TTL must be greater than zero.")
+    if suspend_gap <= 0:
+        raise ValueError("Linux suspend gap must be greater than zero.")
+    if service_timeout <= 0:
+        raise ValueError("Linux service timeout must be greater than zero.")
+    if args.expected_process_name is not None and args.process_pid is None:
+        raise ValueError("--expected-process-name requires --process-pid.")
+
+    process_observer = (
+        LinuxProcessObserver(
+            args.process_pid,
+            expected_name=args.expected_process_name,
+        )
+        if args.process_pid is not None
+        else None
+    )
+    power_observer = (
+        None
+        if args.skip_power
+        else LinuxPowerObserver(suspend_gap_seconds=suspend_gap)
+    )
+    if args.no_services:
+        services: tuple[str, ...] = ()
+    elif args.services is not None:
+        services = tuple(dict.fromkeys(args.services))
+    else:
+        services = tuple(dict.fromkeys(config.linux_user_services))
+    if (
+        process_observer is None
+        and args.skip_network
+        and power_observer is None
+        and not services
+    ):
+        raise ValueError("At least one Linux evidence collector must be enabled.")
+
+    while True:
+        if not args.dry_run:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None:
+                raise ValueError(
+                    f"Worker not found: {worker_id}. Run start before recording evidence."
+                )
+            if worker.status != "active":
+                if args.watch:
+                    print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker is not active: {worker_id}. Run start before recording evidence."
+                )
+
+        observations = []
+        if process_observer is not None:
+            observations.append(process_observer.sample())
+        if not args.skip_network:
+            observations.append(observe_linux_network())
+        if power_observer is not None:
+            observations.append(power_observer.sample())
+        observations.extend(
+            observe_user_service(service, timeout_seconds=service_timeout)
+            for service in services
+        )
+        states = ",".join(
+            f"{observation.source.value}:{observation.state}"
+            for observation in observations
+        )
+
+        if args.dry_run:
+            print(f"[dry-run:linux-evidence] worker={worker_id} states={states}")
+            return 0
+
+        worker = PresenceStore(config.db_path).get_worker(worker_id)
+        if worker is None or worker.status != "active":
+            if args.watch:
+                print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                return 0
+            raise ValueError(
+                f"Worker became inactive before evidence was recorded: {worker_id}."
+            )
+        evidence = record_linux_observations(
+            db_path=config.db_path,
+            worker_id=worker_id,
+            session_id=args.session,
+            observations=tuple(observations),
+            observed_at=time.time(),
+            ttl_seconds=evidence_ttl,
+        )
+        print(
+            f"linux-evidence: worker={worker_id} records={len(evidence)} states={states}"
+        )
+        if not args.watch:
+            return 0
+        time.sleep(interval)
+
+
+def _diagnose(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = diagnose_worker(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        session_id=args.session,
+        dry_run=args.dry_run,
+        presence_ttl_seconds=args.presence_ttl,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "session_id": result.session_id,
+        "age_seconds": None if math.isinf(result.age_seconds) else result.age_seconds,
+        "severity": result.severity.value,
+        "kind": result.assessment.kind.value,
+        "confidence": result.assessment.confidence.value,
+        "summary": result.assessment.summary,
+        "transition": result.transition,
+        "diagnosis_id": result.diagnosis.diagnosis_id if result.diagnosis else None,
+        "incident_id": result.incident.incident_id if result.incident else None,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnosis]" if args.dry_run else "diagnosis:"
+        age = "unknown" if math.isinf(result.age_seconds) else f"{result.age_seconds:.0f}s"
+        print(
+            f"{prefix} worker={result.worker_id} kind={result.assessment.kind.value} "
+            f"confidence={result.assessment.confidence.value} "
+            f"severity={result.severity.value} age={age} "
+            f"transition={result.transition}"
+        )
+    return 0
+
+
+def _notify_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = notify_diagnostic_incident(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        discord_alert_webhook_url=config.discord_alert_webhook_url,
+        discord_red_webhook_url=config.discord_red_webhook_url,
+        dry_run=args.dry_run,
+        timeout_seconds=args.timeout,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "status": result.status,
+        "event_key": result.event_key,
+        "incident_id": result.incident_id,
+        "diagnosis_id": result.diagnosis_id,
+        "notification_id": result.notification_id,
+        "diagnosis_kind": result.diagnosis_kind,
+        "confidence": result.confidence,
+        "severity": result.severity,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnostic-notification]" if args.dry_run else "diagnostic-notification:"
+        print(
+            f"{prefix} worker={result.worker_id} status={result.status} "
+            f"cause={result.diagnosis_kind or '-'} "
+            f"confidence={result.confidence or '-'} "
+            f"severity={result.severity or '-'}"
+        )
+    return 2 if result.status in {"rejected", "uncertain"} else 0
+
+
+def _recover_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = recover_diagnostic_incident(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        controls=ControlStore.from_config(config).load(),
+        message=config.continue_message,
+        authorized=args.authorize_once,
+        dry_run=args.dry_run,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "status": result.status,
+        "incident_id": result.incident_id,
+        "diagnosis_id": result.diagnosis_id,
+        "recovery_id": result.recovery_id,
+        "diagnosis_kind": result.diagnosis_kind,
+        "confidence": result.confidence,
+        "severity": result.severity,
+        "session_id": result.session_id,
+        "stored_status": result.stored_status,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnostic-recovery]" if args.dry_run else "diagnostic-recovery:"
+        print(
+            f"{prefix} worker={result.worker_id} status={result.status} "
+            f"cause={result.diagnosis_kind or '-'} "
+            f"confidence={result.confidence or '-'} "
+            f"severity={result.severity or '-'} "
+            f"session={result.session_id or '-'}"
+        )
+    return 2 if result.status == "uncertain" else 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -853,6 +1195,200 @@ def build_parser() -> argparse.ArgumentParser:
         help="Nao forca a arvore se o processo ignorar a parada normal.",
     )
     stop_alarm_parser.set_defaults(func=lambda args, config: _stop_alarm(args))
+
+    app_server_parser = subparsers.add_parser(
+        "probe-codex-app-server",
+        help="Inspeciona metadados Codex por um app-server filho sem enviar entrada.",
+    )
+    app_server_parser.add_argument(
+        "--thread",
+        required=True,
+        help="ID exato da sessao Codex persistida.",
+    )
+    app_server_parser.add_argument(
+        "--subscribe-seconds",
+        type=float,
+        default=0.0,
+        help="Janela observacional via thread/resume. Padrao: 0 (sem assinatura).",
+    )
+    app_server_parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout de cada requisicao JSON-RPC. Padrao: 10 segundos.",
+    )
+    app_server_parser.add_argument(
+        "--codex-executable",
+        default="codex",
+        help="Executavel Codex. Padrao: codex no PATH.",
+    )
+    app_server_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente campos sanitizados em JSON.",
+    )
+    app_server_parser.set_defaults(
+        func=lambda args, config: _probe_codex_app_server(args)
+    )
+
+    codex_limits_parser = subparsers.add_parser(
+        "observe-codex-limits",
+        help="Registra evidencia sanitizada dos limites da conta Codex.",
+    )
+    _add_identity_args(codex_limits_parser, include_task_message=False)
+    codex_limits_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Repete a leitura no intervalo configurado. Padrao: uma leitura.",
+    )
+    codex_limits_parser.add_argument(
+        "--interval",
+        type=int,
+        help="Intervalo do modo watch em segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--evidence-ttl",
+        type=int,
+        help="Validade da evidencia em segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout da leitura JSON-RPC. Padrao: 10 segundos.",
+    )
+    codex_limits_parser.add_argument(
+        "--codex-executable",
+        default="codex",
+        help="Executavel Codex. Padrao: codex no PATH.",
+    )
+    codex_limits_parser.set_defaults(
+        func=lambda args, config: _observe_codex_limits(args, config)
+    )
+
+    linux_state_parser = subparsers.add_parser(
+        "observe-linux-state",
+        help="Registra evidencias locais de processo, rede, energia e servicos.",
+    )
+    _add_identity_args(linux_state_parser, include_task_message=False)
+    linux_state_parser.add_argument(
+        "--process-pid",
+        type=int,
+        help="PID Linux exato a observar.",
+    )
+    linux_state_parser.add_argument(
+        "--expected-process-name",
+        help="Nome exato esperado em /proc/PID/comm.",
+    )
+    linux_state_parser.add_argument(
+        "--service",
+        dest="services",
+        action="append",
+        help="Unidade systemd --user .service; pode ser repetida.",
+    )
+    linux_state_parser.add_argument(
+        "--no-services",
+        action="store_true",
+        help="Ignora unidades configuradas no ambiente.",
+    )
+    linux_state_parser.add_argument(
+        "--skip-network",
+        action="store_true",
+        help="Nao le rota e estado dos links locais.",
+    )
+    linux_state_parser.add_argument(
+        "--skip-power",
+        action="store_true",
+        help="Nao observa intervalos de suspensao/retomada.",
+    )
+    linux_state_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Repete a coleta no intervalo configurado. Padrao: uma coleta.",
+    )
+    linux_state_parser.add_argument(
+        "--interval",
+        type=int,
+        help="Intervalo do modo watch em segundos.",
+    )
+    linux_state_parser.add_argument(
+        "--evidence-ttl",
+        type=int,
+        help="Validade comum das evidencias em segundos.",
+    )
+    linux_state_parser.add_argument(
+        "--suspend-gap",
+        type=float,
+        help="Diferenca minima de relogios para detectar retomada.",
+    )
+    linux_state_parser.add_argument(
+        "--service-timeout",
+        type=float,
+        help="Timeout de cada consulta systemctl --user.",
+    )
+    linux_state_parser.set_defaults(
+        func=lambda args, config: _observe_linux_state(args, config)
+    )
+
+    diagnose_parser = subparsers.add_parser(
+        "diagnose",
+        help="Correlaciona evidencia atual e aplica uma transicao de incidente.",
+    )
+    _add_identity_args(diagnose_parser, include_task_message=False)
+    diagnose_parser.add_argument(
+        "--presence-ttl",
+        type=int,
+        default=60,
+        help="Validade do fato derivado do relogio de presenca. Padrao: 60 segundos.",
+    )
+    diagnose_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    diagnose_parser.set_defaults(func=lambda args, config: _diagnose(args, config))
+
+    diagnostic_notification_parser = subparsers.add_parser(
+        "notify-diagnostic-incident",
+        help="Envia uma notificacao Discord deduplicada para o incidente atual.",
+    )
+    _add_identity_args(
+        diagnostic_notification_parser,
+        include_task_message=False,
+    )
+    diagnostic_notification_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=15.0,
+        help="Timeout do unico POST Discord. Padrao: 15 segundos.",
+    )
+    diagnostic_notification_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    diagnostic_notification_parser.set_defaults(
+        func=lambda args, config: _notify_diagnostic_incident(args, config)
+    )
+
+    recovery_parser = subparsers.add_parser(
+        "recover-diagnostic-incident",
+        help="Executa uma recuperacao nativa one-shot para um incidente elegivel.",
+    )
+    _add_identity_args(recovery_parser, include_task_message=False)
+    recovery_parser.add_argument(
+        "--authorize-once",
+        action="store_true",
+        help="Autoriza somente esta tentativa real de recuperacao.",
+    )
+    recovery_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    recovery_parser.set_defaults(
+        func=lambda args, config: _recover_diagnostic_incident(args, config)
+    )
 
     ask_parser = subparsers.add_parser(
         "ask-user",
@@ -1229,6 +1765,7 @@ def main(argv: list[str] | None = None) -> None:
         _enforce_runtime_policy(args, config)
         raise_code = args.func(args, config)
     except (
+        CodexAppServerError,
         ControlError,
         UnsupportedPlatformError,
         ValueError,

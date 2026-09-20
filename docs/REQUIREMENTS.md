@@ -16,6 +16,106 @@
 - Deve evitar gravar transcript completo ou secrets.
 - Deve ter exemplo de configuracao de `hooks.json`.
 
+## Diagnostico de Causa
+
+- Observers de diagnostico devem registrar fatos e nao decidir alertas ou
+  executar recuperacao diretamente.
+- Evidencia deve identificar fonte, tipo, estado, worker, sessao opcional,
+  horario e expiracao opcional sem armazenar payload bruto ou transcript.
+- Todo diagnostico deve referenciar ao menos uma evidencia persistida.
+- Evidencias de workers diferentes ou sessoes Codex conflitantes nao devem ser
+  combinadas no mesmo diagnostico.
+- Diagnosticos devem declarar causa, confianca e resumo curto.
+- Deve existir no maximo um incidente de diagnostico aberto por worker.
+- Incidentes devem preservar abertura, diagnostico atual, severidade, ultima
+  notificacao e resolucao.
+- `unexplained_inactivity` deve ser usado quando nao houver evidencia suficiente
+  para uma causa especifica; o sistema nao deve declarar inatividade genuina
+  como fato.
+- Tabelas de diagnostico devem ser aditivas e compativeis com bancos existentes.
+- Persistir evidencia ou diagnostico nao deve atualizar os relogios dos
+  Protocolos 1 e 2.
+- Recuperacao automatica deve permanecer fora da fundacao e desabilitada ate
+  possuir autorizacao, politica one-shot e validacao E2E propria.
+- O probe do Codex App Server deve permitir somente inicializacao, leitura de
+  metadata sem turns, leitura de limites e assinatura/desassinatura
+  observacional explicita.
+- O probe nao deve expor `turn/start`, `turn/steer`, injecao de itens, queue ou
+  fallback GUI e nao deve persistir payload bruto.
+- Metadata retornada deve corresponder a sessao solicitada; eventos de outra
+  sessao devem ser descartados.
+- Uma sessao `notLoaded` no app-server filho nao deve ser classificada como
+  Codex fechado, e conflito `thread_already_active` nao deve ser classificado
+  como inatividade.
+- Somente hooks Codex reconhecidos devem produzir evidencia diagnostica; o
+  estado e o resumo devem vir de uma allowlist constante e possuir TTL.
+- O observer de limites deve chamar somente `account/rateLimits/read`, exigir
+  worker exato ativo, sanitizar o resultado e ser one-shot por padrao.
+- O modo continuo de limites deve ser explicito, revalidar o worker antes de
+  cada poll e encerrar quando o worker ficar idle.
+- Creditos indisponiveis isoladamente nao devem sobrepor
+  `ordinary_usage_allowed=true` nem provar limite excedido.
+- Hook evidence e account-limit evidence nao devem atualizar
+  `last_activity_at`, `last_signal_at` ou rearmar alertas de presenca.
+- O observer Linux deve ser one-shot por padrao e oferecer `--watch` explicito
+  com revalidacao do worker antes e depois de cada coleta.
+- Processo deve exigir PID positivo, aceitar nome esperado validado e detectar
+  troca de instancia pelos start ticks durante a mesma execucao.
+- Rede deve usar apenas rota e links locais, sem DNS, HTTP ou ping, e nao deve
+  afirmar conectividade com a Internet.
+- Energia deve detectar retomada somente pela diferenca entre relogios de boot e
+  monotonic em duas amostras do mesmo watcher.
+- Servicos devem ser alvos `.service` explicitos, consultados por
+  `systemctl --user show` sem shell e sanitizados para estados permitidos.
+- Observers Linux nao devem ler `cmdline`, `environ`, journal, arquivos abertos
+  ou payload de rede, nem atualizar relogios de presenca.
+- O observer live do App Server deve permanecer desabilitado enquanto a sessao
+  monitorada nao compartilhar o mesmo endpoint/daemon validado.
+- O motor deve considerar apenas evidencia nao expirada e o lote mais novo por
+  fonte/tipo, preservando fatos simultaneos de servicos distintos.
+- Evidencias atuais de sessoes Codex diferentes devem falhar fechado sem uma
+  sessao explicita; fatos sem sessao podem apoiar somente a sessao selecionada.
+- A severidade do incidente deve vir do threshold atual do protocolo do worker,
+  nunca de um observer individual.
+- Causas atrasadas devem vincular a evidencia da causa e um fato limitado de
+  que o relogio de presenca excedeu o threshold.
+- Processo executando, rota default, sistema acordado, servico ativo e
+  `usage_available` isolados nao devem provar trabalho nem conectividade.
+- `diagnose --dry-run` nao deve criar evidencia, diagnostico ou incidente.
+- A Fase 5 nao deve enviar notificacao, alarme, input, retry ou recuperacao.
+- A notificacao diagnostica deve consumir somente o incidente aberto e seu
+  diagnostico atual; observers e o motor nao devem enviar mensagens.
+- A chave de deduplicacao deve considerar incidente, causa, confianca,
+  severidade e canal sem depender do UUID mutavel do diagnostico atual.
+- A tentativa deve ser reservada antes do acesso a rede e deve executar no
+  maximo um POST Discord, sem retry automatico.
+- Somente entrega HTTP confirmada deve atualizar `last_notified_at`.
+- Rejeicao, incerteza ou interrupcao devem permanecer registradas e suprimir
+  repeticao automatica da mesma chave semantica.
+- `notify-diagnostic-incident --dry-run` nao deve acessar rede nem gravar a
+  tabela de tentativas.
+- Webhook ausente deve falhar antes da reserva; o fluxo nao deve chamar
+  Telegram, alarme, telefone, input do Codex ou recuperacao.
+- Recuperacao diagnostica nao deve ser iniciada por observer, motor de
+  diagnostico, notificacao, monitor continuo ou timer.
+- A recuperacao one-shot deve aceitar somente `codex_closed` com confianca
+  media/alta ou `codex_crashed` com confianca alta.
+- A tentativa deve exigir worker ativo, incidente aberto, diagnostico atual nao
+  expirado, sessao exata coincidente e entrega Discord confirmada para o mesmo
+  evento semantico.
+- Cada execucao real deve exigir `--authorize-once`; autorizacao persistente de
+  automacao nao deve substituir esse consentimento.
+- O dry-run deve avaliar os gates sem procurar executavel, reservar tentativa,
+  enviar input ou atualizar presenca.
+- A reserva `(incident_id, action)` deve ocorrer antes do transporte e suprimir
+  repeticao apos `pending`, `dispatch_started`, `input_emitted`, `uncertain` ou
+  interrupcao.
+- A recuperacao deve usar somente `codex queue` local, sem GUI, remoto, delay,
+  Telegram, alarme, telefone, fallback ou encadeamento.
+- Estado de transporte nao deve atualizar `last_activity_at`/`last_signal_at`,
+  resolver o incidente ou provar processamento; hook posterior e novo
+  diagnostico devem fornecer essa evidencia.
+
 ## Portabilidade
 
 - O projeto deve gerar wheel instalavel para Python 3.10+.

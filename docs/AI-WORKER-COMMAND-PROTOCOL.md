@@ -76,8 +76,10 @@ heartbeat.
 ### 2. Durante o Trabalho
 
 Os hooks `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse` e
-`Stop` registram observacoes silenciosas. Com hooks funcionando, a IA nao
-precisa executar `touch` em cada comando.
+`Stop` registram observacoes silenciosas. Hooks reconhecidos tambem registram
+um fato diagnostico curto e com TTL. Esse segundo registro nao atualiza os
+relogios dos protocolos. Com hooks funcionando, a IA nao precisa executar
+`touch` em cada comando.
 
 Quando os hooks estiverem indisponiveis, registre somente atividade real:
 
@@ -91,6 +93,111 @@ ai-presence touch \
 
 Nao execute `touch` apenas porque um temporizador expirou. O objetivo e reduzir
 falsos positivos sem criar presenca artificial sem trabalho correspondente.
+
+Quando a tarefa atribuida exigir observacao dos limites Codex, execute uma
+leitura estruturada para o worker ja iniciado:
+
+```bash
+ai-presence observe-codex-limits \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA
+```
+
+O modo padrao e one-shot. Use `--watch` somente quando o observer continuo for
+parte explicita da tarefa; ele revalida o worker a cada poll e encerra depois
+de `finish`. O comando consulta apenas `account/rateLimits/read` e nao atualiza
+presenca, diagnostica a causa final, notifica, toca alarme ou envia input.
+
+Para coletar evidencias locais no Linux:
+
+```bash
+ai-presence observe-linux-state \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --process-pid PID_EXATO \
+  --expected-process-name codex \
+  --service ai-presence-monitor.service
+```
+
+Rede e energia sao incluidas por padrao. PID e servicos devem ser confirmados
+explicitamente; nunca selecione o primeiro processo com nome semelhante. Um
+default route nao prova acesso a Internet, e retomada de suspensao exige duas
+amostras no mesmo `--watch`. O observer registra fatos com TTL, nao atualiza
+presenca e nao autoriza diagnostico, alerta ou recuperacao.
+
+Quando a tarefa atribuida incluir correlacao de causa, execute uma leitura
+one-shot. Use a sessao exata para impedir mistura entre sessoes atuais:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+
+ai-presence diagnose \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA
+```
+
+`diagnose` deriva a severidade do relogio do protocolo e aplica no maximo uma
+transicao: abrir, atualizar, resolver ou nenhuma. Evidencia insuficiente deve
+resultar em `unexplained_inactivity`, nao em uma causa inventada. A IA nao deve
+usar o incidente como autorizacao para notificar, alarmar, reenviar input ou
+recuperar a sessao; essas integracoes permanecem em fases separadas.
+
+Quando a tarefa atribuida incluir a notificacao do incidente, a IA deve
+inspecionar primeiro o payload sem efeitos:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+```
+
+O comando real produz uma mensagem externa no Discord. Uma IA so pode
+executa-lo quando a tarefa ou a autorizacao do usuario incluir esse envio:
+
+```bash
+ai-presence notify-diagnostic-incident \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+```
+
+`delivered` confirma a resposta do webhook e atualiza o incidente.
+`deduplicated` significa que a mesma combinacao de incidente, causa, confianca
+e severidade ja foi tentada e nao autoriza novo envio. `rejected`, `uncertain`
+ou uma tentativa interrompida tambem bloqueiam retry automatico. A IA deve
+relatar o estado sem usar Telegram, alarme, telefonia, input do Codex ou outro
+canal como fallback.
+
+Quando a tarefa incluir recuperacao, a IA deve executar somente o dry-run sem
+autorizacao adicional:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project "$PROJECT" \
+  --json
+```
+
+A forma real e uma acao de input separada e exige autorizacao explicita do
+usuario para uma unica invocacao:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project "$PROJECT" \
+  --authorize-once \
+  --json
+```
+
+A IA nao deve inferir essa autorizacao de `task-automation`, de uma notificacao
+Discord entregue ou de uma autorizacao anterior. `would_dispatch` nao e prova
+de envio. `dispatch_started`, `input_emitted`, `uncertain` e `pending` nao
+autorizam repeticao e nao comprovam que o Codex processou `continue`. A IA deve
+aguardar um hook posterior da mesma sessao e executar novamente `diagnose`; nao
+deve emitir `touch`, sincronizar presenca, usar GUI/remoto ou resolver o
+incidente por conta propria.
 
 ### 3. Pergunta ao Usuario
 
@@ -202,6 +309,7 @@ O monitor e o observer de respostas sao componentes diferentes:
 | hooks do Codex | registram evidencia local de atividade |
 | monitor | avalia atrasos e envia alertas |
 | observer de respostas | consulta o Discord e processa respostas |
+| politica diagnostica | envia no maximo um POST por chave semantica reservada |
 | transporte nativo | enfileira texto em uma sessao exata com `codex queue` |
 | dispatcher GUI | fallback opcional de mouse e teclado |
 

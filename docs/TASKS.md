@@ -1,5 +1,117 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento em 2026-09-20
+
+### Task 023 - E2E de recuperacao e release Linux privada 0.8.0
+
+**Prioridade**: Critica
+**Status**: E2E e candidato 0.8.0 validados; `develop` publicado; excecao CI
+privada registrada; integrado localmente em `main`, com push remoto pendente
+**Objetivo**: comprovar um unico recovery nativo na sessao Codex exata,
+validar o pacote instalado e promover a release Linux privada 0.8.0.
+
+- [x] E2E isolado usa marcador unico, banco temporario e um unico despacho.
+- [x] Usuario confirma uma notificacao Discord e o marcador automatico no
+      Codex; hook posterior da mesma sessao confirma atividade.
+- [x] Versao, changelog, decisoes, seguranca e rollback sao atualizados.
+- [x] Gate completo, matriz Python, build, instalacao isolada e smokes Linux
+      passam no candidato final.
+- [x] Excecao de CI privada 0.8.0 e registrada porque o run `35514873721`
+      continuou bloqueado externamente.
+- [ ] Task branch e integrada e publicada em `develop`; `main` recebe somente
+      o candidato integralmente validado.
+
+**Plano**: `docs/planning/TASK-023-recovery-e2e-release-080.md`.
+
+### Task 022 - Diagnostico de causa por observers
+
+**Prioridade**: Alta
+**Status**: fases 1 a 8 e E2E real de recuperacao concluidos; adapter live
+deferido como tarefa futura nao bloqueante da release Linux privada 0.8.0
+**Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
+gerenciar um unico incidente correlacionado antes de enviar notificacoes.
+
+**Fase 1**:
+
+- [x] Tipos de evidencia, diagnostico, confianca, severidade e incidente.
+- [x] Schema SQLite aditivo e inicializacao compativel com `PresenceStore`.
+- [x] Correlacao obrigatoria por worker e sessao Codex.
+- [x] Um unico incidente aberto por worker, atualizavel e resolvivel.
+- [x] Testes focados de migracao, validacao e ciclo de incidente.
+- [x] Gate local completo: 177 testes nas versoes Python 3.10, 3.11 e 3.12,
+      87% de cobertura, Ruff, mypy, build e diff aprovados.
+- [x] Commit da sessao e integracao local em `develop`.
+
+**Fase 2**:
+
+- [x] Cliente stdio com allowlist que nao oferece envio de input.
+- [x] `thread/read(includeTurns=false)` da sessao exata validado localmente.
+- [x] Leitura estruturada e sanitizada dos limites da conta validada.
+- [x] Sanitizacao de status, erros, uso agregado e compactacao testada.
+- [x] Tentativa controlada de assinatura rejeitada com
+      `thread_already_active`; child separado nao observa sessao ativa da GUI.
+- [x] Limite arquitetural e instrucoes para humanos e AI-workers documentados.
+- [x] Gate completo: 189 testes nas versoes Python 3.10, 3.11 e 3.12,
+      86% de cobertura, Ruff, mypy, build e diff aprovados.
+
+**Fase 3**:
+
+- [x] Hooks Codex reconhecidos tambem registram evidencia diagnostica curta e
+      expiram sem armazenar payload, prompt, mensagem ou nome de ferramenta.
+- [x] `observe-codex-limits` consulta somente `account/rateLimits/read` em um
+      App Server filho e persiste estado sanitizado para o worker exato.
+- [x] Polling e TTL possuem configuracao positiva, modo one-shot padrao e
+      `--watch` explicito que encerra quando o worker deixa de estar ativo.
+- [x] Evidencia diagnostica nao atualiza `last_activity_at`, `last_signal_at`
+      nem rearma alertas de presenca.
+- [x] Live subscription, diagnostico, incidentes, notificacao, alarme, input e
+      recuperacao permanecem desabilitados.
+- [x] Gate completo: 203 testes nas versoes Python 3.10, 3.11 e 3.12,
+      86% de cobertura, Ruff, mypy, build e diff aprovados.
+- [x] Dry-run real do App Server retornou `usage_available` sem escrever SQLite.
+- [x] Commit da sessao e integracao local em `develop`.
+
+**Fase 4**:
+
+- [x] Processo Linux exige PID explicito e pode validar nome e troca por start
+      ticks sem ler `cmdline`, ambiente ou arquivos abertos.
+- [x] Rede observa apenas rota e links locais, sem afirmar acesso a Internet.
+- [x] Energia detecta retomada entre amostras pelos relogios de boot e
+      monotonic; coleta one-shot nao inventa historico de suspensao.
+- [x] Servicos `.service` explicitos usam `systemctl --user show` sem shell e
+      persistem somente estados sanitizados.
+- [x] `observe-linux-state` oferece one-shot, dry-run e `--watch`, revalidando o
+      worker antes e depois de cada coleta.
+- [x] Configuracao, seguranca, arquitetura e guias humanos/AI foram atualizados.
+- [x] Dry-run local validou processo, rota, energia e dois servicos ativos sem
+      escrever SQLite.
+- [x] Gate completo: 226 testes nas versoes Python 3.10, 3.11 e 3.12,
+      87% de cobertura, Ruff, mypy, build e diff aprovados.
+- [x] Commit da sessao e integracao local em `develop`.
+
+**Fases finais e escopo deferido**:
+
+- [ ] **Deferido, nao bloqueante**: adapter live somente para sessoes hospedadas
+      em endpoint compartilhado, com autenticacao e E2E proprios.
+- [x] E2E real de recuperacao usou sessao exata nao critica, marcador unico,
+      autorizacao explicita, um despacho, relogio de presenca inalterado e hook
+      posterior da mesma sessao.
+- [x] Motor de diagnostico, precedencia, confianca e transicoes, com 242 testes
+      aprovados em Python 3.10, 3.11 e 3.12, 87% de cobertura total e dry-run
+      real sem escrita.
+- [x] Notificacao Discord deduplicada com 259 testes em Python 3.10, 3.11 e
+      3.12, 87% de cobertura total, 98% no modulo novo e dry-run real sem
+      mensagem externa nem registro de tentativa.
+- [x] Teste Discord E2E autorizado entregou uma mensagem, deduplicou a
+      repeticao e teve exatamente um marcador confirmado pelo usuario no canal
+      `warnings-worker-robot`; fault injection e gates passaram.
+- [x] Recuperacao one-shot opcional implementada e validada com 271 testes em
+      Python 3.10, 3.11 e 3.12, 88% de cobertura total, 93% no coordenador e
+      dry-run real `no_open_incident`; nenhum input real foi autorizado ou
+      emitido. Integrada localmente em `develop` pelo commit de task `e526782`.
+
+**Plano**: `docs/planning/TASK-022-cause-aware-diagnostics.md`.
+
 ## Concluidas em 2026-09-13
 
 ### Task 021 - E2E nativo Discord e release Linux
@@ -428,7 +540,9 @@ atrasado.
 
 ## Backlog
 
-- Criar observers adicionais para processo, workspace e logs.
+- Projetar o adapter live somente quando as sessoes Codex puderem ser
+  hospedadas em endpoint compartilhado autenticado; manter desabilitado ate
+  passar isolamento e E2E de sessao exata.
 
 ## Concluida em 2026-07-27
 

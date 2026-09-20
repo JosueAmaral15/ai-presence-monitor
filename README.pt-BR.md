@@ -8,6 +8,18 @@ Esta release possui suporte operacional oficial somente para Linux. O codigo
 Windows foi preservado, mas fica experimental e desabilitado por padrao. Testes
 controlados no Windows exigem `PRESENCE_EXPERIMENTAL_WINDOWS_ENABLED=true`.
 
+O projeto tambem registra evidencias diagnosticas com TTL sem alterar os
+relogios de presenca. No Linux, `observe-linux-state` pode observar um PID
+explicito, rota e links locais, retomada depois de suspensao e unidades
+`.service` selecionadas. Esses fatos nao constituem diagnostico, nao enviam
+alertas e nao acionam recuperacao automaticamente. O comando one-shot
+`diagnose` correlaciona os fatos atuais, registra confianca e mantem no maximo
+um incidente aberto por worker. Ele ainda nao envia notificacao nem executa
+recuperacao. O comando separado `notify-diagnostic-incident` pode enviar uma
+mensagem Discord deduplicada para o incidente, sem tocar alarme, enviar input
+ou recuperar a sessao. Uma recuperacao restrita existe somente no comando
+explicito `recover-diagnostic-incident`: ela nunca e iniciada automaticamente.
+
 ## Protocolos
 
 ### Protocolo 1
@@ -365,6 +377,79 @@ PRESENCE_CODEX_AUTO_START=true
 Com `PRESENCE_CODEX_WORKER_SCOPE=project`, execute `start` e `finish` dentro da
 raiz do projeto. O hook usa o `cwd` recebido do Codex para chegar ao mesmo worker.
 Os outros escopos sao `global`, `session` e `project-session`.
+
+### Diagnosticar a inatividade atual
+
+Depois de coletar evidencias para um worker ativo, execute primeiro o dry-run e
+informe a sessao exata quando puder existir evidencia de mais de uma sessao:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+
+ai-presence diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+A severidade vem do relogio do protocolo do worker. O comando registra um fato
+limitado desse relogio, um diagnostico imutavel e abre, atualiza ou resolve o
+unico incidente do worker. Ele nao envia Discord/Telegram, nao toca alarme, nao
+envia input ao Codex e nao executa retry ou recuperacao.
+
+### Notificar o incidente diagnostico atual
+
+Revise primeiro sem rede e sem criar registro de entrega:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+Sem `--dry-run`, amarelo e laranja usam `DISCORD_ALERT_WEBHOOK_URL`; vermelho
+usa `DISCORD_RED_WEBHOOK_URL` quando configurado e, do contrario, usa o webhook
+de alerta. A chave semantica combina incidente, causa, confianca e severidade.
+Um novo UUID com o mesmo significado nao envia novamente; mudanca de causa,
+confianca ou severidade pode enviar uma nova mensagem uma unica vez.
+
+O registro e reservado antes do HTTP. Somente sucesso confirmado atualiza
+`last_notified_at`. Rejeicao, resultado incerto ou interrupcao ficam registrados
+sem retry automatico. Esse fluxo nao usa Telegram, alarme, telefone, input do
+Codex ou recuperacao.
+
+### Recuperar um incidente diagnostico elegivel
+
+Primeiro avalie a elegibilidade sem reservar tentativa nem enviar input:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+A tentativa real envia um unico `continue` local por `codex queue` para a
+sessao exata persistida no incidente e exige autorizacao desta invocacao:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --authorize-once \
+  --json
+```
+
+Somente `codex_closed` com confianca media/alta e `codex_crashed` com confianca
+alta sao elegiveis. O worker deve estar ativo, o diagnostico atual deve estar
+valido e a notificacao Discord do mesmo evento semantico deve estar confirmada.
+A reserva ocorre antes do envio e qualquer tentativa reservada bloqueia novo
+despacho para o mesmo incidente, inclusive apos resultado incerto ou
+interrupcao. O comando nao usa GUI ou transporte remoto, nao atualiza os
+relogios de presenca e nao resolve o incidente. Um hook posterior e novo
+diagnostico devem comprovar a retomada. O E2E real da release Linux privada
+0.8.0 confirmou um marcador unico, um despacho nativo, relogio isolado
+inalterado e hook posterior da sessao exata.
 
 ### Instalar hook no Codex
 

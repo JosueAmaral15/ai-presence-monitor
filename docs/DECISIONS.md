@@ -1,5 +1,241 @@
 # Decisions
 
+## 2026-09-20 - Private Linux 0.8.0 may use local gates while CI is billing-locked
+
+**Decision**: allow the private Linux 0.8.0 release to proceed to `main` after
+the authorized recovery E2E, complete local Python 3.10/3.11/3.12 matrix,
+package build, isolated installation and Linux smokes passed. Treat GitHub run
+`35514873721` as externally blocked, not as a successful CI run.
+
+**Reason**:
+
+- all three required Ubuntu jobs ended in about two seconds with zero steps;
+- GitHub annotated each job with `account is locked due to a billing issue`;
+- the exact `develop` candidate passed 271 tests on all three supported Python
+  versions locally, 88% coverage, Ruff, mypy, build and diff checks;
+- the 0.8.0 wheel passed a fresh isolated installation and no-input Linux
+  runtime smokes;
+- the release is private, Linux-only and explicitly authorized by the user.
+
+**Limit**:
+
+This exception applies only to private Linux version 0.8.0. It does not call
+the hosted jobs successful, does not cover public publication, Windows enablement
+or another release, and must be reconsidered when the billing lock changes.
+
+## 2026-09-20 - Release 0.8.0 defers shared-endpoint live observation
+
+**Decision**: release the completed cause-aware diagnostic pipeline and
+one-shot recovery coordinator for the private supported Linux runtime as
+version 0.8.0. Keep the shared-endpoint App Server event adapter disabled and
+move it to a separate future task.
+
+**Reason**:
+
+- the existing child-process probe cannot observe an already GUI-owned Codex
+  session;
+- same-session hooks, sanitized account-limit polling and Linux observers
+  already provide bounded evidence without changing session ownership;
+- changing how Codex sessions are hosted is an independent architecture and
+  security project, not a safe incremental release requirement;
+- recovery now has one authorized exact-session E2E with a unique marker,
+  one dispatch, unchanged presence clock and later hook evidence.
+
+**Consequence**:
+
+Version 0.8.0 does not claim shared-daemon live event support. The adapter
+remains unreachable until endpoint authentication, ownership, isolation and a
+separate exact-session E2E pass. This deferral is not a Linux release blocker.
+
+## 2026-09-20 - Diagnostic recovery is explicit, local and one-shot
+
+**Decision**: expose one recovery coordinator only through the explicit
+`recover-diagnostic-incident` command. It may reserve and dispatch one local
+native `continue` for an eligible incident, and every real invocation requires
+`--authorize-once` even when persistent task automation is enabled.
+
+**Reason**:
+
+- inactivity does not itself authorize input;
+- closed and crashed Codex states are the only current causes for which one
+  local continuation attempt has a bounded interpretation;
+- confirmed notification ensures the human-visible incident precedes recovery;
+- reservation before transport prevents concurrent or uncertainty-driven
+  duplicate input;
+- presence synchronization would turn attempted recovery into false evidence
+  of work.
+
+**Consequence**:
+
+The ledger permits one `native_continue` reservation per incident. Pending,
+detached, emitted, uncertain and interrupted attempts all suppress another
+dispatch. No observer or background service calls the coordinator. GUI,
+remote input, delay, alarms, Telegram and phone paths are absent. Transport
+does not resolve the incident; same-session hook evidence and a later diagnosis
+must establish recovery. A real recovery E2E requires separate authorization.
+
+Task 023 later consumed that separate authorization and validated one isolated
+dispatch with marker
+`[AI-PRESENCE-RECOVERY-E2E:d0f7c884-428c-49bd-a903-0989a5616a10] continue`.
+
+## 2026-09-20 - Diagnostic Discord delivery is reserved and one-shot
+
+**Decision**: add one explicit diagnostic notification policy that reserves a
+semantic event before sending exactly one Discord request. The unique boundary
+is incident plus cause, confidence, severity and channel, not diagnosis UUID.
+
+**Reason**:
+
+- a new immutable diagnosis may carry the same meaning and must not duplicate
+  a user notification;
+- reservation before network access closes concurrent and crash ambiguity;
+- a timeout cannot prove whether Discord accepted the request, so retrying it
+  automatically risks duplicate external messages;
+- the existing general notifier also invokes Telegram and red escalation,
+  which is outside this phase's narrow Discord contract.
+
+**Consequence**:
+
+Confirmed webhook success marks the ledger row delivered and updates the
+incident notification timestamp atomically. Rejected, uncertain and pending
+attempts remain terminal for that semantic key. Dry-run reserves no attempt and
+makes no network request; missing configuration fails before reservation. A
+changed semantic diagnosis or a new incident can create one new attempt.
+Telegram, alarms, phone, Codex input, recovery and live E2E remain separate.
+
+## 2026-09-20 - Diagnosis severity belongs to the protocol clock
+
+**Decision**: run diagnosis as a one-shot correlation step. Reduce current
+evidence to the newest batch per source and kind, fail closed on ambiguous
+Codex sessions, and derive incident severity only from the worker's Protocol 1
+or Protocol 2 clock.
+
+**Reason**:
+
+- observers know facts but do not own user-facing severity;
+- simultaneous service observations must remain together while an older sample
+  of the same kind must not remain authoritative;
+- local route, process and power facts have different certainty and cannot be
+  promoted to proven causes by one generic rule;
+- an immutable threshold fact makes each incident diagnosis auditable even if
+  the mutable worker clock later advances;
+- resolving and updating one incident prevents parallel contradictory episodes.
+
+**Consequence**:
+
+`diagnose` writes one bounded presence fact and one immutable diagnosis, then
+opens, updates or resolves at most one incident. Insufficient evidence becomes
+`unexplained_inactivity`. Dry-run writes nothing. Notification timestamps,
+Discord, Telegram, alarms, Codex input, retry and recovery remain untouched.
+
+## 2026-09-20 - Linux system observers report local facts only
+
+**Decision**: implement process, network, power and user-service collection as
+independent read-only sources behind one Linux-only `observe-linux-state`
+command. Enable local network and power sampling by default; require explicit
+PID and service targets. Do not add a background-service installer in Phase 4.
+
+**Reason**:
+
+- local route/link state is useful evidence but cannot prove Internet or DNS;
+- an observer cannot execute while suspended, but two clocks can prove a resume
+  gap after execution continues;
+- process-name discovery is ambiguous across concurrent Codex sessions, while
+  explicit PID plus expected `comm` and start ticks is bounded and auditable;
+- optional systemd units must not be treated as required without operator
+  selection;
+- one explicit watcher is enough to validate collection before adding daemon
+  lifecycle and diagnosis policies.
+
+**Consequence**:
+
+The observer is one-shot by default and writes only expiring diagnostic facts
+for an active exact worker. `--watch` preserves process and power baselines and
+stops after `finish`. No collector updates presence, calls external networks,
+reads sensitive process payloads, diagnoses a cause, notifies or recovers.
+
+## 2026-09-14 - Diagnostic evidence never extends presence
+
+**Decision**: recognized Codex hooks may produce both their existing presence
+observation and a separate expiring diagnostic fact. Account-limit polling
+produces only diagnostic evidence. Persisting either diagnostic record must not
+update protocol clocks, worker lifecycle, alert rearming or public heartbeat.
+
+**Reason**:
+
+- a hook is direct evidence of session activity and already owns a presence
+  observation, while its diagnostic interpretation has a separate lifetime;
+- an account limit is context about a possible interruption, not proof that the
+  worker performed useful work;
+- coupling observer polling to `last_activity_at` would hide genuine Protocol 2
+  inactivity indefinitely;
+- diagnosis, notification and recovery still need correlation and dedicated
+  policies in later phases.
+
+**Consequence**:
+
+Hook diagnostic evidence uses constant allowlisted mappings and a configured
+TTL. `observe-codex-limits` is one-shot by default; explicit `--watch` rechecks
+the exact worker and stops after `finish`. Neither path can subscribe to live
+thread events, notify, alarm, send input or recover a session.
+
+## 2026-09-14 - App Server polling and live observation are separate adapters
+
+**Decision**: use a dedicated stdio App Server only for bounded persisted
+thread and account-limit reads. Do not treat it as a live observer for a Codex
+GUI/CLI session owned by another process. Keep a shared-endpoint live adapter
+disabled until its session topology and exact-thread events pass E2E.
+
+**Reason**:
+
+- metadata-only `thread/read` and `account/rateLimits/read` succeeded locally;
+- the child reported the current GUI-owned thread as `notLoaded`;
+- explicit `thread/resume(excludeTurns=true)` was rejected with JSON-RPC
+  `-32600`, classified without raw text as `thread_already_active`;
+- connection-scoped event subscriptions cannot prove activity in an
+  independently owned GUI session;
+- existing same-session hooks already provide authoritative lifecycle evidence
+  without taking ownership of the session.
+
+**Consequence**:
+
+Task 022 Phase 3 may combine Codex hooks with sanitized account-limit polling.
+It must not infer `codex_closed` from the child-local `notLoaded` state. Live
+App Server events require sessions intentionally hosted by a managed or
+multiplexed endpoint, and no failed attach may trigger retry or recovery.
+
+## 2026-09-13 - Evidence observers do not diagnose or recover
+
+**Decision**: diagnostic observers will persist bounded facts. A separate
+diagnosis engine will correlate evidence, and a separate incident state machine
+will own notification lifecycle. Recovery remains an optional downstream
+component that is disabled by default.
+
+**Reason**:
+
+- process, network and Codex signals can coexist or contradict one another;
+- inactivity alone cannot prove why an AI-worker stopped producing evidence;
+- one policy owner is required to deduplicate Discord notifications;
+- collection must remain safe even when a notification or recovery integration
+  is unavailable;
+- recovery needs stricter authorization and E2E evidence than observation.
+
+**Alternatives considered**:
+
+- let each observer send its own alert: rejected because it creates duplicate
+  and contradictory incidents;
+- encode the final cause directly in protocol alerts: rejected because presence
+  severity and interruption cause are independent concerns;
+- retry `continue` whenever hooks stop: rejected because network failure,
+  pending user input, sleep and usage limits require different actions.
+
+**Consequence**:
+
+Task 022 first adds an unused additive persistence foundation. Live observers,
+classification, Discord messages and recovery require later phases and their
+own validation. At most one diagnostic incident may remain open for a worker,
+while immutable diagnoses preserve why that incident changed over time.
+
 ## 2026-09-13 - Excecao de CI para release Linux privada 0.7.0
 
 **Decisao**: permitir a promocao da versao 0.7.0 para `main` sem uma execucao

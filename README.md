@@ -9,6 +9,16 @@ inactivity protocols, and sends alerts through Discord and optionally Telegram.
 The project also provides:
 
 - passive Codex activity observation through hooks;
+- bounded Codex diagnostic evidence from recognized hooks and sanitized
+  account-limit polling, without changing presence clocks;
+- bounded Linux process, local-route, resume-gap, and user-service evidence
+  through an explicit read-only observer;
+- deterministic cause diagnosis with confidence and one correlated incident
+  per worker, without notification or recovery side effects;
+- one-shot, semantically deduplicated Discord notifications for diagnostic
+  incidents, isolated from alarms, input, and recovery;
+- an explicitly authorized, local native-only, one-shot recovery command for
+  narrowly eligible closed or crashed Codex incidents;
 - per-project and per-session worker identities;
 - work-hour alert policies;
 - remote Discord questions routed to the originating Codex session, with
@@ -61,6 +71,7 @@ Detailed operational documentation is currently available in Portuguese:
 - [Integrated Codex continue command](docs/CONTINUE-CODEX.md)
 - [System tray and native Codex input](docs/SYSTEM-TRAY-NATIVE-INPUT.md)
 - [AI worker command protocol](docs/AI-WORKER-COMMAND-PROTOCOL.md)
+- [Codex App Server probe and account-limit observer](docs/CODEX-APP-SERVER-PROBE.md)
 - [Portability](docs/PORTABILIDADE.md)
 - [Remote Discord responses](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [Security checklist](docs/security/SECURITY.md)
@@ -338,6 +349,88 @@ boundaries.
 With `PRESENCE_CODEX_WORKER_SCOPE=project`, run lifecycle commands from the
 project root or pass `--project`. Other scopes are `global`, `session`, and
 `project-session`.
+
+### Diagnose current inactivity
+
+After evidence has been collected for an active worker, run a one-shot
+diagnosis. Use the exact session whenever more than one current Codex session
+may have evidence:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /absolute/path/to/project \
+  --session EXACT_SESSION_ID \
+  --json
+
+ai-presence diagnose \
+  --project /absolute/path/to/project \
+  --session EXACT_SESSION_ID
+```
+
+Severity comes from the worker's existing protocol clock. The command links a
+bounded presence-clock fact to the selected current evidence, records one
+immutable diagnosis, and opens, updates, or resolves the worker's single
+diagnostic incident. `--dry-run` writes no diagnostic rows. This command does
+not send Discord or Telegram messages, play an alarm, dispatch Codex input,
+retry, or recover the worker.
+
+### Notify the current diagnostic incident
+
+Review the exact worker and semantic event without network access or a
+notification-attempt record:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --json
+```
+
+Run the command without `--dry-run` only when one external Discord message is
+intended. Yellow and orange use `DISCORD_ALERT_WEBHOOK_URL`; red uses
+`DISCORD_RED_WEBHOOK_URL` when configured and otherwise falls back to the alert
+webhook.
+
+The notification key contains the incident, cause, confidence, and severity.
+Repeating an equivalent diagnosis does not send again, even when it has a new
+diagnosis UUID. A changed cause, confidence, or severity can send one new
+message. The delivery record is reserved before HTTP. Confirmed success updates
+`last_notified_at`; rejected, uncertain, or interrupted delivery is retained
+without automatic retry. This path does not call Telegram, local alarm, phone,
+Codex input, or recovery.
+
+### Recover one eligible diagnostic incident
+
+Recovery is never started by an observer, monitor timer, diagnosis, or
+notification. First inspect eligibility without reserving an attempt or
+dispatching input:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --json
+```
+
+A real attempt is limited to one local native `continue` for the exact session
+stored in an open incident. It accepts only `codex_closed` with medium/high
+confidence or `codex_crashed` with high confidence, requires an unexpired
+current diagnosis and confirmed Discord delivery for that semantic event, and
+always requires explicit one-invocation authorization:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /absolute/path/to/project \
+  --authorize-once \
+  --json
+```
+
+The recovery ledger is reserved before `codex queue`. Any pending,
+`dispatch_started`, `input_emitted`, or uncertain attempt suppresses another
+dispatch for the same incident. Transport state does not prove that Codex
+processed the message, does not update presence clocks, and does not resolve
+the incident; a later hook and diagnosis must provide that evidence. Real
+recovery E2E was validated for the private Linux 0.8.0 release with one unique
+marker, one native dispatch, an unchanged isolated activity clock, and a later
+hook from the exact target session.
 
 ### Install Codex hooks
 

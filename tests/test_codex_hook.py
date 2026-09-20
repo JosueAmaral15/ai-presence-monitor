@@ -22,6 +22,11 @@ from ai_presence_monitor.codex_hook import (
     main as hook_main,
 )
 from ai_presence_monitor.config import AppConfig
+from ai_presence_monitor.diagnostics import (
+    DiagnosticStore,
+    EvidenceKind,
+    EvidenceSource,
+)
 from ai_presence_monitor.store import PresenceStore
 
 
@@ -122,6 +127,41 @@ class CodexHookTests(unittest.TestCase):
             self.assertEqual(updated.last_signal_at, initial.last_signal_at)
             self.assertGreater(updated.last_activity_at or 0, initial.last_activity_at or 0)
             self.assertIn("PreToolUse", updated.last_message or "")
+            evidence = DiagnosticStore(config.db_path).list_evidence(
+                worker_id="test-computer:codex"
+            )
+            self.assertEqual(len(evidence), 1)
+            self.assertEqual(evidence[0].source, EvidenceSource.CODEX_HOOK)
+            self.assertEqual(evidence[0].kind, EvidenceKind.ACTIVITY)
+            self.assertEqual(evidence[0].state, "tool_started")
+
+    def test_unknown_hook_updates_presence_but_not_diagnostic_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_config(Path(tmp) / "presence.db", auto_start=False)
+            store = PresenceStore(config.db_path)
+            store.record_event(
+                worker_id="test-computer:codex",
+                computer="test-computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+
+            worker = record_codex_hook_payload(
+                payload={
+                    "hook_event_name": "FuturePrivateHook",
+                    "cwd": "/tmp/project",
+                },
+                config=config,
+            )
+
+            self.assertIsNotNone(worker)
+            self.assertEqual(
+                DiagnosticStore(config.db_path).list_evidence(
+                    worker_id="test-computer:codex"
+                ),
+                [],
+            )
 
     def test_hook_confirms_recent_gui_input_for_same_worker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

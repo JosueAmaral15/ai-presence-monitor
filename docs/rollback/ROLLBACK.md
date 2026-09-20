@@ -1,5 +1,21 @@
 # Rollback
 
+## Release 0.8.0 - Diagnostico e recovery one-shot
+
+Se a release 0.8.0 causar regressao operacional:
+
+1. desabilite qualquer chamada externa a `recover-diagnostic-incident`;
+2. pare somente os servicos afetados com `systemctl --user stop`;
+3. reinstale o wheel privado 0.7.0 no ambiente virtual dedicado;
+4. reinstale hooks e unidades a partir do runtime restaurado;
+5. execute `ai-presence init` e os smokes sem input antes de reiniciar servicos.
+
+As tabelas diagnosticas e o ledger de recovery sao aditivos. Nao apague
+`presence.db` nem remova tabelas durante rollback. A versao 0.7.0 ignora essas
+tabelas. Preserve um backup do banco antes de qualquer migracao destrutiva.
+
+Tempo esperado: menos de 10 minutos quando o wheel 0.7.0 estiver preservado.
+
 ## Task 001 - Codex Hook Observer
 
 ## Criterios para rollback

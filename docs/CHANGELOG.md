@@ -1,5 +1,73 @@
 # Changelog
 
+## 2026-09-20 - v0.8.0
+
+- Added typed evidence, diagnosis, confidence, severity and incident models.
+- Added additive SQLite tables for diagnostic evidence, immutable diagnosis
+  links and one open incident per worker.
+- Added validation that prevents cross-worker and cross-session diagnoses.
+- Added incident notification timestamps and explicit resolution state.
+- Kept observers, cause classification, Discord notifications and automatic
+  recovery disabled until later Task 022 phases.
+- Added a hard-allowlisted `probe-codex-app-server` command for metadata-only
+  thread reads, structured rate-limit reads and explicit subscription tests.
+- Sanitized App Server output to bounded status, error and aggregate usage
+  fields without retaining prompts, transcript, commands, account IDs or raw
+  errors.
+- Verified that a separate stdio App Server sees the active GUI thread as
+  `notLoaded` and cannot resume it; live shared-session observation therefore
+  remains disabled pending a managed-endpoint E2E.
+- Added bounded, expiring diagnostic evidence for recognized same-session Codex
+  hooks without changing their existing presence observations.
+- Added `observe-codex-limits` for one-shot or explicit continuous sanitized
+  `account/rateLimits/read` evidence tied to an exact active worker.
+- Kept live subscriptions, cause diagnosis, incidents, notifications, alarms,
+  input and recovery disabled while later Task 022 phases remain pending.
+- Added Linux-only `observe-linux-state` with bounded process, local-route,
+  resume-gap and explicit user-systemd service evidence.
+- Added PID name/start-time safeguards, local-only network reads, clock-based
+  resume detection and shell-free allowlisted systemd parsing.
+- Added one-shot and watch modes with exact-worker rechecks, expiring evidence,
+  dry-run isolation and no presence-clock mutation.
+- Added deterministic diagnosis precedence and confidence over current,
+  same-worker evidence with explicit session disambiguation.
+- Added bounded protocol-threshold evidence and one-shot `diagnose` dry-run or
+  persisted incident transitions.
+- Preserved one incident per worker and its notification timestamp across
+  cause and severity updates; healthy evidence resolves the episode.
+- Kept Discord/Telegram notifications, alarms, Codex input, retry and recovery
+  outside the diagnosis engine.
+- Added a diagnostic-only Discord policy with an additive attempt ledger and
+  semantic deduplication across equivalent diagnosis UUIDs.
+- Reserved each incident/cause/confidence/severity/channel event before one
+  bounded POST; confirmed delivery alone updates `last_notified_at`.
+- Retained rejected, uncertain and interrupted attempts without automatic
+  retry, and kept Telegram, alarm, phone, Codex input and recovery disconnected.
+- Added `notify-diagnostic-incident` with exact worker selection, JSON output
+  and a network-free, ledger-write-free dry run using existing alert webhooks.
+- Validated one authorized yellow `usage_limit_exceeded` Discord notification
+  end to end: confirmed delivery, one-row semantic deduplication and exactly
+  one user-confirmed marker in the configured alert channel.
+- Confirmed through local fault injection that HTTP rejection, raw timeout,
+  transport uncertainty and interruption do not trigger an automatic retry.
+- Added `recover-diagnostic-incident` as an explicitly authorized, local
+  native-only, one-shot recovery for narrowly eligible closed/crashed Codex
+  incidents.
+- Added an additive recovery ledger reserved before transport, with permanent
+  per-incident deduplication across success, detached dispatch, uncertainty and
+  interruption.
+- Required an active worker, current unexpired diagnosis, exact session and
+  delivered semantic Discord notification while keeping persistent automation
+  permission insufficient for real dispatch.
+- Kept recovery disconnected from observers and services, excluded GUI/remote
+  fallback and presence synchronization.
+- Validated one authorized isolated recovery E2E with a unique marker: one
+  Discord diagnostic delivery, one local native dispatch to the exact current
+  session, one `dispatch_started` ledger row, unchanged isolated presence
+  activity and later same-session hook evidence.
+- Deferred the shared-endpoint App Server event adapter as a separate future
+  task because a child process cannot observe an already GUI-owned session.
+
 ## 2026-09-13 - v0.7.0
 
 - Cada pergunta passa a salvar transporte, sessao e destino antes da

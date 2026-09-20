@@ -1,5 +1,208 @@
 # Security Checklist
 
+## Task 022 - Diagnostic foundation
+
+- [x] Diagnostic tables are additive and do not alter presence clocks.
+- [x] Evidence stores typed state and a bounded summary, not raw observer
+      payloads, prompts or transcripts.
+- [x] Worker, session and state identifiers reject empty, multiline, NUL and
+      oversized values.
+- [x] A diagnosis requires persisted evidence from the same worker and cannot
+      combine conflicting Codex sessions.
+- [x] Foreign keys protect diagnosis-evidence and incident-diagnosis links.
+- [x] A partial unique index permits at most one open incident per worker.
+- [x] Phase 1 contains no network calls, notifications, Codex input, retry or
+      recovery execution.
+
+### Residual risk
+
+Future observers must map external payloads to the existing bounded vocabulary
+instead of persisting them verbatim. A concise summary can still contain a
+secret if a producer violates that contract, so observer implementations need
+source-specific allowlists and tests before live activation.
+
+## Task 022 - Codex App Server feasibility probe
+
+- [x] Requests use an argument vector and dedicated stdio child without a
+      shell, remote listener or inherited input transport.
+- [x] `turn/start`, `turn/steer`, item injection, queue and GUI input have no
+      allowed request path.
+- [x] `thread/read` forces `includeTurns=false`; rate-limit reads exclude reset
+      credit details.
+- [x] Message, reasoning, command, patch, plan, transcript and audio deltas are
+      opted out; unknown notifications are dropped.
+- [x] Output uses typed allowlisted fields and excludes account ID, balances,
+      titles, previews, items, raw errors and arbitrary server messages.
+- [x] Metadata must match the requested thread, and cross-thread events are
+      discarded.
+- [x] The probe does not write SQLite, update activity, notify, alarm or recover.
+- [x] A failed subscription is not retried automatically.
+
+### Residual risk
+
+`thread/resume` is observational but still loads or rejoins a thread inside the
+child App Server. Keep positive `--subscribe-seconds` values limited to explicit
+development tests. A future shared-daemon adapter needs authentication, local
+socket permissions, client isolation and exact-session E2E before activation.
+
+## Task 022 - Codex evidence observers
+
+- [x] Recognized hooks map to constant evidence states and summaries; raw hook
+      payloads, prompts, messages, commands and tool names are not persisted.
+- [x] Unknown hooks do not create diagnostic evidence.
+- [x] Hook and account-limit evidence use positive configurable TTLs.
+- [x] The account observer exposes only `account/rateLimits/read` through the
+      existing hard allowlist and discards raw App Server payloads.
+- [x] The observer requires the exact active worker and rechecks it before each
+      continuous poll.
+- [x] Dry-run performs no SQLite write, and an idle or missing worker fails
+      before a persisted read.
+- [x] Diagnostic evidence does not modify presence clocks or worker state.
+- [x] Phase 3 has no thread subscription, notification, alarm, Codex input,
+      automatic retry, diagnosis or recovery path.
+
+### Residual risk
+
+Account-limit fields and classifications may evolve in future Codex versions.
+Unknown documented values are collapsed into bounded fallback states instead
+of being persisted verbatim. The diagnosis engine must still correlate this
+evidence with independent observers before notifying the user.
+
+## Task 022 - Linux system evidence observers
+
+- [x] Linux-only runtime guard fails before collector execution on other
+      platforms, including experimental Windows.
+- [x] Process observation reads only `comm` and `stat` for an explicit positive
+      PID; it does not read command lines, environments or open files.
+- [x] Expected process names and systemd units use bounded allowlists.
+- [x] PID start ticks detect replacement during one watcher lifetime.
+- [x] Network observation reads only local route and link state and sends no
+      DNS, HTTP, ICMP or other network traffic.
+- [x] Boot IDs, actual process names, stderr and raw systemd output are never
+      persisted or printed.
+- [x] `systemctl` uses a fixed argument vector without a shell and parses only
+      `LoadState`, `ActiveState` and `Result`.
+- [x] Every fact has a positive TTL; dry-run writes no SQLite; idle or missing
+      workers fail before persistence.
+- [x] Phase 4 does not update presence, diagnose, notify, alarm, retry input or
+      recover a worker.
+
+### Residual risk
+
+PID identity before the first successful sample can still be stale; provide an
+expected process name. A local default route does not prove upstream or DNS
+availability. Suspend detection occurs only after resume and can be lost if the
+watcher is terminated. Service inactivity is not a fault unless a later policy
+knows that the selected unit was required.
+
+## Task 022 - Diagnosis engine
+
+- [x] Only non-expired evidence is considered.
+- [x] Newest-batch reduction prevents an older fact of the same source/kind
+      from overriding its replacement while retaining simultaneous services.
+- [x] Ambiguous current Codex sessions fail before diagnostic writes.
+- [x] Direct account and interaction states use bounded allowlists.
+- [x] Local network degradation is limited to low or medium confidence and
+      never claims that an upstream Internet probe succeeded or failed.
+- [x] Positive process, route, power, service and account facts do not prove
+      worker activity by themselves.
+- [x] Every persisted diagnosis links evidence; overdue causes also link a
+      bounded protocol-threshold fact.
+- [x] Dry-run does not add evidence, diagnosis or incident rows.
+- [x] Incident updates preserve `last_notified_at` and one-open-per-worker.
+- [x] Phase 5 has no notification, alarm, input, retry or recovery call path.
+
+### Residual risk
+
+The diagnosis is limited to the observers that were actually running and may
+remain `unexplained_inactivity`. A local route cannot distinguish DNS, proxy,
+firewall or upstream service failures. A required service must be selected
+intentionally; selecting an optional service makes its inactivity eligible as
+observer-health evidence. Phase 6 must preserve confidence and deduplicate from
+the incident state instead of notifying from raw evidence.
+
+## Task 022 - Diagnostic Discord notifications
+
+- [x] Only one explicit policy module can consume an open incident for
+      cause-aware delivery; observers and the diagnosis engine do not send.
+- [x] A unique incident/event/channel row is reserved before network access.
+- [x] Equivalent diagnoses deduplicate by bounded semantics instead of UUID.
+- [x] The payload is bounded, replaces display backticks and disables Discord
+      mention parsing.
+- [x] The transport performs one POST, reads a bounded response and has no
+      automatic retry or channel fallback.
+- [x] HTTP rejection and transport uncertainty persist only bounded codes, not
+      response bodies, URLs or raw exceptions.
+- [x] Only confirmed delivery updates the incident notification timestamp.
+- [x] Dry-run performs no network request or notification-row write; a missing
+      webhook fails before reservation.
+- [x] Telegram, local alarm, phone, Codex input and recovery are unreachable
+      from this notification path.
+
+### Residual risk
+
+A timeout can occur after Discord accepted the message. The corresponding
+`uncertain` row intentionally suppresses automatic retry, so an operator may
+need to inspect Discord. A process interruption after reservation leaves
+`pending` with the same suppression. Real Discord behavior remains a Phase 7
+E2E gate and requires explicit authorization for the external message.
+
+## Task 022 - Diagnostic Discord E2E
+
+- [x] The user explicitly authorized one real diagnostic Discord message.
+- [x] The E2E used a temporary isolated database and did not modify operational
+      worker, evidence, incident or notification rows.
+- [x] Dry-run reserved no attempt; the real invocation delivered once; the
+      equivalent invocation returned `deduplicated` with one row.
+- [x] The user confirmed exactly one unique marker in the intended alert
+      channel.
+- [x] Rejection, timeout, uncertainty and interruption fault injection made no
+      second transport call.
+- [x] No Telegram, alarm, phone, Codex input, recovery or permission change was
+      used as fallback.
+
+### Residual risk
+
+The Discord bot cannot list messages in the alert channel and returned HTTP
+403 during one read-only verification attempt. It was not retried. External
+visibility therefore depends on webhook delivery plus explicit human channel
+confirmation until the bot is intentionally granted read access or webhook
+delivery is changed to return and persist a bounded Discord message ID.
+
+## Task 022 - One-shot diagnostic recovery
+
+- [x] Recovery has no observer, monitor-loop, diagnosis, notification or
+      background-service trigger.
+- [x] Eligibility is allowlisted by cause/confidence and requires a current,
+      unexpired diagnosis for an active worker and open incident.
+- [x] Incident and diagnosis must carry the same exact persisted Codex session.
+- [x] A delivered Discord notification for the current semantic event is a
+      prerequisite, not authorization.
+- [x] Every real invocation requires `--authorize-once`; persistent automation
+      permission is intentionally insufficient.
+- [x] One incident/action row is reserved before native transport and prevents
+      concurrent or later duplicate dispatch.
+- [x] Uncertain transport stores only a bounded failure code; interruption
+      leaves `pending`, and neither state is retried automatically.
+- [x] Dry-run does not check the executable, reserve a row, send input or
+      mutate worker state.
+- [x] Only local `codex queue` is reachable; GUI, remote, delay, Telegram,
+      alarm, phone and fallback paths are absent.
+- [x] Recovery does not update presence clocks or resolve the incident.
+
+### Residual risk
+
+`dispatch_started` and `input_emitted` do not prove that Codex accepted or
+processed the message. An interruption after the child starts may leave only a
+`pending` row. Both outcomes deliberately block another automatic attempt and
+require operator inspection plus later same-session hook/diagnosis evidence.
+The private Linux 0.8.0 E2E used a noncritical exact session, a unique marker
+the human did not type, and separate explicit authorization for one dispatch.
+It produced one delivered Discord notification, one `dispatch_started`
+recovery row, no presence-clock change and later same-session hooks. This does
+not change the residual rule: transport state alone is insufficient, and no
+uncertain or interrupted attempt may be retried.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

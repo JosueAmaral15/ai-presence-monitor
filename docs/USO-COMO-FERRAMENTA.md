@@ -38,7 +38,11 @@ Os componentes sao independentes:
 | Componente | Responsabilidade |
 |---|---|
 | CLI `ai-presence` | interface deterministica para humanos, scripts e IAs |
-| hooks do Codex | registrar atividade local silenciosa |
+| hooks do Codex | registrar atividade local silenciosa e evidencia diagnostica reconhecida |
+| observer de limites | registrar estado sanitizado da conta sem alterar presenca |
+| observer Linux | registrar processo, rota local, retomada e servicos selecionados |
+| motor de diagnostico | correlacionar fatos atuais e manter um incidente por worker |
+| politica de notificacao diagnostica | enviar uma mensagem Discord deduplicada por mudanca semantica |
 | monitor | avaliar atrasos e produzir alertas |
 | observer Discord | receber respostas correlacionadas de usuarios permitidos |
 | `codex queue` | enviar texto para uma sessao sem mouse ou teclado |
@@ -143,6 +147,179 @@ No Protocolo 1, o worker publica heartbeat a cada cinco minutos. No Protocolo
 2, publica `start` e `finish`; hooks ou `touch` significativo registram
 atividade silenciosa durante a tarefa.
 
+### Observar evidencia diagnostica do Codex
+
+Depois de iniciar o worker do projeto, uma leitura unica dos limites da conta
+pode ser registrada com:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+Use `--watch` somente quando houver uma atribuicao explicita para manter esse
+observer continuo. Ele confirma que o worker exato continua ativo antes de cada
+poll e termina depois de `finish`:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --watch
+```
+
+O comando consulta somente `account/rateLimits/read`. A evidencia expira e nao
+atualiza `last_activity_at`, nao evita alertas do Protocolo 2 e nao envia
+Discord, alarme, `continue` ou recuperacao. Hooks reconhecidos registram a sua
+propria evidencia diagnostica curta, alem da observacao de presenca existente.
+Esses producers nao decidem a causa sozinhos; a correlacao ocorre no comando
+separado `diagnose`.
+
+### Observar estado local do Linux
+
+Rede e energia sao coletadas por padrao. Processo e servicos exigem alvos
+explicitos:
+
+```bash
+ai-presence observe-linux-state \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --process-pid PID_EXATO \
+  --expected-process-name codex \
+  --service ai-presence-monitor.service \
+  --service ai-presence-reply-observer.service
+```
+
+Use `--watch` para repetir no intervalo configurado. `finish` torna o worker
+idle e encerra o watcher. `--skip-network`, `--skip-power` e `--no-services`
+desabilitam fontes especificas. Se um shell substituir seu proprio processo ao
+executar o ultimo comando, `$$` pode passar a identificar `python3`; confirme
+PID e `/proc/PID/comm` antes de informar o nome esperado.
+
+O observer nao testa DNS nem Internet, nao le linha de comando ou ambiente de
+processos e nao consulta journal. Uma retomada de suspensao so pode ser
+detectada entre duas coletas do mesmo watcher. Servico inativo e apenas um fato;
+o motor o interpreta como problema somente porque as unidades observadas foram
+selecionadas explicitamente como obrigatorias. Nenhuma dessas evidencias
+atualiza presenca ou envia alertas.
+
+### Correlacionar a causa atual
+
+Use primeiro o modo sem escrita:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Se o resultado e o alvo estiverem corretos, persista a transicao:
+
+```bash
+ai-presence diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+O comando considera apenas evidencia nao expirada, mantem o lote mais novo de
+cada fonte/tipo e falha fechado se encontrar sessoes Codex atuais conflitantes
+sem `--session`. A severidade continua vindo do threshold do Protocolo 1 ou 2.
+Fatos positivos isolados, como processo em execucao, rota default, sistema
+acordado ou servico ativo, nao provam que a IA esta trabalhando. Na falta de
+causa suficiente, o resultado correto e `unexplained_inactivity` com baixa
+confianca.
+
+`working` ou `long_running_operation` resolve um incidente aberto. Outras
+causas atrasadas abrem ou atualizam um unico incidente. A Fase 5 nao envia
+Discord/Telegram, nao toca alarme, nao envia input, nao repete uma acao e nao
+recupera a sessao.
+
+### Notificar um incidente diagnosticado
+
+Revise primeiro a mensagem sem gravar uma tentativa nem acessar a rede:
+
+```bash
+ai-presence --dry-run notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Somente depois de confirmar worker, causa, confianca e severidade, execute uma
+tentativa real explicitamente:
+
+```bash
+ai-presence notify-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+```
+
+Amarelo e laranja usam `DISCORD_ALERT_WEBHOOK_URL`. Vermelho usa
+`DISCORD_RED_WEBHOOK_URL` quando configurado e, caso contrario, o webhook
+de alertas. Nao ha nova variavel de ambiente para esta fase.
+
+O comando reserva no banco uma chave formada por incidente, causa, confianca e
+severidade antes do unico POST. Uma repeticao equivalente retorna
+`deduplicated`, mesmo que um novo diagnostico tenha outro UUID. Mudanca de
+causa, confianca ou severidade permite uma nova tentativa no mesmo incidente;
+um incidente novo tambem possui ciclo proprio.
+
+Somente uma resposta HTTP confirmada marca `delivered` e atualiza
+`last_notified_at`. Rejeicao HTTP, timeout, erro de rede ou interrupcao ficam
+registrados como `rejected`, `uncertain` ou `pending` e nao sao repetidos
+automaticamente. Corrija a causa e aguarde uma mudanca semantica ou um novo
+incidente; nao transforme um resultado incerto em retry manual cego. Este
+fluxo nao usa Telegram, alarme local, telefonia, input do Codex ou recuperacao.
+
+### Recuperar um incidente elegivel uma unica vez
+
+Este comando nao e observer nem servico continuo. Ele nunca e chamado por
+`diagnose`, `notify-diagnostic-incident`, `monitor` ou por um timer. Avalie
+primeiro sem escrita e sem transporte:
+
+```bash
+ai-presence --dry-run recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --json
+```
+
+O resultado `would_dispatch` significa somente que os gates atuais permitem
+uma tentativa. Ele nao reserva o ledger, nao procura o executavel Codex e nao
+envia input. A execucao real exige autorizacao explicita e descartavel:
+
+```bash
+ai-presence recover-diagnostic-incident \
+  --project /caminho/absoluto/do/projeto \
+  --authorize-once \
+  --json
+```
+
+Pre-condicoes:
+
+- worker exato ativo e um incidente aberto;
+- diagnostico atual nao expirado;
+- `codex_closed` com confianca media/alta ou `codex_crashed` com confianca alta;
+- mesma sessao Codex explicita no incidente e no diagnostico;
+- notificacao Discord `delivered` para o mesmo evento semantico;
+- controle `native-input` habilitado e `codex` disponivel no `PATH`.
+
+O coordenador reserva `native_continue` antes de chamar `codex queue`. Os
+estados `pending`, `dispatch_started`, `input_emitted` e `uncertain` suprimem
+qualquer repeticao no mesmo incidente. Timeout, falha incerta ou interrupcao
+nao autorizam retry manual cego. A mensagem vem de
+`PRESENCE_CONTINUE_MESSAGE`; nao ha opcao de mensagem, GUI, remoto, delay,
+Telegram, alarme ou telefonia neste comando.
+
+`dispatch_started` e `input_emitted` provam somente transporte. A recuperacao
+nao atualiza `last_activity_at` ou `last_signal_at` e nao resolve o incidente.
+Um hook posterior da mesma sessao e uma nova execucao de `diagnose` devem
+comprovar a retomada. Uma IA nao pode executar a forma real sem autorizacao
+especifica do usuario para aquela tentativa, mesmo quando a automacao de tarefa
+persistente estiver habilitada.
+
 ### Enviar texto sem usar mouse ou teclado
 
 ```bash
@@ -234,6 +411,22 @@ ai-presence touch \
 
 `touch` baseado apenas em relogio e proibido porque simula atividade.
 
+Hooks reconhecidos tambem registram evidencia diagnostica com TTL. Quando a
+tarefa incluir observacao de limites, a IA pode executar uma leitura one-shot
+com `observe-codex-limits --project "$PROJECT" --session SESSAO_EXATA`. Ela nao
+deve manter `--watch` sem essa responsabilidade ter sido atribuida e nao deve
+interpretar a evidencia como autorizacao para notificar ou recuperar.
+
+Para evidencia Linux, use `observe-linux-state --project "$PROJECT"` somente
+com PIDs e servicos confirmados. Nao descubra automaticamente outro processo
+Codex por nome, nao trate rota local como Internet disponivel e nao use um
+servico opcional inativo como diagnostico final.
+
+Quando a tarefa incluir correlacao de causa, execute `ai-presence --dry-run
+diagnose --project "$PROJECT" --session SESSAO_EXATA` antes da chamada real.
+Nao interprete a criacao ou atualizacao de um incidente como autorizacao para
+notificar, tocar alarme ou enviar `continue`.
+
 ### Perguntar ao usuario
 
 Prefira o mecanismo nativo de pergunta da plataforma da IA. Quando ele nao
@@ -306,6 +499,8 @@ ai-presence finish \
 | `input_emitted` | transporte sincrono terminou com sucesso | interpretacao correta pelo agente |
 | hook posterior | houve atividade posterior naquela sessao/worker | autoria da mensagem isoladamente |
 | `delivery_confirmed` | observer correlacionou entrega e hook; nativo exige a mesma sessao | interpretacao correta ou qualidade da resposta |
+| diagnosis `high/medium/low` | precedencia deterministica sobre fatos atuais | certeza absoluta fora das fontes observadas |
+| incidente `open/resolved` | ciclo correlacionado do mesmo worker | notificacao, recuperacao ou acao automatica |
 
 Para `continue` nativo, um hook isolado nao identifica qual entrada causou a
 atividade. Nao declare E2E concluido apenas porque apareceu um hook depois do
