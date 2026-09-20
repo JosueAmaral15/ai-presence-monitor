@@ -45,6 +45,11 @@
   retry, and kept Telegram, alarm, phone, Codex input and recovery disconnected.
 - Added `notify-diagnostic-incident` with exact worker selection, JSON output
   and a network-free, ledger-write-free dry run using existing alert webhooks.
+- Validated one authorized yellow `usage_limit_exceeded` Discord notification
+  end to end: confirmed delivery, one-row semantic deduplication and exactly
+  one user-confirmed marker in the configured alert channel.
+- Confirmed through local fault injection that HTTP rejection, raw timeout,
+  transport uncertainty and interruption do not trigger an automatic retry.
 
 ## 2026-09-13 - v0.7.0
 

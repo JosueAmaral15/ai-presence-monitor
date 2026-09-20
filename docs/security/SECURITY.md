@@ -147,6 +147,28 @@ need to inspect Discord. A process interruption after reservation leaves
 `pending` with the same suppression. Real Discord behavior remains a Phase 7
 E2E gate and requires explicit authorization for the external message.
 
+## Task 022 - Diagnostic Discord E2E
+
+- [x] The user explicitly authorized one real diagnostic Discord message.
+- [x] The E2E used a temporary isolated database and did not modify operational
+      worker, evidence, incident or notification rows.
+- [x] Dry-run reserved no attempt; the real invocation delivered once; the
+      equivalent invocation returned `deduplicated` with one row.
+- [x] The user confirmed exactly one unique marker in the intended alert
+      channel.
+- [x] Rejection, timeout, uncertainty and interruption fault injection made no
+      second transport call.
+- [x] No Telegram, alarm, phone, Codex input, recovery or permission change was
+      used as fallback.
+
+### Residual risk
+
+The Discord bot cannot list messages in the alert channel and returned HTTP
+403 during one read-only verification attempt. It was not retried. External
+visibility therefore depends on webhook delivery plus explicit human channel
+confirmation until the bot is intentionally granted read access or webhook
+delivery is changed to return and persist a bounded Discord message ID.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

@@ -239,9 +239,9 @@ rows and do not affect presence clocks, alerts or input transports.
 - [x] Phase 4: add Linux process, network, power and service observers.
 - [x] Phase 5: implement diagnosis precedence, confidence and incident
       transitions.
-- [ ] Phase 6: add deduplicated cause-aware Discord notifications.
-- [ ] Phase 7: validate each cause with fault injection and real integration
-      tests.
+- [x] Phase 6: add deduplicated cause-aware Discord notifications.
+- [x] Phase 7: validate one selected cause with fault injection, one real
+      Discord delivery and external-channel deduplication confirmation.
 - [ ] Phase 8: design an optional one-shot recovery coordinator after detection
       is stable.
 
@@ -433,8 +433,8 @@ hosted through a shared managed endpoint proves exact-thread events E2E.
 
 ## Phase 7 - Real Discord Delivery and Fault Injection
 
-Status: in progress on `codex/task-022-diagnostic-notification-e2e` with the
-user's explicit authorization for one real diagnostic Discord message.
+Status: validated on `codex/task-022-diagnostic-notification-e2e`; local
+`develop` integration pending.
 
 The live test uses a temporary isolated SQLite database and a unique marker in
 one yellow `usage_limit_exceeded` diagnosis. It must not modify the operational
@@ -462,13 +462,13 @@ Acceptance checklist:
 - [x] dry-run produced the expected bounded event and zero attempts;
 - [x] one authorized real POST returned confirmed delivery;
 - [x] immediate equivalent invocation returned `deduplicated` with one row;
-- [ ] user confirmed exactly one matching Discord message;
+- [x] user confirmed exactly one matching Discord message;
 - [x] local rejection, timeout and interruption paths remained one-shot;
 - [x] focused regression gates passed;
-- [ ] evidence documented, task committed and integrated locally into
-      `develop`.
+- [x] evidence documented and committed on the task branch;
+- [ ] integrated locally into `develop`.
 
-Sanitized evidence recorded before visual confirmation:
+Sanitized evidence:
 
 - both configured Discord webhook roles were present; no URL was printed;
 - marker:
@@ -489,4 +489,6 @@ Sanitized evidence recorded before visual confirmation:
   was changed;
 - no Discord application or browser tab was exposed to the current Codex UI,
   so automated visual confirmation was unavailable;
-- external-channel visual confirmation and Git integration remain pending.
+- the user confirmed exactly one matching marker in the Discord channel
+  `warnings-worker-robot`;
+- task-branch validation is complete; local Git integration remains pending.
