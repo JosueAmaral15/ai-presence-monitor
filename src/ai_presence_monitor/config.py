@@ -132,6 +132,13 @@ def _env_csv(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(item.strip().lower() for item in raw.split(",") if item.strip())
 
 
+def _env_csv_preserve_case(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
+
+
 @dataclass(frozen=True)
 class AppConfig:
     env_path: Path
@@ -195,6 +202,11 @@ class AppConfig:
     codex_hook_evidence_ttl_seconds: int = 300
     codex_limit_poll_interval_seconds: int = 300
     codex_limit_evidence_ttl_seconds: int = 600
+    linux_observer_interval_seconds: int = 30
+    linux_evidence_ttl_seconds: int = 90
+    linux_suspend_gap_seconds: float = 5.0
+    linux_service_timeout_seconds: float = 5.0
+    linux_user_services: tuple[str, ...] = ()
 
 
 def load_config(env_file: str | Path | None = None, override_env: bool = False) -> AppConfig:
@@ -345,5 +357,25 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         codex_limit_evidence_ttl_seconds=_env_int(
             "PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS",
             600,
+        ),
+        linux_observer_interval_seconds=_env_int(
+            "PRESENCE_LINUX_OBSERVER_INTERVAL_SECONDS",
+            30,
+        ),
+        linux_evidence_ttl_seconds=_env_int(
+            "PRESENCE_LINUX_EVIDENCE_TTL_SECONDS",
+            90,
+        ),
+        linux_suspend_gap_seconds=_env_float(
+            "PRESENCE_LINUX_SUSPEND_GAP_SECONDS",
+            5.0,
+        ),
+        linux_service_timeout_seconds=_env_float(
+            "PRESENCE_LINUX_SERVICE_TIMEOUT_SECONDS",
+            5.0,
+        ),
+        linux_user_services=_env_csv_preserve_case(
+            "PRESENCE_LINUX_USER_SERVICES",
+            (),
         ),
     )

@@ -36,6 +36,13 @@ from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
 from .identity import WORKER_SCOPES, scoped_worker_id
+from .linux_evidence import (
+    LinuxPowerObserver,
+    LinuxProcessObserver,
+    observe_linux_network,
+    observe_user_service,
+    record_linux_observations,
+)
 from .notify import NotificationError, Notifier
 from .platform_integration import (
     UnsupportedPlatformError,
@@ -865,6 +872,129 @@ def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
         time.sleep(interval)
 
 
+def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
+    if not sys.platform.startswith("linux"):
+        raise UnsupportedPlatformError(
+            "The Linux evidence observer is available only on Linux."
+        )
+    worker_id, _, _, _ = _identity(args, config)
+    interval = (
+        args.interval
+        if args.interval is not None
+        else config.linux_observer_interval_seconds
+    )
+    evidence_ttl = (
+        args.evidence_ttl
+        if args.evidence_ttl is not None
+        else config.linux_evidence_ttl_seconds
+    )
+    suspend_gap = (
+        args.suspend_gap
+        if args.suspend_gap is not None
+        else config.linux_suspend_gap_seconds
+    )
+    service_timeout = (
+        args.service_timeout
+        if args.service_timeout is not None
+        else config.linux_service_timeout_seconds
+    )
+    if interval <= 0:
+        raise ValueError("Linux observer interval must be greater than zero.")
+    if evidence_ttl <= 0:
+        raise ValueError("Linux evidence TTL must be greater than zero.")
+    if suspend_gap <= 0:
+        raise ValueError("Linux suspend gap must be greater than zero.")
+    if service_timeout <= 0:
+        raise ValueError("Linux service timeout must be greater than zero.")
+    if args.expected_process_name is not None and args.process_pid is None:
+        raise ValueError("--expected-process-name requires --process-pid.")
+
+    process_observer = (
+        LinuxProcessObserver(
+            args.process_pid,
+            expected_name=args.expected_process_name,
+        )
+        if args.process_pid is not None
+        else None
+    )
+    power_observer = (
+        None
+        if args.skip_power
+        else LinuxPowerObserver(suspend_gap_seconds=suspend_gap)
+    )
+    if args.no_services:
+        services: tuple[str, ...] = ()
+    elif args.services is not None:
+        services = tuple(dict.fromkeys(args.services))
+    else:
+        services = tuple(dict.fromkeys(config.linux_user_services))
+    if (
+        process_observer is None
+        and args.skip_network
+        and power_observer is None
+        and not services
+    ):
+        raise ValueError("At least one Linux evidence collector must be enabled.")
+
+    while True:
+        if not args.dry_run:
+            worker = PresenceStore(config.db_path).get_worker(worker_id)
+            if worker is None:
+                raise ValueError(
+                    f"Worker not found: {worker_id}. Run start before recording evidence."
+                )
+            if worker.status != "active":
+                if args.watch:
+                    print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                    return 0
+                raise ValueError(
+                    f"Worker is not active: {worker_id}. Run start before recording evidence."
+                )
+
+        observations = []
+        if process_observer is not None:
+            observations.append(process_observer.sample())
+        if not args.skip_network:
+            observations.append(observe_linux_network())
+        if power_observer is not None:
+            observations.append(power_observer.sample())
+        observations.extend(
+            observe_user_service(service, timeout_seconds=service_timeout)
+            for service in services
+        )
+        states = ",".join(
+            f"{observation.source.value}:{observation.state}"
+            for observation in observations
+        )
+
+        if args.dry_run:
+            print(f"[dry-run:linux-evidence] worker={worker_id} states={states}")
+            return 0
+
+        worker = PresenceStore(config.db_path).get_worker(worker_id)
+        if worker is None or worker.status != "active":
+            if args.watch:
+                print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                return 0
+            raise ValueError(
+                f"Worker became inactive before evidence was recorded: {worker_id}."
+            )
+        evidence = record_linux_observations(
+            db_path=config.db_path,
+            worker_id=worker_id,
+            session_id=args.session,
+            observations=tuple(observations),
+            observed_at=time.time(),
+            ttl_seconds=evidence_ttl,
+        )
+        print(
+            f"linux-evidence: worker={worker_id} records={len(evidence)} states={states}"
+        )
+        if not args.watch:
+            return 0
+        time.sleep(interval)
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -1022,6 +1152,70 @@ def build_parser() -> argparse.ArgumentParser:
     )
     codex_limits_parser.set_defaults(
         func=lambda args, config: _observe_codex_limits(args, config)
+    )
+
+    linux_state_parser = subparsers.add_parser(
+        "observe-linux-state",
+        help="Registra evidencias locais de processo, rede, energia e servicos.",
+    )
+    _add_identity_args(linux_state_parser, include_task_message=False)
+    linux_state_parser.add_argument(
+        "--process-pid",
+        type=int,
+        help="PID Linux exato a observar.",
+    )
+    linux_state_parser.add_argument(
+        "--expected-process-name",
+        help="Nome exato esperado em /proc/PID/comm.",
+    )
+    linux_state_parser.add_argument(
+        "--service",
+        dest="services",
+        action="append",
+        help="Unidade systemd --user .service; pode ser repetida.",
+    )
+    linux_state_parser.add_argument(
+        "--no-services",
+        action="store_true",
+        help="Ignora unidades configuradas no ambiente.",
+    )
+    linux_state_parser.add_argument(
+        "--skip-network",
+        action="store_true",
+        help="Nao le rota e estado dos links locais.",
+    )
+    linux_state_parser.add_argument(
+        "--skip-power",
+        action="store_true",
+        help="Nao observa intervalos de suspensao/retomada.",
+    )
+    linux_state_parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Repete a coleta no intervalo configurado. Padrao: uma coleta.",
+    )
+    linux_state_parser.add_argument(
+        "--interval",
+        type=int,
+        help="Intervalo do modo watch em segundos.",
+    )
+    linux_state_parser.add_argument(
+        "--evidence-ttl",
+        type=int,
+        help="Validade comum das evidencias em segundos.",
+    )
+    linux_state_parser.add_argument(
+        "--suspend-gap",
+        type=float,
+        help="Diferenca minima de relogios para detectar retomada.",
+    )
+    linux_state_parser.add_argument(
+        "--service-timeout",
+        type=float,
+        help="Timeout de cada consulta systemctl --user.",
+    )
+    linux_state_parser.set_defaults(
+        func=lambda args, config: _observe_linux_state(args, config)
     )
 
     ask_parser = subparsers.add_parser(

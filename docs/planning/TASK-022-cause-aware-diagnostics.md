@@ -129,13 +129,60 @@ diagnostic evidence: they do not update activity clocks, diagnose a cause,
 open an incident, notify, alarm, send input or perform recovery. Live App
 Server subscription remains disabled.
 
+## Phase 4 - Linux System Evidence Observers
+
+Status: implemented and validated on
+`codex/task-022-linux-evidence-observers`, then integrated locally into
+`develop`.
+
+The phase adds one Linux-only `observe-linux-state` command with independent
+read-only collectors:
+
+- process state from an explicit PID, with an expected `/proc/<pid>/comm` name
+  and process start ticks used to detect identity mismatch or PID replacement;
+- network route/link state from `/proc/net/route` and `/sys/class/net`, without
+  DNS lookup, HTTP request, packet transmission or a claim of Internet access;
+- power resume evidence from the difference between `CLOCK_BOOTTIME` and
+  monotonic elapsed time while a watch process remains alive;
+- explicit user-systemd unit health through `systemctl --user show`, using an
+  argument vector, bounded fields and no shell.
+
+The command is one-shot by default and samples network and power unless they
+are explicitly skipped. Process and service checks are opt-in targets. The
+`--watch` mode rechecks the exact active worker before and after every sample;
+`finish` stops the observer. Dry-run performs one local sample and writes no
+database. Every persisted fact has the same bounded TTL and none updates
+presence clocks.
+
+Known limits are normative:
+
+- no default route is evidence about local routing, not proof of an upstream
+  outage;
+- an observer cannot run while Linux is suspended, so it reports a detected
+  resume gap after execution resumes rather than claiming live suspension;
+- a one-shot process read cannot rule out PID reuse before its first successful
+  sample; an expected process name is therefore recommended;
+- an intentionally inactive optional service is not automatically unhealthy;
+  Phase 5 must interpret only services the operator selected as required.
+
+Implementation checkpoints:
+
+- [x] bounded collectors and allowlisted states;
+- [x] one-shot/watch CLI with active-worker rechecks and dry-run isolation;
+- [x] positive interval, TTL, suspend-gap and systemd-timeout validation;
+- [x] configuration and `.env.example` defaults;
+- [x] focused unit tests with fake `/proc`, `/sys`, clocks and systemctl output;
+- [x] live local dry-run without SQLite mutation;
+- [x] complete test, coverage, lint, type, build and Python matrix gates;
+- [x] task commit and local `develop` integration.
+
 ## Remaining Phases
 
 - [x] Phase 2: prototype an exact-session Codex app-server event subscription
       and document the separate-process ownership boundary.
 - [x] Phase 3: implement hook-backed Codex evidence plus sanitized account-limit
       polling; keep shared-endpoint live events disabled.
-- [ ] Phase 4: add Linux process, network, power and service observers.
+- [x] Phase 4: add Linux process, network, power and service observers.
 - [ ] Phase 5: implement diagnosis precedence, confidence and incident
       transitions.
 - [ ] Phase 6: add deduplicated cause-aware Discord notifications.
@@ -158,18 +205,21 @@ experimental runtime gate. Task 022 targets the supported Linux runtime first.
 - Opening a new diagnosis updates the worker's current open incident instead of
   creating parallel contradictory incidents.
 - No automatic recovery, retry, GUI fallback or `continue` dispatch is present
-  in Phase 1, Phase 2 or Phase 3.
+  in Phase 1, Phase 2, Phase 3 or Phase 4.
 - Evidence summaries must remain brief and must not contain secrets or
   transcript content.
+- Linux collectors must not read process command lines, environments, open
+  files, network payloads, DNS responses or journal content.
 
 ## Validation
 
-Phase 1 and Phase 2 require:
+Phases 1 through 4 require:
 
 ```bash
 PYTHONPATH=src python3 -m unittest tests.test_diagnostics -v
 PYTHONPATH=src python3 -m unittest tests.test_codex_app_server -v
 PYTHONPATH=src python3 -m unittest tests.test_codex_evidence -v
+PYTHONPATH=src python3 -m unittest tests.test_linux_evidence -v
 python3 scripts/quality_check.py
 ```
 
@@ -215,6 +265,20 @@ Phase 3 validation result on 2026-09-14:
 - no live subscription, Discord notification, local alarm, Codex input,
   incident, diagnosis or recovery action was emitted.
 
+Phase 4 validation result on 2026-09-20:
+
+- 226 tests passed on Python 3.10, 3.11 and 3.12;
+- the complete Python 3.12 gate passed with 87% coverage;
+- Ruff, mypy, compileall, wheel/sdist build and `git diff --check` passed;
+- focused tests use isolated `/proc`, `/sys`, clocks and systemctl results to
+  cover process replacement, local route/link states, resume gaps, service
+  sanitization, dry-run, worker rechecks, TTL and unchanged presence clocks;
+- a real dry-run first rejected a shell/Python PID identity mismatch, then
+  observed `process:running`, `network:default_route_available`, `power:awake`
+  and two `service:active` facts without writing SQLite;
+- no external network request, diagnosis, incident, Discord notification,
+  alarm, Codex input or recovery action was emitted.
+
 ## Rollback
 
 Before release integration, switch away from or delete the task branch. The
@@ -225,10 +289,18 @@ tables untouched. Existing releases ignore them. Do not delete the tables from
 a live database unless a separate backup and destructive migration are
 explicitly authorized.
 
+Phase 4 rollback requires no schema reversal. Before integration, switch back
+to `develop` and delete the task branch if desired. After integration, revert
+the Phase 4 task and merge commits; existing diagnostic rows remain harmless
+and expire normally. Stop any manually started `observe-linux-state --watch`
+process before package rollback.
+
 ## Next Implementation Step
 
-Phase 4 should add independent Linux process, network, power and service-health
-observers. Each observer must persist only bounded facts, use explicit TTLs and
-remain unable to update presence clocks, notify or recover. The separate live
-Codex event adapter remains disabled until a session hosted through a shared
-managed endpoint proves exact-thread events E2E.
+Phase 5 should implement deterministic diagnosis precedence, confidence and
+incident transitions over current, same-worker evidence. It must preserve the
+difference between a local observation and a proven cause, prefer
+`unexplained_inactivity` when evidence is insufficient, and remain unable to
+notify or recover. The separate live Codex event adapter remains disabled until
+a session hosted through a shared managed endpoint proves exact-thread events
+E2E.

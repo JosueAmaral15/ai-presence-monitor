@@ -64,17 +64,35 @@ PRESENCE_CODEX_HOOK_FAIL_CLOSED=false
 PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS=300
 PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS=300
 PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=600
+PRESENCE_LINUX_OBSERVER_INTERVAL_SECONDS=30
+PRESENCE_LINUX_EVIDENCE_TTL_SECONDS=90
+PRESENCE_LINUX_SUSPEND_GAP_SECONDS=5
+PRESENCE_LINUX_SERVICE_TIMEOUT_SECONDS=5
+PRESENCE_LINUX_USER_SERVICES=
 ```
 
 Desde a versao 0.2.0, um caminho relativo em `PRESENCE_DB_PATH` e resolvido em
 relacao ao diretorio do `.env`. Portanto, hooks executados em outros diretorios
 continuam usando o mesmo banco.
 
-As tres ultimas variaveis controlam somente evidencia diagnostica. O TTL do
+As tres variaveis Codex anteriores controlam somente evidencia diagnostica. O TTL do
 hook define por quanto tempo um fato de lifecycle permanece atual; o intervalo
 define a espera entre polls no modo `observe-codex-limits --watch`; o TTL de
 limites define a validade de cada leitura sanitizada. Todos devem ser inteiros
 positivos. Eles nao alteram os thresholds nem os relogios dos Protocolos 1 e 2.
+
+As cinco variaveis Linux configuram `observe-linux-state`. Intervalo, TTL,
+limiar de retomada e timeout devem ser positivos. A lista de servicos fica
+vazia por padrao porque somente o usuario sabe quais unidades sao obrigatorias.
+Separe unidades por virgula, sempre com sufixo `.service`:
+
+```env
+PRESENCE_LINUX_USER_SERVICES=ai-presence-monitor.service,ai-presence-reply-observer.service
+```
+
+O PID nao pertence ao `.env`, pois pode mudar a cada execucao. Informe-o por
+`--process-pid` e, de preferencia, confirme tambem
+`--expected-process-name`. Rede e energia sao coletadas sem chamada externa.
 
 ## Expediente e Repeticao de Alertas
 

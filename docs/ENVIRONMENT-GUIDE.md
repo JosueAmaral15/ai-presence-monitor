@@ -516,6 +516,11 @@ PRESENCE_CODEX_HOOK_FAIL_CLOSED=false
 PRESENCE_CODEX_HOOK_EVIDENCE_TTL_SECONDS=300
 PRESENCE_CODEX_LIMIT_POLL_INTERVAL_SECONDS=300
 PRESENCE_CODEX_LIMIT_EVIDENCE_TTL_SECONDS=600
+PRESENCE_LINUX_OBSERVER_INTERVAL_SECONDS=30
+PRESENCE_LINUX_EVIDENCE_TTL_SECONDS=90
+PRESENCE_LINUX_SUSPEND_GAP_SECONDS=5
+PRESENCE_LINUX_SERVICE_TIMEOUT_SECONDS=5
+PRESENCE_LINUX_USER_SERVICES=
 ```
 
 ### `PRESENCE_CODEX_WORKER_ID`
@@ -662,6 +667,58 @@ ai-presence observe-codex-limits \
   --project /caminho/absoluto/do/projeto \
   --session SESSAO_EXATA
 ```
+
+## Observers de Evidencia Linux
+
+### `PRESENCE_LINUX_OBSERVER_INTERVAL_SECONDS`
+
+Intervalo do modo `observe-linux-state --watch`. O padrao e `30` segundos e o
+valor deve ser positivo.
+
+### `PRESENCE_LINUX_EVIDENCE_TTL_SECONDS`
+
+Validade comum dos fatos de processo, rede, energia e servico. O padrao e `90`
+segundos. Expiracao nao remove a linha historica; apenas impede que uma fase de
+diagnostico trate o fato antigo como atual.
+
+### `PRESENCE_LINUX_SUSPEND_GAP_SECONDS`
+
+Diferenca minima entre o tempo de boot e o tempo monotonic para classificar uma
+retomada. O padrao e `5`. A deteccao exige duas amostras do mesmo processo em
+`--watch`; uma coleta one-shot informa somente o estado atual observavel.
+
+### `PRESENCE_LINUX_SERVICE_TIMEOUT_SECONDS`
+
+Timeout de cada `systemctl --user show`. O padrao e `5`. O comando usa vetor de
+argumentos sem shell e descarta stderr e campos nao permitidos.
+
+### `PRESENCE_LINUX_USER_SERVICES`
+
+Lista opcional, separada por virgulas, de unidades `.service` consideradas
+relevantes pelo operador:
+
+```env
+PRESENCE_LINUX_USER_SERVICES=ai-presence-monitor.service,ai-presence-reply-observer.service
+```
+
+Vazio significa que nenhum servico sera consultado. Isso evita classificar um
+componente opcional deliberadamente desligado como falha. `--service` substitui
+a lista naquela execucao; `--no-services` ignora a configuracao.
+
+Exemplo completo:
+
+```bash
+ai-presence observe-linux-state \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --process-pid PID_EXATO \
+  --expected-process-name codex \
+  --watch
+```
+
+O observer nao faz DNS, HTTP ou ping. Ele nao le `cmdline`, `environ`, journal
+ou arquivos abertos. Rota local, processo presente, retomada e estado de
+servico continuam sendo fatos separados, sem diagnostico ou alerta direto.
 
 ## Como Criar Webhooks no Discord
 

@@ -1,12 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-09-14
+## Em andamento em 2026-09-20
 
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fases 1, 2 e 3 implementadas, validadas e integradas localmente em
-`develop`; observers Linux, diagnostico e notificacao permanecem pendentes
+**Status**: fases 1, 2, 3 e 4 implementadas, validadas e integradas localmente
+em `develop`; diagnostico e notificacao permanecem pendentes
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -50,10 +50,27 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Dry-run real do App Server retornou `usage_available` sem escrever SQLite.
 - [x] Commit da sessao e integracao local em `develop`.
 
+**Fase 4**:
+
+- [x] Processo Linux exige PID explicito e pode validar nome e troca por start
+      ticks sem ler `cmdline`, ambiente ou arquivos abertos.
+- [x] Rede observa apenas rota e links locais, sem afirmar acesso a Internet.
+- [x] Energia detecta retomada entre amostras pelos relogios de boot e
+      monotonic; coleta one-shot nao inventa historico de suspensao.
+- [x] Servicos `.service` explicitos usam `systemctl --user show` sem shell e
+      persistem somente estados sanitizados.
+- [x] `observe-linux-state` oferece one-shot, dry-run e `--watch`, revalidando o
+      worker antes e depois de cada coleta.
+- [x] Configuracao, seguranca, arquitetura e guias humanos/AI foram atualizados.
+- [x] Dry-run local validou processo, rota, energia e dois servicos ativos sem
+      escrever SQLite.
+- [x] Gate completo: 226 testes nas versoes Python 3.10, 3.11 e 3.12,
+      87% de cobertura, Ruff, mypy, build e diff aprovados.
+- [x] Commit da sessao e integracao local em `develop`.
+
 **Fases seguintes**:
 
 - [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
-- [ ] Observers Linux de processo, rede, energia e saude dos servicos.
 - [ ] Motor de diagnostico, precedencia, confianca e transicoes.
 - [ ] Notificacao Discord deduplicada e testes E2E por causa.
 - [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.

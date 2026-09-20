@@ -68,6 +68,33 @@ Unknown documented values are collapsed into bounded fallback states instead
 of being persisted verbatim. The diagnosis engine must still correlate this
 evidence with independent observers before notifying the user.
 
+## Task 022 - Linux system evidence observers
+
+- [x] Linux-only runtime guard fails before collector execution on other
+      platforms, including experimental Windows.
+- [x] Process observation reads only `comm` and `stat` for an explicit positive
+      PID; it does not read command lines, environments or open files.
+- [x] Expected process names and systemd units use bounded allowlists.
+- [x] PID start ticks detect replacement during one watcher lifetime.
+- [x] Network observation reads only local route and link state and sends no
+      DNS, HTTP, ICMP or other network traffic.
+- [x] Boot IDs, actual process names, stderr and raw systemd output are never
+      persisted or printed.
+- [x] `systemctl` uses a fixed argument vector without a shell and parses only
+      `LoadState`, `ActiveState` and `Result`.
+- [x] Every fact has a positive TTL; dry-run writes no SQLite; idle or missing
+      workers fail before persistence.
+- [x] Phase 4 does not update presence, diagnose, notify, alarm, retry input or
+      recover a worker.
+
+### Residual risk
+
+PID identity before the first successful sample can still be stale; provide an
+expected process name. A local default route does not prove upstream or DNS
+availability. Suspend detection occurs only after resume and can be lost if the
+watcher is terminated. Service inactivity is not a fault unless a later policy
+knows that the selected unit was required.
+
 ## Task 001 - Codex Hook Observer
 
 ### 1. Injection

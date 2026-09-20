@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-09-20 - Linux system observers report local facts only
+
+**Decision**: implement process, network, power and user-service collection as
+independent read-only sources behind one Linux-only `observe-linux-state`
+command. Enable local network and power sampling by default; require explicit
+PID and service targets. Do not add a background-service installer in Phase 4.
+
+**Reason**:
+
+- local route/link state is useful evidence but cannot prove Internet or DNS;
+- an observer cannot execute while suspended, but two clocks can prove a resume
+  gap after execution continues;
+- process-name discovery is ambiguous across concurrent Codex sessions, while
+  explicit PID plus expected `comm` and start ticks is bounded and auditable;
+- optional systemd units must not be treated as required without operator
+  selection;
+- one explicit watcher is enough to validate collection before adding daemon
+  lifecycle and diagnosis policies.
+
+**Consequence**:
+
+The observer is one-shot by default and writes only expiring diagnostic facts
+for an active exact worker. `--watch` preserves process and power baselines and
+stops after `finish`. No collector updates presence, calls external networks,
+reads sensitive process payloads, diagnoses a cause, notifies or recovers.
+
 ## 2026-09-14 - Diagnostic evidence never extends presence
 
 **Decision**: recognized Codex hooks may produce both their existing presence

@@ -108,6 +108,23 @@ parte explicita da tarefa; ele revalida o worker a cada poll e encerra depois
 de `finish`. O comando consulta apenas `account/rateLimits/read` e nao atualiza
 presenca, diagnostica a causa final, notifica, toca alarme ou envia input.
 
+Para coletar evidencias locais no Linux:
+
+```bash
+ai-presence observe-linux-state \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --process-pid PID_EXATO \
+  --expected-process-name codex \
+  --service ai-presence-monitor.service
+```
+
+Rede e energia sao incluidas por padrao. PID e servicos devem ser confirmados
+explicitamente; nunca selecione o primeiro processo com nome semelhante. Um
+default route nao prova acesso a Internet, e retomada de suspensao exige duas
+amostras no mesmo `--watch`. O observer registra fatos com TTL, nao atualiza
+presenca e nao autoriza diagnostico, alerta ou recuperacao.
+
 ### 3. Pergunta ao Usuario
 
 Quando a superficie do Codex oferecer entrada nativa do usuario, prefira esse
