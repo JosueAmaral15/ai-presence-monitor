@@ -81,6 +81,16 @@ session. It recorded zero `observation:automation:continue` events in the test
 window. No retry, GUI fallback, remote destination, recovery, Discord message
 or alarm was used.
 
+## Source Control Result
+
+- Preparation commit: `28abf9f`.
+- E2E evidence commit: `3e1ef98`.
+- Validated `develop` merge: `b72d4ea`.
+- Validated `main` merge: `b2dbf19`.
+
+The final documentation closeout is synchronized to both branches after this
+record is committed.
+
 ## Checklist
 
 - [x] Operational-upgrade commits published to remote `develop` and `main`.
@@ -88,4 +98,4 @@ or alarm was used.
 - [x] AI-worker authorization rule reconciled and documented.
 - [x] Linux Mint XDG tray autostart installed, mode `600`, validated and started.
 - [x] One post-upgrade exact-session native E2E completed.
-- [ ] Task branch committed and promoted after all checks pass.
+- [x] Task branch committed and promoted after all checks pass.
