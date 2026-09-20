@@ -1,6 +1,41 @@
 # Tasks - AI Presence Monitor
 
+## Planejadas
+
+### Task 025 - Superficie de produto e atualizacao transacional
+
+**Prioridade**: Alta
+**Status**: planejada
+**Objetivo**: transformar a instalacao tecnica em um produto atualizavel,
+diagnosticavel e distribuivel com rollback deterministico.
+
+- [ ] Adicionar `ai-presence --version` deterministico.
+- [ ] Implementar upgrade e rollback transacionais com manifesto de backup.
+- [ ] Expor versao e estado de migracao do schema SQLite.
+- [ ] Criar comando sanitizado `doctor` para saude operacional.
+- [ ] Publicar artefatos tagueados e checksums SHA-256.
+- [ ] Restaurar CI Linux hospedada antes de distribuicao publica.
+- [ ] Definir politicas de instalacao, upgrade, suporte e compatibilidade.
+
 ## Concluidas em 2026-09-20
+
+### Task 024 - Upgrade operacional Linux para 0.8.0
+
+**Prioridade**: Alta
+**Status**: concluida; runtime dedicado atualizado de 0.7.0 para 0.8.0 com
+backup, migracao aditiva e servicos validados
+**Objetivo**: implantar a release privada validada sem perder dados, expor
+segredos ou ampliar permissoes de automacao silenciosamente.
+
+- [x] Versao operacional anterior confirmada fora do checkout como 0.7.0.
+- [x] Wheel anterior, checksums, unidades, dependencias e banco SQLite salvos.
+- [x] Wheel 0.8.0 instalado no ambiente virtual dedicado.
+- [x] Integridade SQLite, hooks, bandeja e instaladores validados.
+- [x] Monitor e observer de respostas ativos, habilitados e sem reinicios.
+- [x] Controles preservados; `task-automation` continua desabilitado.
+
+**Plano e evidencias**:
+`docs/planning/TASK-024-operational-upgrade-productization.md`.
 
 ### Task 023 - E2E de recuperacao e release Linux privada 0.8.0
 
