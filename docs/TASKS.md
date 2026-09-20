@@ -77,7 +77,9 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Notificacao Discord deduplicada com 259 testes em Python 3.10, 3.11 e
       3.12, 87% de cobertura total, 98% no modulo novo e dry-run real sem
       mensagem externa nem registro de tentativa.
-- [ ] Testes Discord E2E autorizados por causa e severidade (Fase 7).
+- [ ] Teste Discord E2E autorizado entregou uma mensagem e deduplicou a
+      repeticao; fault injection e gates passaram. Confirmacao visual do canal
+      e integracao local da Fase 7 ainda estao pendentes.
 - [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.
 
 **Plano**: `docs/planning/TASK-022-cause-aware-diagnostics.md`.
