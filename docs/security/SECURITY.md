@@ -1,5 +1,26 @@
 # Security Checklist
 
+## Task 025 - Immediate product activation
+
+- [x] Persistent `task-automation` authorizes only ordinary continuation after
+      normative checks; it does not authorize recovery, answer dispatch or GUI
+      automation.
+- [x] Native input remains enabled while GUI and remote input remain disabled.
+- [x] The Cinnamon autostart entry stores only executable and `.env` paths, not
+      configuration values, and has mode `600`.
+- [x] The post-upgrade E2E used one unique marker, exact worker/session, local
+      native transport, zero delay and detached dispatch.
+- [x] A later exact-session hook followed the marker; no synthetic automation
+      event, retry, fallback, recovery, Discord message or alarm occurred.
+
+### Residual risk
+
+Persistent authorization permits future compliant AI-workers to invoke
+ordinary native continuation without asking again. Operators must disable
+`task-automation` when that standing permission is no longer intended. A
+later hook proves session activity but still does not make an arbitrary
+unmarked input attributable to one dispatch.
+
 ## Task 022 - Diagnostic foundation
 
 - [x] Diagnostic tables are additive and do not alter presence clocks.

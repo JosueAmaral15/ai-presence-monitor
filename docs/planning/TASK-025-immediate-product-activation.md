@@ -61,11 +61,31 @@ Required evidence:
 - no retry, GUI fallback, remote input or synthetic activity synchronization
   occurs; the later Codex hook records normal session activity.
 
+## E2E Result
+
+The authorized post-installation E2E used:
+
+```text
+[AI-PRESENCE-POST-UPGRADE-E2E:4c86d9a1-65a3-4f9e-b70a-2fdf32d8c4e1] continue
+```
+
+The dry-run resolved worker
+`notebook-josue:codex:project=ai-presence-monitor-c5b81815`, the exact current
+session, local native transport, zero delay, detached dispatch and disabled
+per-invocation synchronization without touching input or SQLite.
+
+Exactly one real invocation returned `dispatch_started`. The exact marker then
+arrived in the target Codex session without being typed by the human. The
+operational database recorded `UserPromptSubmit` and later hooks for that exact
+session. It recorded zero `observation:automation:continue` events in the test
+window. No retry, GUI fallback, remote destination, recovery, Discord message
+or alarm was used.
+
 ## Checklist
 
 - [x] Operational-upgrade commits published to remote `develop` and `main`.
 - [x] Persistent ordinary task automation enabled and verified.
 - [x] AI-worker authorization rule reconciled and documented.
 - [x] Linux Mint XDG tray autostart installed, mode `600`, validated and started.
-- [ ] One post-upgrade exact-session native E2E completed.
+- [x] One post-upgrade exact-session native E2E completed.
 - [ ] Task branch committed and promoted after all checks pass.
