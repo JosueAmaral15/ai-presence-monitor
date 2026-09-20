@@ -5,8 +5,8 @@
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fases 1 a 6 implementadas, validadas e integradas localmente em
-`develop`; E2E Discord da Fase 7 permanece pendente
+**Status**: fases 1 a 7 implementadas, validadas e integradas localmente em
+`develop`; recuperacao one-shot opcional da Fase 8 permanece pendente
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -77,7 +77,9 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 - [x] Notificacao Discord deduplicada com 259 testes em Python 3.10, 3.11 e
       3.12, 87% de cobertura total, 98% no modulo novo e dry-run real sem
       mensagem externa nem registro de tentativa.
-- [ ] Testes Discord E2E autorizados por causa e severidade (Fase 7).
+- [x] Teste Discord E2E autorizado entregou uma mensagem, deduplicou a
+      repeticao e teve exatamente um marcador confirmado pelo usuario no canal
+      `warnings-worker-robot`; fault injection e gates passaram.
 - [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.
 
 **Plano**: `docs/planning/TASK-022-cause-aware-diagnostics.md`.

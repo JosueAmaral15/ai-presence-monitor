@@ -239,9 +239,9 @@ rows and do not affect presence clocks, alerts or input transports.
 - [x] Phase 4: add Linux process, network, power and service observers.
 - [x] Phase 5: implement diagnosis precedence, confidence and incident
       transitions.
-- [ ] Phase 6: add deduplicated cause-aware Discord notifications.
-- [ ] Phase 7: validate each cause with fault injection and real integration
-      tests.
+- [x] Phase 6: add deduplicated cause-aware Discord notifications.
+- [x] Phase 7: validate one selected cause with fault injection, one real
+      Discord delivery and external-channel deduplication confirmation.
 - [ ] Phase 8: design an optional one-shot recovery coordinator after detection
       is stable.
 
@@ -430,3 +430,65 @@ channel. Fault injection must also retain rejection, timeout and interrupted
 states without retry. Alarm, Codex input and recovery remain outside that
 phase. The separate live Codex event adapter remains disabled until a session
 hosted through a shared managed endpoint proves exact-thread events E2E.
+
+## Phase 7 - Real Discord Delivery and Fault Injection
+
+Status: validated on `codex/task-022-diagnostic-notification-e2e`, then
+integrated locally into `develop`.
+
+The live test uses a temporary isolated SQLite database and a unique marker in
+one yellow `usage_limit_exceeded` diagnosis. It must not modify the operational
+worker, evidence, incident or notification rows. The sequence is fixed:
+
+1. verify the existing alert webhook is configured without printing it;
+2. create one isolated active worker, evidence, diagnosis and incident;
+3. run `notify-diagnostic-incident --dry-run` and verify zero attempt rows;
+4. invoke the real command once and require `delivered`;
+5. invoke the same semantic event again and require `deduplicated` with one
+   ledger row total;
+6. ask the user to confirm that exactly one message with the unique marker is
+   visible in the Discord alert channel;
+7. run local-only rejection, timeout and interruption fault injection and
+   confirm that later calls deduplicate without a second transport call.
+
+If the real attempt returns `rejected` or `uncertain`, stop immediately. Do not
+retry, switch webhook, use Telegram, play an alarm, dispatch Codex input or run
+recovery. The temporary database may be removed after recording sanitized
+results; webhook URLs and raw external responses must never enter the report.
+
+Acceptance checklist:
+
+- [x] webhook presence verified without secret disclosure;
+- [x] dry-run produced the expected bounded event and zero attempts;
+- [x] one authorized real POST returned confirmed delivery;
+- [x] immediate equivalent invocation returned `deduplicated` with one row;
+- [x] user confirmed exactly one matching Discord message;
+- [x] local rejection, timeout and interruption paths remained one-shot;
+- [x] focused regression gates passed;
+- [x] evidence documented and committed on the task branch;
+- [x] integrated locally into `develop`.
+
+Sanitized evidence:
+
+- both configured Discord webhook roles were present; no URL was printed;
+- marker:
+  `[AI-PRESENCE-DIAGNOSTIC-E2E:96b24d27-e7b1-4e30-863f-29bd30dd8b3f]`;
+- selected scenario: `usage_limit_exceeded`, high confidence, yellow severity;
+- dry-run result: `would_send`, zero notification rows;
+- real result: `delivered`, one delivered row and updated
+  `last_notified_at`;
+- immediate equivalent invocation: `deduplicated`, still one row;
+- the isolated temporary database was removed after the run;
+- local HTTP rejection, raw timeout/transport uncertainty and unexpected
+  interruption tests passed without a second transport call;
+- 259 tests passed on Python 3.10, 3.11 and 3.12; Python 3.12 coverage remained
+  87% overall and 98% for `diagnostic_notifications.py`; Ruff, mypy, package
+  build and diff checks passed;
+- one read-only bot attempt resolved the alert webhook channel but Discord
+  rejected message listing with HTTP 403; it was not retried and no permission
+  was changed;
+- no Discord application or browser tab was exposed to the current Codex UI,
+  so automated visual confirmation was unavailable;
+- the user confirmed exactly one matching marker in the Discord channel
+  `warnings-worker-robot`;
+- task-branch validation and local `develop` integration are complete.

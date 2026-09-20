@@ -187,6 +187,13 @@ class DiagnosticDiscordClientTests(unittest.TestCase):
 
         with patch(
             "ai_presence_monitor.diagnostic_notifications.urllib.request.urlopen",
+            side_effect=TimeoutError("timed out"),
+        ):
+            with self.assertRaises(DiscordDeliveryUncertain):
+                client.send("https://example.invalid", {})
+
+        with patch(
+            "ai_presence_monitor.diagnostic_notifications.urllib.request.urlopen",
             return_value=FakeResponse(status=500),
         ):
             with self.assertRaises(DiscordDeliveryRejected):
