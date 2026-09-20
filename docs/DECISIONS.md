@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-09-20 - Persistent permission covers ordinary native continuation only
+
+**Decision**: a user-enabled `task-automation` control is sufficient
+authorization for an AI-worker to invoke ordinary native `continue` after the
+normative continuation checks pass. `--authorize-once` remains the alternative
+when persistent automation is disabled.
+
+This permission does not extend to `recover-diagnostic-incident`,
+`dispatch-answer`, GUI automation or a failed/uncertain retry. Those actions
+retain explicit one-invocation authorization. A persistent grant starts no
+timer and no observer-driven dispatch by itself.
+
+The installed Linux 0.8.0 runtime was validated with one exact-session,
+zero-delay detached marker. Its later same-session hook proved subsequent
+activity; the preliminary `dispatch_started` state alone did not. The test did
+not create synthetic automation activity and did not use fallback transport.
+
 ## 2026-09-20 - Private Linux 0.8.0 may use local gates while CI is billing-locked
 
 **Decision**: allow the private Linux 0.8.0 release to proceed to `main` after

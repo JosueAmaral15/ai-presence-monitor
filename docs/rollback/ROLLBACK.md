@@ -1,5 +1,24 @@
 # Rollback
 
+## Task 025 - Ativacao imediata do produto
+
+Para revogar continuidade persistente sem desabilitar entrada nativa:
+
+```bash
+ai-presence control disable task-automation
+```
+
+Para remover somente o inicio automatico da bandeja no Linux Mint, encerre a
+bandeja pelo menu **Exit** e remova:
+
+```text
+$HOME/.config/autostart/ai-presence-tray.desktop
+```
+
+Essa remocao nao para o monitor, o observer Discord, hooks ou banco. Restaurar
+a regra anterior de AI-worker exige reverter somente o commit da Task 025; nao
+altere `.env` nem `presence.db`.
+
 ## Release 0.8.0 - Diagnostico e recovery one-shot
 
 Se a release 0.8.0 causar regressao operacional:
