@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from dataclasses import replace
@@ -35,6 +36,7 @@ from .codex_input import (
 from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
+from .diagnosis_engine import diagnose_worker
 from .identity import WORKER_SCOPES, scoped_worker_id
 from .linux_evidence import (
     LinuxPowerObserver,
@@ -995,6 +997,42 @@ def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
         time.sleep(interval)
 
 
+def _diagnose(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _, _ = _identity(args, config)
+    result = diagnose_worker(
+        db_path=config.db_path,
+        worker_id=worker_id,
+        session_id=args.session,
+        dry_run=args.dry_run,
+        presence_ttl_seconds=args.presence_ttl,
+    )
+    payload = {
+        "worker_id": result.worker_id,
+        "session_id": result.session_id,
+        "age_seconds": None if math.isinf(result.age_seconds) else result.age_seconds,
+        "severity": result.severity.value,
+        "kind": result.assessment.kind.value,
+        "confidence": result.assessment.confidence.value,
+        "summary": result.assessment.summary,
+        "transition": result.transition,
+        "diagnosis_id": result.diagnosis.diagnosis_id if result.diagnosis else None,
+        "incident_id": result.incident.incident_id if result.incident else None,
+        "dry_run": args.dry_run,
+    }
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
+    else:
+        prefix = "[dry-run:diagnosis]" if args.dry_run else "diagnosis:"
+        age = "unknown" if math.isinf(result.age_seconds) else f"{result.age_seconds:.0f}s"
+        print(
+            f"{prefix} worker={result.worker_id} kind={result.assessment.kind.value} "
+            f"confidence={result.assessment.confidence.value} "
+            f"severity={result.severity.value} age={age} "
+            f"transition={result.transition}"
+        )
+    return 0
+
+
 def _add_identity_args(
     parser: argparse.ArgumentParser,
     *,
@@ -1217,6 +1255,24 @@ def build_parser() -> argparse.ArgumentParser:
     linux_state_parser.set_defaults(
         func=lambda args, config: _observe_linux_state(args, config)
     )
+
+    diagnose_parser = subparsers.add_parser(
+        "diagnose",
+        help="Correlaciona evidencia atual e aplica uma transicao de incidente.",
+    )
+    _add_identity_args(diagnose_parser, include_task_message=False)
+    diagnose_parser.add_argument(
+        "--presence-ttl",
+        type=int,
+        default=60,
+        help="Validade do fato derivado do relogio de presenca. Padrao: 60 segundos.",
+    )
+    diagnose_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente o resultado sanitizado em JSON.",
+    )
+    diagnose_parser.set_defaults(func=lambda args, config: _diagnose(args, config))
 
     ask_parser = subparsers.add_parser(
         "ask-user",

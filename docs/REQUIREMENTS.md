@@ -71,6 +71,18 @@
   ou payload de rede, nem atualizar relogios de presenca.
 - O observer live do App Server deve permanecer desabilitado enquanto a sessao
   monitorada nao compartilhar o mesmo endpoint/daemon validado.
+- O motor deve considerar apenas evidencia nao expirada e o lote mais novo por
+  fonte/tipo, preservando fatos simultaneos de servicos distintos.
+- Evidencias atuais de sessoes Codex diferentes devem falhar fechado sem uma
+  sessao explicita; fatos sem sessao podem apoiar somente a sessao selecionada.
+- A severidade do incidente deve vir do threshold atual do protocolo do worker,
+  nunca de um observer individual.
+- Causas atrasadas devem vincular a evidencia da causa e um fato limitado de
+  que o relogio de presenca excedeu o threshold.
+- Processo executando, rota default, sistema acordado, servico ativo e
+  `usage_available` isolados nao devem provar trabalho nem conectividade.
+- `diagnose --dry-run` nao deve criar evidencia, diagnostico ou incidente.
+- A Fase 5 nao deve enviar notificacao, alarme, input, retry ou recuperacao.
 
 ## Portabilidade
 

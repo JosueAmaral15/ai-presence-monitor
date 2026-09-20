@@ -125,6 +125,26 @@ default route nao prova acesso a Internet, e retomada de suspensao exige duas
 amostras no mesmo `--watch`. O observer registra fatos com TTL, nao atualiza
 presenca e nao autoriza diagnostico, alerta ou recuperacao.
 
+Quando a tarefa atribuida incluir correlacao de causa, execute uma leitura
+one-shot. Use a sessao exata para impedir mistura entre sessoes atuais:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --json
+
+ai-presence diagnose \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA
+```
+
+`diagnose` deriva a severidade do relogio do protocolo e aplica no maximo uma
+transicao: abrir, atualizar, resolver ou nenhuma. Evidencia insuficiente deve
+resultar em `unexplained_inactivity`, nao em uma causa inventada. A IA nao deve
+usar o incidente como autorizacao para notificar, alarmar, reenviar input ou
+recuperar a sessao; essas integracoes permanecem em fases separadas.
+
 ### 3. Pergunta ao Usuario
 
 Quando a superficie do Codex oferecer entrada nativa do usuario, prefira esse

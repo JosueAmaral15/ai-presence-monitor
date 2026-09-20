@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - Task 022 Linux system evidence observers
+## Unreleased - Task 022 cause-aware diagnostics
 
 - Added typed evidence, diagnosis, confidence, severity and incident models.
 - Added additive SQLite tables for diagnostic evidence, immutable diagnosis
@@ -29,6 +29,14 @@
   resume detection and shell-free allowlisted systemd parsing.
 - Added one-shot and watch modes with exact-worker rechecks, expiring evidence,
   dry-run isolation and no presence-clock mutation.
+- Added deterministic diagnosis precedence and confidence over current,
+  same-worker evidence with explicit session disambiguation.
+- Added bounded protocol-threshold evidence and one-shot `diagnose` dry-run or
+  persisted incident transitions.
+- Preserved one incident per worker and its notification timestamp across
+  cause and severity updates; healthy evidence resolves the episode.
+- Kept Discord/Telegram notifications, alarms, Codex input, retry and recovery
+  outside the diagnosis engine.
 
 ## 2026-09-13 - v0.7.0
 

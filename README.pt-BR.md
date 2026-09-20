@@ -12,7 +12,10 @@ O projeto tambem registra evidencias diagnosticas com TTL sem alterar os
 relogios de presenca. No Linux, `observe-linux-state` pode observar um PID
 explicito, rota e links locais, retomada depois de suspensao e unidades
 `.service` selecionadas. Esses fatos nao constituem diagnostico, nao enviam
-alertas e nao acionam recuperacao automaticamente.
+alertas e nao acionam recuperacao automaticamente. O comando one-shot
+`diagnose` correlaciona os fatos atuais, registra confianca e mantem no maximo
+um incidente aberto por worker. Ele ainda nao envia notificacao nem executa
+recuperacao.
 
 ## Protocolos
 
@@ -371,6 +374,27 @@ PRESENCE_CODEX_AUTO_START=true
 Com `PRESENCE_CODEX_WORKER_SCOPE=project`, execute `start` e `finish` dentro da
 raiz do projeto. O hook usa o `cwd` recebido do Codex para chegar ao mesmo worker.
 Os outros escopos sao `global`, `session` e `project-session`.
+
+### Diagnosticar a inatividade atual
+
+Depois de coletar evidencias para um worker ativo, execute primeiro o dry-run e
+informe a sessao exata quando puder existir evidencia de mais de uma sessao:
+
+```bash
+ai-presence --dry-run diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --json
+
+ai-presence diagnose \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA
+```
+
+A severidade vem do relogio do protocolo do worker. O comando registra um fato
+limitado desse relogio, um diagnostico imutavel e abre, atualiza ou resolve o
+unico incidente do worker. Ele nao envia Discord/Telegram, nao toca alarme, nao
+envia input ao Codex e nao executa retry ou recuperacao.
 
 ### Instalar hook no Codex
 

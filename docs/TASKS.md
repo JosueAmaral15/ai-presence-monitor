@@ -5,8 +5,8 @@
 ### Task 022 - Diagnostico de causa por observers
 
 **Prioridade**: Alta
-**Status**: fases 1, 2, 3 e 4 implementadas, validadas e integradas localmente
-em `develop`; diagnostico e notificacao permanecem pendentes
+**Status**: fases 1, 2, 3 e 4 integradas localmente em `develop`; Fase 5
+implementada e validada na branch da tarefa; notificacao permanece pendente
 **Objetivo**: distinguir causas conhecidas de uma interrupcao de atividade e
 gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 
@@ -71,7 +71,9 @@ gerenciar um unico incidente correlacionado antes de enviar notificacoes.
 **Fases seguintes**:
 
 - [ ] Adapter live somente para sessoes hospedadas em endpoint compartilhado.
-- [ ] Motor de diagnostico, precedencia, confianca e transicoes.
+- [x] Motor de diagnostico, precedencia, confianca e transicoes, com 242 testes
+      aprovados em Python 3.10, 3.11 e 3.12, 87% de cobertura total e dry-run
+      real sem escrita.
 - [ ] Notificacao Discord deduplicada e testes E2E por causa.
 - [ ] Recuperacao one-shot opcional somente depois da deteccao estabilizada.
 

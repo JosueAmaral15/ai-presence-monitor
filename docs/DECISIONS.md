@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-09-20 - Diagnosis severity belongs to the protocol clock
+
+**Decision**: run diagnosis as a one-shot correlation step. Reduce current
+evidence to the newest batch per source and kind, fail closed on ambiguous
+Codex sessions, and derive incident severity only from the worker's Protocol 1
+or Protocol 2 clock.
+
+**Reason**:
+
+- observers know facts but do not own user-facing severity;
+- simultaneous service observations must remain together while an older sample
+  of the same kind must not remain authoritative;
+- local route, process and power facts have different certainty and cannot be
+  promoted to proven causes by one generic rule;
+- an immutable threshold fact makes each incident diagnosis auditable even if
+  the mutable worker clock later advances;
+- resolving and updating one incident prevents parallel contradictory episodes.
+
+**Consequence**:
+
+`diagnose` writes one bounded presence fact and one immutable diagnosis, then
+opens, updates or resolves at most one incident. Insufficient evidence becomes
+`unexplained_inactivity`. Dry-run writes nothing. Notification timestamps,
+Discord, Telegram, alarms, Codex input, retry and recovery remain untouched.
+
 ## 2026-09-20 - Linux system observers report local facts only
 
 **Decision**: implement process, network, power and user-service collection as
