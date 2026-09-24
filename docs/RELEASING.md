@@ -67,14 +67,24 @@ git merge --ff-only TASK_BRANCH
 git push origin develop
 
 git switch main
-git merge --no-ff develop
+git merge --ff-only develop
 git push origin main
 
 git tag -a v0.9.0 -m "AI Presence Monitor 0.9.0"
 git push origin v0.9.0
 ```
 
-Attach the verified bundle files to the private GitHub release. Do not attach
-`.env`, SQLite databases, control state, service logs or local backup manifests.
+Create a canonical archive containing the complete verified bundle directory
+and publish a separate SHA-256 sidecar for that archive. This preserves the
+required `.env.example` filename; GitHub renames a leading-dot file when it is
+uploaded individually. Users must verify the sidecar, extract the archive, then
+run both `sha256sum -c SHA256SUMS` and `python3 verify_release.py .` inside it.
+
+Individual bundle files may be attached as supplementary assets, but they are
+not the canonical downloadable set. Do not attach a real `.env`, SQLite
+databases, control state, service logs or local backup manifests. After upload,
+download the canonical archive into a fresh directory and repeat both checksum
+layers and the isolated verifier.
+
 Confirm the release tag, main commit and `release-manifest.json` source commit
-agree before declaring publication complete.
+agree at publication before declaring the release complete.

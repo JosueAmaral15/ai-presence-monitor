@@ -49,24 +49,24 @@ without depending on the source checkout.
 
 - [x] Preserve an authentic 0.8.0 rollback wheel and verify its checksum.
 - [x] Run a no-mutation transactional dry-run against the installed runtime.
-- [ ] Obtain explicit authorization immediately before stopping live services
+- [x] Obtain explicit authorization immediately before stopping live services
   or restoring the operational database.
-- [ ] Upgrade the dedicated runtime from 0.8.0 to 0.9.0.
-- [ ] Verify version, schema, doctor, controls, hooks, services and tray.
-- [ ] Roll back once to authentic 0.8.0 and verify package/database/services.
-- [ ] Upgrade again to 0.9.0 so the machine ends on the release candidate.
-- [ ] Perform only the real external integrations explicitly required by the
+- [x] Upgrade the dedicated runtime from 0.8.0 to 0.9.0.
+- [x] Verify version, schema, doctor, controls, hooks, services and tray.
+- [x] Roll back once to authentic 0.8.0 and verify package/database/services.
+- [x] Upgrade again to 0.9.0 so the machine ends on the release candidate.
+- [x] Perform only the real external integrations explicitly required by the
   release plan, with unique correlation and no uncertain retry.
 
 ## Phase 5 - Publication
 
 - [x] Commit each completed phase on the task branch.
-- [ ] Integrate and push validated work to `develop`.
-- [ ] Re-run final release gates at the exact candidate commit.
-- [ ] Promote `develop` to `main` only after Phase 4 passes.
-- [ ] Create and push an annotated `v0.9.0` tag only at the validated main
+- [x] Integrate and push validated work to `develop`.
+- [x] Re-run final release gates at the exact candidate commit.
+- [x] Promote `develop` to `main` only after Phase 4 passes.
+- [x] Create and push an annotated `v0.9.0` tag only at the validated main
   commit.
-- [ ] Publish private release artifacts and checksums without secrets.
+- [x] Publish private release artifacts and checksums without secrets.
 
 ## Stop Conditions
 
@@ -102,9 +102,30 @@ retried automatically.
 - Authentic rollback wheel was built from historical commit `5205ca4` and
   verified as `ai-presence-monitor` 0.8.0 with SHA-256
   `05a7fa214ca1dd79f2b0f8f0fb3acc4f7946ecb2c26a2746b3efae6e89fac3db`.
-- Clean-source bundle verification passed for commit `8ed6c76`, with
+- Clean-source bundle verification first passed for commit `8ed6c76`, then the
+  complete gate was repeated successfully at final candidate `388ef2f` with
   `source_dirty=false`, six declared artifacts and an isolated installed smoke.
 - The real installed 0.8.0 runtime accepted the authentic wheel pair in a
   host-level `--dry-run` and returned `would_upgrade` to 0.9.0. The first
-  sandboxed attempt failed closed because user-systemd bus access was denied;
-  no live service or database mutation has been performed.
+  sandboxed attempt failed closed because user-systemd bus access was denied.
+- The owner explicitly authorized service stops, one database-restoring
+  rollback and the private 0.9.0 hosted-CI exception.
+- Upgrade manifest `upgrade-0.8.0-to-0.9.0-20260924-144840-796ef834` completed;
+  its manual rollback reached `manually_rolled_back`. The authentic 0.8.0
+  package, SQLite integrity, required tables and both services were verified.
+- Final manifest `upgrade-0.8.0-to-0.9.0-20260924-145121-950fd55a` completed.
+  The machine ended on 0.9.0 with schema 1 current, strict doctor status `ok`,
+  both services active/enabled, unchanged control/hook hashes and a restarted
+  upgraded tray process.
+- Version 0.9.0 introduced no Discord or Codex-input transport change, so no
+  new external message was required. Doctor verified the existing observer,
+  five hooks and native Codex queue without sending input.
+- `develop`, `main`, annotated tag `v0.9.0`, the live wheel and release manifest
+  identified commit `388ef2f` at publication.
+- GitHub Actions run `36033763903` executed zero Linux steps because of the
+  account billing lock. It remains external non-pass evidence under the
+  explicitly authorized private Linux 0.9.0 exception.
+- The private prerelease was published at
+  `https://github.com/JosueAmaral15/ai-presence-monitor/releases/tag/v0.9.0`.
+  Its canonical archive and sidecar were downloaded again; the outer SHA-256,
+  internal checksums and full isolated verifier all passed.

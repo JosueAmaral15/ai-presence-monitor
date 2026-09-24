@@ -18,11 +18,21 @@ the product without importing from the source checkout or bypassing rollback
 protections. A manifest bound to one clean source commit and an isolated
 installed-runtime smoke make that contract auditable.
 
-The latest `develop` Quality run `35532470401` failed all required Ubuntu jobs
-before executing any steps. It is external non-pass evidence, not successful
-CI. The prior user-approved billing-lock exception applies only to 0.8.0; a
-0.9.0 exception requires a separate explicit decision after local and live
-operational gates pass.
+The final `develop` Quality run `36033763903` failed all required Ubuntu jobs
+before executing any steps because the GitHub account was billing-locked. It
+is external non-pass evidence, not successful CI. After the complete local
+gate, Python matrix, isolated release verification and authorized live
+upgrade/rollback/re-upgrade passed, the owner explicitly approved a private
+Linux 0.9.0 exception.
+
+This exception is version-specific. It does not call hosted CI successful, does
+not cover public distribution or Windows, and does not waive restoration of
+hosted Linux execution before any future public release.
+
+GitHub renames a leading-dot file uploaded individually, so the canonical
+hosted artifact is the checksummed Linux archive that preserves
+`.env.example`. Individual assets are supplementary and do not replace the
+archive-level and internal checksum checks.
 
 ## 2026-09-20 - Upgrades are local, transactional and Linux-only
 

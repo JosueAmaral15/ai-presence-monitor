@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - v0.9.0 candidate
+## 2026-09-24 - v0.9.0
 
 - Defined a private Linux product contract for CPython 3.10, 3.11 and 3.12,
   with Windows code preserved but disabled and unsupported for this release.
@@ -12,6 +12,10 @@
   and two-project identity isolation.
 - Added explicit installation, support and release-process documentation.
 - Extended local quality checks to release scripts and shell syntax.
+- Completed a real upgrade, manual database-restoring rollback and final
+  re-upgrade while preserving managed services, controls and Codex hooks.
+- Published the private tagged prerelease with a canonical checksummed Linux
+  archive verified again after download from GitHub.
 
 ### Included Task 025 product diagnostics
 

@@ -1,11 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Planejadas
+## Concluidas em 2026-09-24
 
 ### Task 026 - Release profissional Linux 0.9.0
 
 **Prioridade**: Critica
-**Status**: em execucao na branch de tarefa
+**Status**: concluida; release privada Linux 0.9.0 validada, implantada,
+tagueada e publicada como prerelease privada
 **Objetivo**: concluir um produto Linux privado, instalavel em outro computador
 e reutilizavel por projetos independentes sem depender do checkout.
 
@@ -13,16 +14,19 @@ e reutilizavel por projetos independentes sem depender do checkout.
 - [x] Instalador Linux de wheel local e verificador offline implementados.
 - [x] Conjunto deterministico de artefatos 0.9.0 com checksums verificaveis.
 - [x] Gate local, matriz Python, instalacao limpa e isolamento por projeto.
-- [ ] Upgrade e rollback reais autorizados no runtime dedicado.
-- [ ] Candidato exato promovido para `develop`, depois `main`, e tagueado.
+- [x] Upgrade e rollback reais autorizados no runtime dedicado.
+- [x] Candidato exato promovido para `develop`, depois `main`, e tagueado.
 
 **Plano**: `docs/planning/TASK-026-linux-product-release.md`.
+
+## Planejadas
 
 ### Task 025 - Superficie de produto e atualizacao transacional
 
 **Prioridade**: Alta
-**Status**: diagnostico e implementacao transacional concluidos localmente;
-release e E2E operacional permanecem pendentes
+**Status**: diagnostico, implementacao transacional, E2E operacional e release
+privada concluidos; CI hospedada permanece externa e necessaria somente antes
+de futura distribuicao publica
 **Objetivo**: transformar a instalacao tecnica em um produto atualizavel,
 diagnosticavel e distribuivel com rollback deterministico.
 
@@ -35,9 +39,9 @@ diagnosticavel e distribuivel com rollback deterministico.
 - [x] Implementar upgrade e rollback transacionais com manifesto de backup.
 - [x] Expor versao e estado de migracao do schema SQLite.
 - [x] Criar comando sanitizado `doctor` para saude operacional.
-- [ ] Publicar artefatos tagueados e checksums SHA-256.
+- [x] Publicar artefatos tagueados e checksums SHA-256.
 - [ ] Restaurar CI Linux hospedada antes de distribuicao publica.
-- [ ] Definir politicas de instalacao, upgrade, suporte e compatibilidade.
+- [x] Definir politicas de instalacao, upgrade, suporte e compatibilidade.
 
 **Fase imediata**:
 `docs/planning/TASK-025-immediate-product-activation.md`.
