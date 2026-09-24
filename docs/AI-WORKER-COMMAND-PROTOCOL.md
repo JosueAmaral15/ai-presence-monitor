@@ -362,6 +362,11 @@ atividade, nao autoria; testes E2E exigem o marcador exclusivo definido em
 
 ## Linux e Windows
 
+Para preparar outro computador, um AI-worker deve seguir
+[INSTALL-LINUX.md](INSTALL-LINUX.md), verificar `SHA256SUMS` e
+`release-manifest.json` e nunca improvisar uma instalacao a partir do checkout.
+O contrato de compatibilidade esta em [SUPPORT.md](SUPPORT.md).
+
 O nucleo, SQLite e a CLI Python sao portateis. `pip` gera um launcher apropriado
 para cada sistema:
 

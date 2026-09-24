@@ -79,6 +79,9 @@ Detailed operational documentation is currently available in Portuguese:
 - [Security checklist](docs/security/SECURITY.md)
 - [Rollback procedures](docs/rollback/ROLLBACK.md)
 - [Transactional upgrade and rollback](docs/TRANSACTIONAL-UPGRADE.md)
+- [Linux installation and multi-project use](docs/INSTALL-LINUX.md)
+- [Support and compatibility](docs/SUPPORT.md)
+- [Private release process](docs/RELEASING.md)
 
 The Portuguese version of this README is preserved in
 [README.pt-BR.md](README.pt-BR.md).
@@ -100,27 +103,29 @@ input requires an installed Codex CLI that provides `codex queue`.
 
 ## Installation
 
-Recommended isolated installation:
+AI Presence Monitor 0.9.0 is distributed as a private, checksummed Linux
+release bundle. Verify the extracted bundle before installation:
 
 ```bash
-python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /path/to/ai-presence-monitor
-"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
+sha256sum -c SHA256SUMS
+python3 verify_release.py .
+./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+ai-presence --version
 ```
 
-Install the optional tray extra when desktop controls are needed:
+The installer creates a dedicated per-user virtual environment, preserves an
+existing private configuration, initializes SQLite, and does not silently
+install services, hooks, tray startup, or automation permissions. See the
+[Linux installation guide](docs/INSTALL-LINUX.md) for prerequisites,
+multi-project use, optional components, and upgrade procedures.
+
+Install PySide6 into the dedicated environment from a trusted source when the
+optional desktop controls are needed:
 
 ```bash
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install '/path/to/ai-presence-monitor[tray]'
+"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install PySide6
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray --check
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray
-```
-
-To expose the installed command in the current user's `PATH`:
-
-```bash
-./scripts/install-user-command.sh
-ai-presence --help
 ```
 
 Verify the installed product and inspect local health without printing secret

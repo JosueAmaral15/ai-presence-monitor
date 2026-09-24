@@ -231,7 +231,7 @@ class CliBehaviorTests(unittest.TestCase):
             build_parser().parse_args(["--version"])
 
         self.assertEqual(exit_context.exception.code, 0)
-        self.assertEqual(output.getvalue().strip(), "ai-presence 0.8.0")
+        self.assertEqual(output.getvalue().strip(), "ai-presence 0.9.0")
 
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

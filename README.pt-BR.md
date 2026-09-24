@@ -73,14 +73,23 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/PORTABILIDADE.md](docs/PORTABILIDADE.md)
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [docs/TRANSACTIONAL-UPGRADE.md](docs/TRANSACTIONAL-UPGRADE.md)
+- [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md)
+- [docs/SUPPORT.md](docs/SUPPORT.md)
+- [docs/RELEASING.md](docs/RELEASING.md)
 
-Instalacao portatil recomendada:
+Na release privada Linux 0.9.0, valide o bundle extraido e use o instalador
+incluido:
 
 ```bash
-python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /caminho/para/ai-presence-monitor
-"$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" --help
+sha256sum -c SHA256SUMS
+python3 verify_release.py .
+./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+ai-presence --version
 ```
+
+O instalador cria um ambiente virtual dedicado por usuario, preserva uma
+configuracao privada existente e nao habilita silenciosamente servicos, hooks,
+bandeja ou permissoes de automacao. Consulte [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md).
 
 Para uma futura atualizacao privada no Linux, valide primeiro os dois wheels
 locais sem alterar a instalacao:

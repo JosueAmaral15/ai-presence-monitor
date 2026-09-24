@@ -2,6 +2,22 @@
 
 ## Planejadas
 
+### Task 026 - Release profissional Linux 0.9.0
+
+**Prioridade**: Critica
+**Status**: em execucao na branch de tarefa
+**Objetivo**: concluir um produto Linux privado, instalavel em outro computador
+e reutilizavel por projetos independentes sem depender do checkout.
+
+- [x] Contrato de suporte, instalacao, compatibilidade e upgrade publicado.
+- [x] Instalador Linux de wheel local e verificador offline implementados.
+- [ ] Conjunto deterministico de artefatos 0.9.0 com checksums verificaveis.
+- [x] Gate local, matriz Python, instalacao limpa e isolamento por projeto.
+- [ ] Upgrade e rollback reais autorizados no runtime dedicado.
+- [ ] Candidato exato promovido para `develop`, depois `main`, e tagueado.
+
+**Plano**: `docs/planning/TASK-026-linux-product-release.md`.
+
 ### Task 025 - Superficie de produto e atualizacao transacional
 
 **Prioridade**: Alta

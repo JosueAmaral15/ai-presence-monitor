@@ -1,12 +1,26 @@
 [project]
 name = "ai-presence-monitor"
-version = "0.8.0"
+version = "0.9.0"
 description = "Monitor local de presenca artificial com alertas por Discord e Telegram."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
+keywords = ["ai-agent", "monitoring", "discord", "codex", "linux"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Private :: Do Not Upload",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "tzdata>=2024.1; platform_system == 'Windows'",
 ]
+
+[project.urls]
+Repository = "https://github.com/JosueAmaral15/ai-presence-monitor"
 
 [project.optional-dependencies]
 dev = [

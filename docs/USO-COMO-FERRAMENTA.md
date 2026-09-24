@@ -51,6 +51,10 @@ Os componentes sao independentes:
 
 ## Instalacao e Descoberta
 
+Em outro computador Linux, use somente um bundle verificado e siga
+[INSTALL-LINUX.md](INSTALL-LINUX.md). O bundle 0.9.0 inclui instalador e
+verificador offline; nao instale um artefato com `source_dirty=true`.
+
 No Linux, confirme primeiro o comando instalado:
 
 ```bash

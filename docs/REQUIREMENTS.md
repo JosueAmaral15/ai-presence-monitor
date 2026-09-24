@@ -149,7 +149,15 @@
 - O modo estrito deve retornar codigo diferente de zero para avisos, permitindo
   preflight de automacao.
 
-- O projeto deve gerar wheel instalavel para Python 3.10+.
+- O projeto deve gerar wheel instalavel para CPython 3.10, 3.11 e 3.12 e
+  rejeitar Python fora desse intervalo na release 0.9.0.
+- A release Linux privada deve fornecer wheel, sdist, instalador, modelo de
+  configuracao, verificador offline, manifesto e checksums SHA-256 vinculados
+  a um commit limpo.
+- O instalador deve consumir somente wheel local, preservar configuracao
+  existente e nao ativar servicos, hooks, bandeja ou permissoes implicitamente.
+- O verificador deve testar instalacao isolada sem indice e provar isolamento
+  entre ao menos dois caminhos absolutos de projeto.
 - A configuracao deve funcionar com `.env` central ou por projeto.
 - Caminhos relativos do banco devem ser estaveis fora do `cwd`.
 - Hooks nao devem depender da permanencia do checkout.

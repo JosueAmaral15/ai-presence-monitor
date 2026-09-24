@@ -13,6 +13,8 @@
 - [Portabilidade e reutilizacao](PORTABILIDADE.md)
 - [Guia operacional do Windows](WINDOWS.md)
 - [Upgrade e rollback transacionais](TRANSACTIONAL-UPGRADE.md)
+- [Instalacao Linux e uso multiprojeto](INSTALL-LINUX.md)
+- [Suporte e compatibilidade](SUPPORT.md)
 
 ## Projeto
 
@@ -21,6 +23,7 @@
 - [Decisoes](DECISIONS.md)
 - [Tasks](TASKS.md)
 - [Changelog](CHANGELOG.md)
+- [Processo de release privada Linux](RELEASING.md)
 - [Plano de orientacao para respostas Discord invalidas](planning/TASK-014-discord-reply-guidance.md)
 - [Plano de entrega nativa de respostas Discord](planning/TASK-020-native-discord-answer-routing.md)
 - [Plano do E2E nativo Discord e release Linux](planning/TASK-021-native-discord-e2e-release.md)
@@ -30,6 +33,7 @@
 - [Ativacao imediata do produto e E2E pos-upgrade](planning/TASK-025-immediate-product-activation.md)
 - [Diagnostico de produto e contrato de schema](planning/TASK-025-product-diagnostics.md)
 - [Plano do upgrade transacional](planning/TASK-025-transactional-upgrade.md)
+- [Plano da release profissional Linux 0.9.0](planning/TASK-026-linux-product-release.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
 - [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)

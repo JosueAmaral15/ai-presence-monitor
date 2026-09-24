@@ -13,6 +13,7 @@ presence.db
 *.sqlite3
 build/
 dist/
+release/
 *.egg-info/
 .coverage
 .coverage.*

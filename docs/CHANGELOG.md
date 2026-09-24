@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased - Task 025 product diagnostics
+## Unreleased - v0.9.0 candidate
+
+- Defined a private Linux product contract for CPython 3.10, 3.11 and 3.12,
+  with Windows code preserved but disabled and unsupported for this release.
+- Added a fresh per-user Linux installer that consumes a local wheel, preserves
+  existing configuration and leaves services, hooks and permissions opt-in.
+- Added clean-source release bundle generation with wheel, sdist, installer,
+  configuration template, manifest and SHA-256 checksums.
+- Added offline artifact verification, isolated installed-runtime health checks
+  and two-project identity isolation.
+- Added explicit installation, support and release-process documentation.
+- Extended local quality checks to release scripts and shell syntax.
+
+### Included Task 025 product diagnostics
 
 - Added deterministic `ai-presence --version` output independent of checkout
   metadata and invocation style.

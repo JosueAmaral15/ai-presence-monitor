@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-09-24 - Version 0.9.0 is a private Linux product bundle
+
+**Decision**: distribute version 0.9.0 as a checksummed private Linux bundle
+for CPython 3.10, 3.11 and 3.12. A clean Git commit produces the wheel, sdist,
+installer, configuration template, offline verifier, manifest and
+`SHA256SUMS`. Fresh installation is per-user and offline. Existing runtimes
+must use the transactional updater with an authentic rollback wheel.
+
+Windows modules remain packaged to prevent code loss, but Windows execution is
+disabled by default and is outside the 0.9.0 support and release gates. The
+bundle is not a public package-index release, hosted service or multi-user
+security boundary.
+
+**Reason**: another Linux computer must be able to verify, install and operate
+the product without importing from the source checkout or bypassing rollback
+protections. A manifest bound to one clean source commit and an isolated
+installed-runtime smoke make that contract auditable.
+
+The latest `develop` Quality run `35532470401` failed all required Ubuntu jobs
+before executing any steps. It is external non-pass evidence, not successful
+CI. The prior user-approved billing-lock exception applies only to 0.8.0; a
+0.9.0 exception requires a separate explicit decision after local and live
+operational gates pass.
+
 ## 2026-09-20 - Upgrades are local, transactional and Linux-only
 
 **Decision**: accept only a target wheel and exact installed-version rollback

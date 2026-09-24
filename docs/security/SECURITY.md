@@ -1,5 +1,31 @@
 # Security Checklist
 
+## Task 026 - Private Linux release bundle
+
+- [x] Release construction refuses a dirty worktree by default and records the
+      exact source commit and dirty state in a bounded manifest.
+- [x] Every distributed artifact is bound by both manifest metadata and
+      `SHA256SUMS`; the verifier rejects missing, extra, changed or traversing
+      artifact names.
+- [x] Installed-runtime verification uses a temporary home, scrubbed product
+      environment and `pip --no-index --no-deps`.
+- [x] The fresh installer accepts only a local wheel, rejects unsupported
+      Python and unsafe root-like installation targets, and preserves an
+      existing configuration.
+- [x] Services, Codex hooks, tray startup, Discord integration and automation
+      permissions remain explicit post-install actions.
+- [x] The wheel retains Windows modules while the operational Windows runtime
+      remains disabled and unsupported by default.
+
+### Residual risk
+
+SHA-256 proves bundle integrity after publication but not publisher identity;
+private transfer must still use a trusted channel. Wheel installation executes
+package build artifacts owned by the local user. The base bundle intentionally
+does not vendor optional PySide6, system packages or Codex CLI. A clean bundle
+and isolated smoke do not replace the authorized live upgrade, rollback and
+service-state gate.
+
 ## Task 025 - Product diagnostics
 
 - [x] `--version` uses the package constant and does not inspect distribution

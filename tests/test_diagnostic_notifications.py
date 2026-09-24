@@ -158,7 +158,7 @@ class DiagnosticDiscordClientTests(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data), {"message": "test"})
         self.assertEqual(request.headers["Content-type"], "application/json")
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.8.0")
+        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.9.0")
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 7)
         self.assertEqual(response.read_size, 1024)
 

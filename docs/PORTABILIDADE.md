@@ -12,11 +12,12 @@ por padrao e exige opt-in experimental explicito.
 
 ## Instalacao Recomendada
 
-Use um ambiente virtual dedicado:
+Para a release privada Linux 0.9.0, extraia o bundle e valide seu conteudo:
 
 ```bash
-python3 -m venv "$HOME/.local/share/ai-presence-monitor/venv"
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /caminho/para/ai-presence-monitor
+sha256sum -c SHA256SUMS
+python3 verify_release.py .
+./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
 ```
 
 Os comandos ficam em:
@@ -26,30 +27,30 @@ Os comandos ficam em:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence-interactive"
 ```
 
-Para expor o comando principal no `PATH` do usuario Linux:
+O instalador cria o link em `~/.local/bin`, preserva um `.env` existente e nao
+habilita componentes opcionais. Para atualizar uma instalacao existente, use o
+updater transacional e forneca o wheel exato da versao instalada:
 
 ```bash
-./scripts/install-user-command.sh
-command -v ai-presence
+ai-presence --dry-run upgrade \
+  --package /caminho/absoluto/novo.whl \
+  --rollback-package /caminho/absoluto/instalado.whl \
+  --json
 ```
 
-O script cria um link em `~/.local/bin`. Ele e preferivel a um alias porque
-tambem funciona em shells nao interativos e para AI-workers.
-
-Atualizacao:
+Depois de revisar o dry-run, a operacao real exige autorizacao unica:
 
 ```bash
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install --upgrade /caminho/para/ai-presence-monitor
+ai-presence upgrade \
+  --package /caminho/absoluto/novo.whl \
+  --rollback-package /caminho/absoluto/instalado.whl \
+  --authorize-once
 ```
 
-Rollback do pacote:
-
-```bash
-"$HOME/.local/share/ai-presence-monitor/venv/bin/pip" install /caminho/para/ai-presence-monitor-0.1.0.whl
-```
-
-Guarde o wheel anterior antes de atualizar quando o monitor estiver em uso
-continuo.
+Nao use `pip install --upgrade` diretamente em um runtime operacional: esse
+caminho ignora snapshot SQLite, estado de servicos, manifesto e rollback.
+Consulte [INSTALL-LINUX.md](INSTALL-LINUX.md) e
+[TRANSACTIONAL-UPGRADE.md](TRANSACTIONAL-UPGRADE.md).
 
 ### Windows
 
@@ -335,6 +336,12 @@ Win32 da biblioteca padrao e nao substitui o clipboard. A sincronizacao usa o
 mesmo SQLite e o mesmo escopo de worker do monitor.
 
 ## Verificacao de Release
+
+O gate completo de uma release limpa gera e valida o bundle:
+
+```bash
+./scripts/release-gate.sh "$PWD/dist/release-0.9.0"
+```
 
 Quando as versoes estiverem instaladas na maquina:
 
