@@ -11,7 +11,7 @@ e reutilizavel por projetos independentes sem depender do checkout.
 
 - [x] Contrato de suporte, instalacao, compatibilidade e upgrade publicado.
 - [x] Instalador Linux de wheel local e verificador offline implementados.
-- [ ] Conjunto deterministico de artefatos 0.9.0 com checksums verificaveis.
+- [x] Conjunto deterministico de artefatos 0.9.0 com checksums verificaveis.
 - [x] Gate local, matriz Python, instalacao limpa e isolamento por projeto.
 - [ ] Upgrade e rollback reais autorizados no runtime dedicado.
 - [ ] Candidato exato promovido para `develop`, depois `main`, e tagueado.

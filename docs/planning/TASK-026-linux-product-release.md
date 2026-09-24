@@ -38,7 +38,7 @@ without depending on the source checkout.
 
 - [x] Full local quality gate passes.
 - [x] Python 3.10, 3.11 and 3.12 matrix passes.
-- [ ] Release artifacts verify offline from a clean temporary home.
+- [x] Release artifacts verify offline from a clean temporary home.
 - [x] Fresh installer E2E passes without source-checkout imports.
 - [x] Two separate project roots produce separate workers and preserve their
   own lifecycle state.
@@ -48,7 +48,7 @@ without depending on the source checkout.
 ## Phase 4 - Operational Transaction
 
 - [x] Preserve an authentic 0.8.0 rollback wheel and verify its checksum.
-- [ ] Run a no-mutation transactional dry-run against the installed runtime.
+- [x] Run a no-mutation transactional dry-run against the installed runtime.
 - [ ] Obtain explicit authorization immediately before stopping live services
   or restoring the operational database.
 - [ ] Upgrade the dedicated runtime from 0.8.0 to 0.9.0.
@@ -60,7 +60,7 @@ without depending on the source checkout.
 
 ## Phase 5 - Publication
 
-- [ ] Commit each completed phase on the task branch.
+- [x] Commit each completed phase on the task branch.
 - [ ] Integrate and push validated work to `develop`.
 - [ ] Re-run final release gates at the exact candidate commit.
 - [ ] Promote `develop` to `main` only after Phase 4 passes.
@@ -102,5 +102,9 @@ retried automatically.
 - Authentic rollback wheel was built from historical commit `5205ca4` and
   verified as `ai-presence-monitor` 0.8.0 with SHA-256
   `05a7fa214ca1dd79f2b0f8f0fb3acc4f7946ecb2c26a2746b3efae6e89fac3db`.
-- The exact clean-source 0.9.0 bundle remains pending until the task-branch
-  commit exists. No live service or database mutation has been performed.
+- Clean-source bundle verification passed for commit `8ed6c76`, with
+  `source_dirty=false`, six declared artifacts and an isolated installed smoke.
+- The real installed 0.8.0 runtime accepted the authentic wheel pair in a
+  host-level `--dry-run` and returned `would_upgrade` to 0.9.0. The first
+  sandboxed attempt failed closed because user-systemd bus access was denied;
+  no live service or database mutation has been performed.
