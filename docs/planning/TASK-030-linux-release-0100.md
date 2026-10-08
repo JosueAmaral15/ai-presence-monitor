@@ -56,7 +56,7 @@ offline.
 
 ## Phase 1 and 2 Evidence
 
-- Exact artifact source: `d54842b391f5e1311a14449a66f242b6a19ae431`;
+- Exact artifact source: `447f3091cf676d347a628207a36cb3eae1d75094`;
   the release manifest records `source_dirty=false`.
 - The first bundle smoke exposed that the isolated `doctor` still observed the
   host's failed reply-observer unit. Commit `ced1f14` made release verification
@@ -71,11 +71,11 @@ offline.
 - Offline installation, schema, command, updater help and two-project isolation
   smokes passed from the built wheel.
 - Candidate wheel SHA-256:
-  `09532662983a0c73a0766a06f198ffc2134b8e3bdf59e5b99c67205e50aa53b2`.
+  `acef4d3a47b84b8692c935b0d30d9bef85a535adc897b981c690e7ab07debde6`.
 - Candidate sdist SHA-256:
-  `1cbf10fcb2ac710603ef82601a7d9d27fe827887f4913831a8888001169589f9`.
+  `89c66601155672f7272e14d948998509c1f40c64fab715f4129c282f8cc91efb`.
 - Canonical archive SHA-256:
-  `3d6a52a8e852fd7236849d446b243870b7bf7d90ef6ca6d8e792cbdcc5bbfe65`;
+  `106d0aaf853381826d63416b61712cdd406c4602eb9088d79da3eb23fc4a3144`;
   its listing includes the complete bundle, `.env.example` and
   `upgrade-linux.sh`.
 - The authentic private-release 0.9.0 wheel was downloaded and matched its
@@ -150,6 +150,13 @@ the root README is package metadata, this changes the wheel bytes even though
 runtime code is unchanged. The rebuilt exact wheel therefore needs a final
 bounded installed-runtime validation before promotion and publication. No old
 artifact or hash may be reused.
+
+Commit `447f309` completed that correction. Its clean release gate passed 315
+tests, 86% aggregate coverage, Ruff, mypy, compileall, shell syntax, build,
+Python 3.10/3.11/3.12 and the isolated bundle verifier. All 40 packaged Python
+modules are byte-identical to the operationally validated `d54842b` wheel; only
+release documentation and package metadata differ. The final hashes are the
+ones recorded in Phase 1 and 2 Evidence above.
 
 ## Phase 4 - Tag and Private Prerelease
 
