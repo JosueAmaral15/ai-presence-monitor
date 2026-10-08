@@ -56,27 +56,33 @@ offline.
 
 ## Phase 1 and 2 Evidence
 
-- Exact artifact source: `ced1f142f2c85ac98fd16b39b4b0e123c8cf0974`;
+- Exact artifact source: `d54842b391f5e1311a14449a66f242b6a19ae431`;
   the release manifest records `source_dirty=false`.
 - The first bundle smoke exposed that the isolated `doctor` still observed the
   host's failed reply-observer unit. Commit `ced1f14` made release verification
   require the intrinsic runtime, platform, environment, database and control
   checks while treating hooks, services, Codex and tray state as host-dependent.
-- The complete gate then passed 314 tests, 86% aggregate coverage, Ruff, mypy,
+- A second preflight found that the installed 0.9.0 updater would apply the same
+  host-state coupling during a real transaction. Commit `d54842b` added a
+  bundled candidate-side bootstrap and the same fail-closed intrinsic checks
+  to transactional postflight.
+- The final complete gate passed 315 tests, 86% aggregate coverage, Ruff, mypy,
   compileall, shell syntax, package build and Python 3.10, 3.11 and 3.12.
 - Offline installation, schema, command, updater help and two-project isolation
   smokes passed from the built wheel.
 - Candidate wheel SHA-256:
-  `b5d41261a80da920c0f9f2df30b4d7f4de45cb1fd259cd3684da54228bbbf5a2`.
+  `09532662983a0c73a0766a06f198ffc2134b8e3bdf59e5b99c67205e50aa53b2`.
 - Candidate sdist SHA-256:
-  `afb713151bc7d2c22d965a2d1a4ce98e8a4dc04d0c9d5de368737ed4aa072a8b`.
+  `1cbf10fcb2ac710603ef82601a7d9d27fe827887f4913831a8888001169589f9`.
 - Canonical archive SHA-256:
-  `7e6189ebe11b8f4c4a7ece72537e3c728a0c529c40ad27e5b7c9da1e8bbe9e99`;
-  its listing includes the complete bundle and `.env.example`.
+  `3d6a52a8e852fd7236849d446b243870b7bf7d90ef6ca6d8e792cbdcc5bbfe65`;
+  its listing includes the complete bundle, `.env.example` and
+  `upgrade-linux.sh`.
 - The authentic private-release 0.9.0 wheel was downloaded and matched its
   published SHA-256:
   `0399782b78b7ab69175230d6116b94f1f1a10ba21594795711aded49e114bd53`.
-- The installed 0.9.0 command returned `status=would_upgrade`,
+- The candidate-side bootstrap, using the dedicated installed 0.9.0 Python,
+  returned `status=would_upgrade`,
   `from_version=0.9.0`, `to_version=0.10.0` and no manifest during dry-run.
 - The dry-run did not change the installed runtime or restart the failed reply
   observer.
