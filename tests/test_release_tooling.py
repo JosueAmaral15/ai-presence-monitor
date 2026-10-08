@@ -17,6 +17,7 @@ from scripts.release_lib import (
     sha256,
     wheel_metadata,
 )
+from scripts.verify_release import _validate_installed_doctor
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -93,6 +94,35 @@ class ReleaseToolingTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 2)
             self.assertIn("absolute, dedicated non-root directory", result.stderr)
+
+    def test_release_doctor_ignores_host_dependent_errors(self) -> None:
+        checks = [
+            {"name": name, "status": "ok"}
+            for name in ("runtime", "platform", "environment", "database", "controls")
+        ]
+        checks.append(
+            {
+                "name": "service:ai-presence-reply-observer.service",
+                "status": "error",
+            }
+        )
+
+        _validate_installed_doctor(
+            {"version": __version__, "status": "error", "checks": checks},
+            __version__,
+        )
+
+    def test_release_doctor_rejects_core_check_failure(self) -> None:
+        checks = [
+            {"name": name, "status": "error" if name == "database" else "ok"}
+            for name in ("runtime", "platform", "environment", "database", "controls")
+        ]
+
+        with self.assertRaisesRegex(ReleaseError, "database"):
+            _validate_installed_doctor(
+                {"version": __version__, "status": "error", "checks": checks},
+                __version__,
+            )
 
 
 if __name__ == "__main__":

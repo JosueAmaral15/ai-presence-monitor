@@ -41,6 +41,13 @@ STATIC_ASSETS = {
     "release_lib.py",
     "release-manifest.json",
 }
+ISOLATED_DOCTOR_CHECKS = {
+    "runtime",
+    "platform",
+    "environment",
+    "database",
+    "controls",
+}
 
 
 def verify_release(
@@ -131,9 +138,16 @@ def _installed_smoke(wheel: Path, version: str) -> None:
         )
         if not schema.get("healthy") or schema.get("migration_status") != "current":
             raise ReleaseError("Installed schema smoke failed.")
-        doctor = json.loads(_run([str(command), "doctor", "--json"], env=environment).stdout)
-        if doctor.get("status") == "error" or doctor.get("version") != version:
-            raise ReleaseError("Installed doctor smoke failed.")
+        doctor_result = _run(
+            [str(command), "doctor", "--json"],
+            env=environment,
+            allowed_returncodes=(0, 2),
+        )
+        try:
+            doctor = json.loads(doctor_result.stdout)
+        except json.JSONDecodeError as exc:
+            raise ReleaseError("Installed doctor returned invalid JSON.") from exc
+        _validate_installed_doctor(doctor, version)
         _run([str(command), "upgrade", "--help"], env=environment)
         _run([str(command), "rollback-upgrade", "--help"], env=environment)
         _verify_project_isolation(command, root, database, environment)
@@ -279,19 +293,48 @@ def _verify_wheel_modules(wheel: Path) -> None:
         raise ReleaseError(f"Wheel is missing required modules: {sorted(missing)}.")
 
 
-def _run(command: list[str], *, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def _validate_installed_doctor(payload: object, version: str) -> None:
+    if not isinstance(payload, dict) or payload.get("version") != version:
+        raise ReleaseError("Installed doctor smoke reported the wrong version.")
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        raise ReleaseError("Installed doctor smoke omitted its checks.")
+    statuses = {
+        check.get("name"): check.get("status")
+        for check in checks
+        if isinstance(check, dict)
+        and isinstance(check.get("name"), str)
+        and isinstance(check.get("status"), str)
+    }
+    missing = ISOLATED_DOCTOR_CHECKS - statuses.keys()
+    if missing:
+        raise ReleaseError(f"Installed doctor smoke omitted checks: {sorted(missing)}.")
+    failed = sorted(name for name in ISOLATED_DOCTOR_CHECKS if statuses[name] != "ok")
+    if failed:
+        raise ReleaseError(f"Installed doctor smoke failed checks: {failed}.")
+
+
+def _run(
+    command: list[str],
+    *,
+    env: dict[str, str],
+    allowed_returncodes: tuple[int, ...] = (0,),
+) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(
+        result = subprocess.run(
             command,
             env=env,
-            check=True,
+            check=False,
             capture_output=True,
             text=True,
             timeout=180,
             cwd=Path("/tmp"),
         )
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         raise ReleaseError(f"Release verification command failed: {Path(command[0]).name}.") from exc
+    if result.returncode not in allowed_returncodes:
+        raise ReleaseError(f"Release verification command failed: {Path(command[0]).name}.")
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
