@@ -232,6 +232,12 @@
   `dispatch_started`, `input_emitted` ou incerteza nao podem causar retry.
 - O timer nao deve atualizar os relogios de presenca; somente um hook posterior
   registra atividade normal da sessao.
+- O prompt temporizado deve oferecer um gate opcional de inatividade vermelha.
+- Quando o gate estiver habilitado, o atraso configurado deve continuar sendo o
+  prazo minimo e o envio deve aguardar tambem 30 minutos sem `last_signal_at` no
+  Protocolo 1 ou 15 minutos sem `last_activity_at` no Protocolo 2.
+- Worker ausente, idle, protocolo desconhecido ou relogio ausente nao deve
+  liberar o envio.
 
 ## Bandeja e Controle de Entrada
 
@@ -242,6 +248,12 @@
   sincronizacao de atividade.
 - Preferencias devem oferecer checkbox do prompt temporizado, minutos e texto,
   reutilizando o seletor de sessao exata.
+- Todos os checkboxes e campos devem ser persistidos como um perfil completo por
+  `worker_id`, preservando valores diferentes entre projetos ou agentes.
+- Um perfil ainda inexistente deve herdar os defaults globais; salvar um perfil
+  nao pode alterar outro perfil nem os defaults globais.
+- A bandeja deve filtrar sessoes pelo worker selecionado e a CLI deve permitir
+  consultar ou alterar um perfil explicito.
 - O compositor deve enviar para este computador ou para um endpoint Codex
   remoto autenticado.
 - A dependencia da bandeja deve ser opcional para preservar instalacoes CLI.

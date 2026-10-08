@@ -14,10 +14,13 @@ from .control import (
     ControlSettings,
     ControlStore,
 )
+from .protocols import get_protocol
+from .store import PresenceStore
 
 ScheduledPromptRunState = Literal[
     "disabled",
     "waiting",
+    "waiting_for_red",
     "dispatch_started",
     "input_emitted",
     "failed_or_uncertain",
@@ -37,6 +40,7 @@ def configure_scheduled_prompt(
     delay_minutes: int,
     text: str,
     thread_id: str | None,
+    require_red_inactivity: bool = False,
     now: float | None = None,
     schedule_id: str | None = None,
 ) -> ControlSettings:
@@ -50,6 +54,7 @@ def configure_scheduled_prompt(
             scheduled_prompt_enabled=False,
             scheduled_prompt_delay_minutes=delay,
             scheduled_prompt_text=clean_text,
+            scheduled_prompt_require_red_inactivity=require_red_inactivity,
             scheduled_prompt_thread_id=None,
             scheduled_prompt_due_at=None,
             scheduled_prompt_id=None,
@@ -67,6 +72,8 @@ def configure_scheduled_prompt(
         settings.scheduled_prompt_enabled
         and settings.scheduled_prompt_delay_minutes == delay
         and settings.scheduled_prompt_text == clean_text
+        and settings.scheduled_prompt_require_red_inactivity
+        == require_red_inactivity
         and settings.scheduled_prompt_thread_id == target_thread
         and settings.scheduled_prompt_due_at is not None
         and settings.scheduled_prompt_id is not None
@@ -81,6 +88,7 @@ def configure_scheduled_prompt(
         scheduled_prompt_enabled=True,
         scheduled_prompt_delay_minutes=delay,
         scheduled_prompt_text=clean_text,
+        scheduled_prompt_require_red_inactivity=require_red_inactivity,
         scheduled_prompt_thread_id=target_thread,
         scheduled_prompt_due_at=current_time + delay * 60,
         scheduled_prompt_id=schedule_id or uuid.uuid4().hex,
@@ -92,16 +100,27 @@ def configure_scheduled_prompt(
 def process_due_scheduled_prompt(
     *,
     store: ControlStore,
+    profile_id: str | None = None,
+    presence_store: PresenceStore | None = None,
     now: float | None = None,
     client: CodexQueueClient | None = None,
 ) -> ScheduledPromptRunResult:
     checked_at = time.time() if now is None else now
-    settings = store.load()
+    settings = store.load(profile_id)
     if not settings.scheduled_prompt_enabled:
         return ScheduledPromptRunResult("disabled")
     due_at = settings.scheduled_prompt_due_at
     if due_at is None or due_at > checked_at:
         return ScheduledPromptRunResult("waiting", due_at=due_at)
+    if settings.scheduled_prompt_require_red_inactivity:
+        if profile_id is None or presence_store is None:
+            return ScheduledPromptRunResult("waiting_for_red", due_at=due_at)
+        if not _worker_reached_red_inactivity(
+            presence_store,
+            worker_id=profile_id,
+            now=checked_at,
+        ):
+            return ScheduledPromptRunResult("waiting_for_red", due_at=due_at)
 
     schedule_id = settings.scheduled_prompt_id
     thread_id = settings.scheduled_prompt_thread_id
@@ -115,7 +134,7 @@ def process_due_scheduled_prompt(
         scheduled_prompt_last_state="dispatching",
         scheduled_prompt_last_attempt_at=checked_at,
     )
-    store.save(claimed)
+    store.save(claimed, profile_id)
 
     try:
         result = send_native_message(
@@ -129,29 +148,64 @@ def process_due_scheduled_prompt(
     except CodexInputError:
         _complete_claim(
             store,
+            profile_id=profile_id,
             schedule_id=schedule_id,
             state="failed_or_uncertain",
         )
         return ScheduledPromptRunResult("failed_or_uncertain")
 
-    _complete_claim(store, schedule_id=schedule_id, state=result.state)
+    _complete_claim(
+        store,
+        profile_id=profile_id,
+        schedule_id=schedule_id,
+        state=result.state,
+    )
     return ScheduledPromptRunResult(result.state)
 
 
 def _complete_claim(
     store: ControlStore,
     *,
+    profile_id: str | None,
     schedule_id: str,
     state: str,
 ) -> None:
-    latest = store.load()
+    latest = store.load(profile_id)
     if (
         latest.scheduled_prompt_id != schedule_id
         or latest.scheduled_prompt_enabled
         or latest.scheduled_prompt_last_state != "dispatching"
     ):
         return
-    store.save(replace(latest, scheduled_prompt_last_state=state))
+    store.save(
+        replace(latest, scheduled_prompt_last_state=state),
+        profile_id,
+    )
+
+
+def _worker_reached_red_inactivity(
+    store: PresenceStore,
+    *,
+    worker_id: str,
+    now: float,
+) -> bool:
+    worker = store.get_worker(worker_id)
+    if worker is None or worker.status != "active":
+        return False
+    try:
+        protocol = get_protocol(worker.protocol)
+    except ValueError:
+        return False
+    red_threshold = next(
+        (threshold for threshold in protocol.thresholds if threshold.level == "red"),
+        None,
+    )
+    if red_threshold is None:
+        return False
+    clock = getattr(worker, protocol.monitored_clock, None)
+    if clock is None:
+        return False
+    return max(0.0, now - clock) >= red_threshold.after_seconds
 
 
 def _validate_delay(value: int) -> int:

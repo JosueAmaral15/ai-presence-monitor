@@ -13,6 +13,7 @@ from ai_presence_monitor.codex_input import (
     CodexInputError,
     CodexInputResult,
 )
+from ai_presence_monitor.control import ControlSettings, ControlStore
 from ai_presence_monitor.discord_questions import (
     DiscordQuestionError,
     PostedDiscordQuestion,
@@ -336,6 +337,51 @@ class RemoteQuestionFlowTests(unittest.TestCase):
             )
             self.assertEqual(retried.status, "input_emitted")
             self.assertEqual(len(recovered.sent), 1)
+
+    def test_reply_observer_resolves_controls_from_question_worker_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                remote_config(root, gui=False),
+                question_answer_transport="native",
+                native_input_enabled=True,
+            )
+            store = PresenceStore(root / "presence.db")
+            question = ask_remote_question(
+                config=config,
+                store=store,
+                worker_id="worker-clarify",
+                prompt="Pergunta",
+                thread_id="session-exact",
+                client=FakeDiscordClient(),  # type: ignore[arg-type]
+                now=1000,
+            )
+            control_store = ControlStore(
+                root / "control.json",
+                ControlSettings(native_input_enabled=True),
+            )
+            control_store.save(
+                ControlSettings(native_input_enabled=False),
+                "worker-clarify",
+            )
+            native = FakeNativeClient()
+
+            result = observe_discord_replies_once(
+                config=config,
+                store=store,
+                client=FakeDiscordClient([reply_message(message_id="101")]),  # type: ignore[arg-type]
+                native_client=native,  # type: ignore[arg-type]
+                control_store=control_store,
+                now=1010,
+            )
+
+            self.assertEqual(result.dispatched, 0)
+            self.assertEqual(result.dispatch_failed, 1)
+            self.assertEqual(native.sent, [])
+            self.assertEqual(
+                store.require_question(question.question_id).status,
+                "dispatch_failed",
+            )
 
     def test_native_client_target_stores_token_name_but_never_token_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

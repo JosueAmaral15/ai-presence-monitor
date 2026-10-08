@@ -2,6 +2,26 @@
 
 ## Concluidas em 2026-10-08
 
+### Task 028 - Perfis de automacao e gate de inatividade vermelha
+
+**Prioridade**: Alta
+**Status**: implementacao e gates locais concluidos na branch
+`codex/task-028-profiled-red-gated-prompts`; candidata a `develop`. Promocao
+para `main` requer E2E real autorizado do scheduler 0.10.0.
+**Objetivo**: isolar todos os controles da bandeja por worker/projeto e permitir
+que o prompt temporizado aguarde tambem a inatividade vermelha do protocolo.
+
+- [x] Persistir perfis completos por `worker_id` sem invalidar controles globais.
+- [x] Selecionar perfil e sessoes correspondentes na bandeja.
+- [x] Adicionar checkbox opcional para exigir inatividade vermelha.
+- [x] Usar 30 minutos no Protocolo 1 e 15 minutos no Protocolo 2.
+- [x] Manter o atraso configurado como prazo minimo e o envio como one-shot.
+- [x] Fazer CLI e automacao ordinaria resolverem o perfil do worker quando aplicavel.
+- [x] Cobrir isolamento, compatibilidade, gate e ausencia de retry com testes.
+- [x] Atualizar guias humanos, protocolo de AI-workers, arquitetura e seguranca.
+
+**Plano**: `docs/planning/TASK-028-profiled-red-gated-prompts.md`.
+
 ### Task 027 - Prompt temporizado one-shot por sessao
 
 **Prioridade**: Alta

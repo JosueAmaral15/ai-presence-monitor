@@ -14,7 +14,7 @@ from .answer_dispatch import (
 )
 from .codex_input import CodexInputError, CodexQueueClient, resolve_native_destination
 from .config import AppConfig
-from .control import ControlSettings
+from .control import ControlSettings, ControlStore
 from .discord_questions import (
     DiscordQuestionClient,
     DiscordQuestionError,
@@ -272,6 +272,7 @@ def observe_discord_replies_once(
     dispatcher: GuiAnswerDispatcher | None = None,
     native_client: CodexQueueClient | None = None,
     controls: ControlSettings | None = None,
+    control_store: ControlStore | None = None,
     now: float | None = None,
 ) -> ReplyObserverResult:
     validate_remote_question_config(config)
@@ -305,7 +306,6 @@ def observe_discord_replies_once(
     dispatch_failed = 0
     guided = 0
     guidance_failed = 0
-    settings = controls or ControlSettings.from_config(config)
     gui_actor = dispatcher
 
     last_message_id = cursor
@@ -355,6 +355,15 @@ def observe_discord_replies_once(
             question_transport = _stored_question_transport(question)
             if question_transport == "store":
                 continue
+            settings = (
+                controls
+                or (
+                    control_store.load(question.worker_id)
+                    if control_store is not None
+                    else None
+                )
+                or ControlSettings.from_config(config)
+            )
             answer_dispatcher, gui_actor = _build_answer_dispatcher(
                 config=config,
                 transport=question_transport,

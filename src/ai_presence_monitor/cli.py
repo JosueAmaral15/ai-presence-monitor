@@ -304,7 +304,7 @@ def _ask_user(args: argparse.Namespace, config: AppConfig) -> int:
         return 0
 
     store = PresenceStore(config.db_path)
-    controls = ControlStore.from_config(config).load()
+    controls = ControlStore.from_config(config).load(worker_id)
     try:
         question = ask_remote_question(
             config=config,
@@ -340,7 +340,7 @@ def _observe_replies_once(config: AppConfig, dry_run: bool = False) -> int:
         result = observe_discord_replies_once(
             config=config,
             store=PresenceStore(config.db_path),
-            controls=ControlStore.from_config(config).load(),
+            control_store=ControlStore.from_config(config),
         )
     except RemoteQuestionError as exc:
         print(f"Falha no observer de respostas: {exc}", file=sys.stderr)
@@ -400,11 +400,13 @@ def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
         )
         return 0
     try:
+        store = PresenceStore(config.db_path)
+        question = store.require_question(args.question_id)
         question = retry_answer_dispatch(
             config=config,
-            store=PresenceStore(config.db_path),
+            store=store,
             question_id=args.question_id,
-            controls=ControlStore.from_config(config).load(),
+            controls=ControlStore.from_config(config).load(question.worker_id),
         )
     except (RemoteQuestionError, ValueError) as exc:
         print(f"Falha na entrega da resposta: {exc}", file=sys.stderr)
@@ -415,7 +417,7 @@ def _dispatch_answer(args: argparse.Namespace, config: AppConfig) -> int:
 
 def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
     worker_id, _, _, _ = _identity(args, config)
-    controls = ControlStore.from_config(config).load()
+    controls = ControlStore.from_config(config).load(worker_id)
     if (
         not args.dry_run
         and not controls.task_automation_enabled
@@ -423,7 +425,9 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
     ):
         print(
             "Falha ao executar continue: automacao de tarefas desativada. "
-            "Habilite com 'ai-presence control enable task-automation' ou use "
+            "Habilite no perfil do worker com "
+            "'ai-presence control enable task-automation --profile WORKER_ID' "
+            "ou use "
             "--authorize-once para esta execucao.",
             file=sys.stderr,
         )
@@ -510,7 +514,8 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
 
 def _control(args: argparse.Namespace, config: AppConfig) -> int:
     store = ControlStore.from_config(config)
-    settings = store.load()
+    profile_id = getattr(args, "profile", None)
+    settings = store.load(profile_id)
     if args.action in {"enable", "disable"}:
         if args.control_name is None:
             raise ControlError("Informe qual controle deve ser alterado.")
@@ -519,7 +524,7 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
             args.action == "enable",
         )
         if not getattr(args, "dry_run", False):
-            store.save(settings)
+            store.save(settings, profile_id)
     elif args.action == "target":
         thread_id = (
             None
@@ -544,13 +549,14 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
             remote_auth_token_env=auth_env,
         )
         if not getattr(args, "dry_run", False):
-            store.save(settings)
+            store.save(settings, profile_id)
 
     settings_payload = dict(settings.__dict__)
     scheduled_text = settings_payload.pop("scheduled_prompt_text")
     settings_payload["scheduled_prompt_text_configured"] = bool(scheduled_text)
     payload = {
         "control_path": str(store.path),
+        "profile_id": profile_id,
         **settings_payload,
     }
     if args.json:
@@ -577,7 +583,9 @@ def _tray(args: argparse.Namespace, config: AppConfig) -> int:
 
 
 def _send_input(args: argparse.Namespace, config: AppConfig) -> int:
-    settings = ControlStore.from_config(config).load()
+    settings = ControlStore.from_config(config).load(
+        getattr(args, "profile", None)
+    )
     destination = "remote" if args.destination == "client" else "local"
     try:
         if not args.message.strip():
@@ -1162,7 +1170,7 @@ def _recover_diagnostic_incident(args: argparse.Namespace, config: AppConfig) ->
     result = recover_diagnostic_incident(
         db_path=config.db_path,
         worker_id=worker_id,
-        controls=ControlStore.from_config(config).load(),
+        controls=ControlStore.from_config(config).load(worker_id),
         message=config.continue_message,
         authorized=args.authorize_once,
         dry_run=args.dry_run,
@@ -1630,6 +1638,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("show", "enable", "disable", "target"),
     )
     control_parser.add_argument("control_name", nargs="?", choices=CONTROL_NAMES)
+    control_parser.add_argument(
+        "--profile",
+        help="ID exato do worker; sem esta opcao consulta os defaults globais.",
+    )
     control_parser.add_argument("--thread", help="UUID ou nome exato da sessao Codex.")
     control_parser.add_argument("--clear-thread", action="store_true")
     control_parser.add_argument("--remote", help="Endpoint app-server remoto.")
@@ -1657,6 +1669,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Envia texto diretamente para uma sessao Codex, sem mouse ou teclado.",
     )
     input_parser.add_argument("--message", required=True, help="Texto a enfileirar.")
+    input_parser.add_argument(
+        "--profile",
+        help="ID exato do worker cujos controles devem ser aplicados.",
+    )
     input_parser.add_argument(
         "--destination",
         choices=("local", "client"),

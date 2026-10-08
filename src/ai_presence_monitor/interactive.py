@@ -900,7 +900,6 @@ def _run_reply_observer_loop(env_file: Path, dry_run: bool) -> None:
 
 def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
     config = _load_current_config(env_file)
-    controls = ControlStore.from_config(config).load()
     ai_name = _prompt_text("Nome da IA/agente", "codex", allow_clear=False)
     computer = _prompt_text(
         "Nome do computador",
@@ -912,6 +911,7 @@ def _continue_task_interactive(env_file: Path, dry_run: bool) -> None:
         config.codex_worker_id or f"{computer}:{ai_name}",
         allow_clear=False,
     )
+    controls = ControlStore.from_config(config).load(worker)
     message = _prompt_text(
         "Mensagem de continuidade",
         config.continue_message,

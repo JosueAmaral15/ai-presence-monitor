@@ -44,6 +44,7 @@ class ControlStoreTests(unittest.TestCase):
                 scheduled_prompt_enabled=True,
                 scheduled_prompt_delay_minutes=210,
                 scheduled_prompt_text="continue",
+                scheduled_prompt_require_red_inactivity=True,
                 scheduled_prompt_thread_id="thread-1",
                 scheduled_prompt_due_at=13_600.0,
                 scheduled_prompt_id="schedule-1",
@@ -81,6 +82,93 @@ class ControlStoreTests(unittest.TestCase):
             self.assertFalse(settings.scheduled_prompt_enabled)
             self.assertEqual(settings.scheduled_prompt_delay_minutes, 210)
             self.assertEqual(settings.scheduled_prompt_text, "continue")
+
+    def test_profiles_inherit_global_defaults_and_remain_isolated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "control.json"
+            store = ControlStore(path, ControlSettings())
+            global_settings = replace(
+                ControlSettings(),
+                native_input_enabled=True,
+                scheduled_prompt_delay_minutes=45,
+            )
+            clarify_settings = replace(
+                global_settings,
+                task_automation_enabled=True,
+                scheduled_prompt_delay_minutes=210,
+                scheduled_prompt_require_red_inactivity=True,
+            )
+            ethos_settings = replace(
+                global_settings,
+                native_input_enabled=False,
+                scheduled_prompt_text="proceed",
+            )
+
+            store.save(global_settings)
+            self.assertEqual(store.load("new-worker"), global_settings)
+            store.save(clarify_settings, "worker-clarify")
+            store.save(ethos_settings, "worker-ethos")
+
+            self.assertEqual(store.load(), global_settings)
+            self.assertEqual(store.load("worker-clarify"), clarify_settings)
+            self.assertEqual(store.load("worker-ethos"), ethos_settings)
+            self.assertEqual(
+                store.list_profile_ids(),
+                ("worker-clarify", "worker-ethos"),
+            )
+
+            updated_global = replace(global_settings, sync_activity_enabled=False)
+            store.save(updated_global)
+            self.assertEqual(store.load(), updated_global)
+            self.assertEqual(store.load("worker-clarify"), clarify_settings)
+            self.assertEqual(store.load("worker-ethos"), ethos_settings)
+
+    def test_new_profile_never_inherits_an_armed_global_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = ControlStore(Path(tmp) / "control.json", ControlSettings())
+            global_settings = ControlSettings(
+                native_input_enabled=True,
+                scheduled_prompt_enabled=True,
+                scheduled_prompt_delay_minutes=210,
+                scheduled_prompt_text="continue",
+                scheduled_prompt_require_red_inactivity=True,
+                scheduled_prompt_thread_id="global-session",
+                scheduled_prompt_due_at=10_000.0,
+                scheduled_prompt_id="global-schedule",
+                scheduled_prompt_last_state="armed",
+            )
+            store.save(global_settings)
+
+            profile = store.load("new-worker")
+
+            self.assertFalse(profile.scheduled_prompt_enabled)
+            self.assertEqual(profile.scheduled_prompt_delay_minutes, 210)
+            self.assertEqual(profile.scheduled_prompt_text, "continue")
+            self.assertTrue(profile.scheduled_prompt_require_red_inactivity)
+            self.assertIsNone(profile.scheduled_prompt_thread_id)
+            self.assertIsNone(profile.scheduled_prompt_due_at)
+            self.assertIsNone(profile.scheduled_prompt_id)
+            self.assertEqual(profile.scheduled_prompt_last_state, "disabled")
+
+    def test_invalid_profile_document_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "control.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "settings": {},
+                        "profiles": {"bad\nprofile": {}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            store = ControlStore(path, ControlSettings())
+
+            with self.assertRaisesRegex(ControlError, "uma linha"):
+                store.list_profile_ids()
+            with self.assertRaisesRegex(ControlError, "uma linha"):
+                store.load("bad\nprofile")
 
     def test_controls_and_target_are_immutable_updates(self) -> None:
         settings = ControlSettings()

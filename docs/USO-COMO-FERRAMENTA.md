@@ -134,6 +134,7 @@ Consulte a politica compartilhada:
 ```bash
 ai-presence control show
 ai-presence control show --json
+ai-presence control show --profile WORKER_ID --json
 ```
 
 As autorizacoes sao independentes:
@@ -149,19 +150,27 @@ As autorizacoes sao independentes:
 Exemplos:
 
 ```bash
-ai-presence control enable native-input
-ai-presence control enable task-automation
-ai-presence control disable gui-fallback
-ai-presence control target --thread SESSAO_EXATA
+ai-presence control enable native-input --profile WORKER_ID
+ai-presence control enable task-automation --profile WORKER_ID
+ai-presence control disable gui-fallback --profile WORKER_ID
+ai-presence control target --profile WORKER_ID --thread SESSAO_EXATA
 ```
 
 Habilitar `task-automation` e uma autorizacao persistente, nao um timer. O
 sistema nao envia `continue` sozinho em intervalos fixos.
 
+A bandeja salva todos os checkboxes e campos em um perfil completo por
+`worker_id`. Com escopo `project`, aplicativos como Clarify e Ethos Agenda
+mantem configuracoes independentes. O item global serve como default para um
+perfil ainda inexistente.
+
 A bandeja oferece separadamente um prompt temporizado one-shot. O usuario
-seleciona uma sessao exata, habilita o checkbox e define minutos e texto. Os
-defaults sao 210 minutos e `continue`; a tentativa e desarmada antes do envio e
-nunca se repete automaticamente.
+seleciona o perfil e uma sessao desse worker, habilita o checkbox e define
+minutos e texto. Os defaults sao 210 minutos e `continue`; a tentativa e
+desarmada antes do envio e nunca se repete automaticamente. Um segundo checkbox
+pode exigir tambem inatividade vermelha: 30 minutos pelo relogio de sinal do
+Protocolo 1 ou 15 minutos pelo relogio de atividade do Protocolo 2. O atraso
+configurado continua sendo o prazo minimo.
 
 Para usar a bandeja:
 
@@ -500,7 +509,7 @@ A IA so pode executar `continue` quando:
 Sequencia recomendada:
 
 ```bash
-ai-presence control show --json
+ai-presence control show --profile WORKER_ID --json
 ai-presence --dry-run continue \
   --project "$PROJECT" \
   --thread SESSAO_EXATA \

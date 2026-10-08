@@ -96,28 +96,73 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     control_store = ControlStore.from_config(config)
     presence_store = PresenceStore(config.db_path)
 
-    def load_settings() -> ControlSettings:
-        return control_store.load()
+    def load_settings(profile_id: str | None = None) -> ControlSettings:
+        return control_store.load(profile_id)
 
-    def session_combo(configured: str | None) -> QComboBox:
+    def known_profile_ids() -> tuple[str, ...]:
+        profile_ids = set(control_store.list_profile_ids())
+        profile_ids.update(worker.worker_id for worker in presence_store.list_workers())
+        profile_ids.update(
+            session.worker_id for session in presence_store.list_codex_sessions()
+        )
+        return tuple(sorted(profile_ids))
+
+    def profile_combo(configured: str | None = None) -> QComboBox:
         combo = QComboBox()
-        combo.setEditable(True)
+        combo.addItem("Global defaults", None)
+        configured_index = 0
+        workers = {
+            worker.worker_id: worker for worker in presence_store.list_workers()
+        }
+        for profile_id in known_profile_ids():
+            worker = workers.get(profile_id)
+            task = worker.current_task if worker and worker.current_task else "no task"
+            combo.addItem(f"{task} | {profile_id}", profile_id)
+            if profile_id == configured:
+                configured_index = combo.count() - 1
+        combo.setCurrentIndex(configured_index)
+        return combo
+
+    def selected_profile(combo: QComboBox) -> str | None:
+        data = combo.currentData()
+        return data if isinstance(data, str) and data.strip() else None
+
+    def populate_session_combo(
+        combo: QComboBox,
+        configured: str | None,
+        profile_id: str | None,
+    ) -> None:
+        combo.blockSignals(True)
+        combo.clear()
+        combo.setEditable(profile_id is None)
         configured_index = -1
-        for session in presence_store.list_codex_sessions():
+        sessions = presence_store.list_codex_sessions(worker_id=profile_id)
+        if profile_id is None:
+            sessions = presence_store.list_codex_sessions()
+        for session in sessions:
             task = session.task or "no task"
             label = f"{task} | {session.worker_id} | {session.session_id}"
             combo.addItem(label, session.session_id)
             if session.session_id == configured:
                 configured_index = combo.count() - 1
-        if configured and configured_index < 0:
+        if configured and configured_index < 0 and profile_id is None:
             combo.insertItem(0, configured, configured)
             configured_index = 0
         if configured_index >= 0:
             combo.setCurrentIndex(configured_index)
         else:
             combo.setCurrentIndex(-1)
-            combo.setEditText("")
+            if combo.isEditable():
+                combo.setEditText("")
         combo.setPlaceholderText("Codex session UUID or exact name")
+        combo.blockSignals(False)
+
+    def session_combo(
+        configured: str | None,
+        profile_id: str | None = None,
+    ) -> QComboBox:
+        combo = QComboBox()
+        populate_session_combo(combo, configured, profile_id)
         return combo
 
     def selected_session(combo: QComboBox) -> str | None:
@@ -129,8 +174,14 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         return combo.currentText().strip() or None
 
     class PreferencesDialog(QDialog):
-        def __init__(self, settings: ControlSettings):
+        def __init__(self):
             super().__init__()
+            recent_sessions = presence_store.list_codex_sessions(limit=1)
+            initial_profile = (
+                recent_sessions[0].worker_id if recent_sessions else None
+            )
+            self.profile = profile_combo(initial_profile)
+            settings = load_settings(selected_profile(self.profile))
             self._original = settings
             self.setWindowTitle("AI Presence Monitor")
             self.setMinimumWidth(480)
@@ -138,6 +189,10 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             title = QLabel("Automation controls")
             title.setStyleSheet("font-size: 16px; font-weight: 600;")
             layout.addWidget(title)
+
+            profile_form = QFormLayout()
+            profile_form.addRow("Project or agent", self.profile)
+            layout.addLayout(profile_form)
 
             self.automation = QCheckBox("Enable task automation")
             self.automation.setChecked(settings.task_automation_enabled)
@@ -160,7 +215,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
             form = QFormLayout()
             self.thread_field = session_combo(
-                settings.scheduled_prompt_thread_id or settings.codex_thread_id
+                settings.scheduled_prompt_thread_id or settings.codex_thread_id,
+                selected_profile(self.profile),
             )
             form.addRow("Codex session", self.thread_field)
             self.endpoint = QLineEdit(settings.codex_remote or "")
@@ -177,6 +233,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.scheduled_prompt = QCheckBox("Send one prompt after a delay")
             self.scheduled_prompt.setChecked(settings.scheduled_prompt_enabled)
             layout.addWidget(self.scheduled_prompt)
+            self.require_red = QCheckBox(
+                "Send only after red inactivity for this project or agent"
+            )
+            self.require_red.setChecked(
+                settings.scheduled_prompt_require_red_inactivity
+            )
+            layout.addWidget(self.require_red)
             scheduled_form = QFormLayout()
             self.scheduled_delay = QSpinBox()
             self.scheduled_delay.setRange(1, 10_080)
@@ -195,8 +258,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             def update_scheduled_fields(enabled: bool) -> None:
                 self.scheduled_delay.setEnabled(enabled)
                 self.scheduled_text.setEnabled(enabled)
+                self.require_red.setEnabled(
+                    enabled and selected_profile(self.profile) is not None
+                )
 
             self.scheduled_prompt.toggled.connect(update_scheduled_fields)
+            self.profile.currentIndexChanged.connect(self._load_selected_profile)
             update_scheduled_fields(self.scheduled_prompt.isChecked())
 
             note = QLabel(
@@ -212,6 +279,36 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             buttons.accepted.connect(self.accept)
             buttons.rejected.connect(self.reject)
             layout.addWidget(buttons)
+
+        def _load_selected_profile(self, _index: int = -1) -> None:
+            profile_id = selected_profile(self.profile)
+            settings = load_settings(profile_id)
+            self._original = settings
+            self.automation.setChecked(settings.task_automation_enabled)
+            self.native.setChecked(settings.native_input_enabled)
+            self.gui.setChecked(settings.gui_fallback_enabled)
+            self.remote.setChecked(settings.remote_input_enabled)
+            self.sync.setChecked(settings.sync_activity_enabled)
+            populate_session_combo(
+                self.thread_field,
+                settings.scheduled_prompt_thread_id or settings.codex_thread_id,
+                profile_id,
+            )
+            self.endpoint.setText(settings.codex_remote or "")
+            self.auth_env.setText(settings.remote_auth_token_env or "")
+            self.scheduled_prompt.setChecked(settings.scheduled_prompt_enabled)
+            self.require_red.setChecked(
+                settings.scheduled_prompt_require_red_inactivity
+            )
+            self.scheduled_delay.setValue(settings.scheduled_prompt_delay_minutes)
+            self.scheduled_text.setText(settings.scheduled_prompt_text)
+            self.scheduled_status.setText(_scheduled_status(settings))
+            self.require_red.setEnabled(
+                self.scheduled_prompt.isChecked() and profile_id is not None
+            )
+
+        def profile_id(self) -> str | None:
+            return selected_profile(self.profile)
 
         def result_settings(self) -> ControlSettings:
             settings = replace(
@@ -231,11 +328,19 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 delay_minutes=self.scheduled_delay.value(),
                 text=self.scheduled_text.text(),
                 thread_id=selected_session(self.thread_field),
+                require_red_inactivity=self.require_red.isChecked(),
             )
 
     class MessageDialog(QDialog):
-        def __init__(self, settings: ControlSettings):
+        def __init__(self):
             super().__init__()
+            recent_sessions = presence_store.list_codex_sessions(limit=1)
+            initial_profile = (
+                recent_sessions[0].worker_id if recent_sessions else None
+            )
+            self.profile = profile_combo(initial_profile)
+            settings = load_settings(selected_profile(self.profile))
+            self.settings = settings
             self.setWindowTitle("Respond to message")
             self.setMinimumWidth(520)
             layout = QVBoxLayout(self)
@@ -244,7 +349,11 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.destination.addItem("This computer", "local")
             self.destination.addItem("Client computer", "remote")
             form.addRow("Destination", self.destination)
-            self.thread_field = session_combo(settings.codex_thread_id)
+            form.addRow("Project or agent", self.profile)
+            self.thread_field = session_combo(
+                settings.codex_thread_id,
+                selected_profile(self.profile),
+            )
             form.addRow("Codex session", self.thread_field)
             layout.addLayout(form)
             self.message = QPlainTextEdit()
@@ -259,6 +368,16 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             buttons.accepted.connect(self.accept)
             buttons.rejected.connect(self.reject)
             layout.addWidget(buttons)
+            self.profile.currentIndexChanged.connect(self._load_selected_profile)
+
+        def _load_selected_profile(self, _index: int = -1) -> None:
+            profile_id = selected_profile(self.profile)
+            self.settings = load_settings(profile_id)
+            populate_session_combo(
+                self.thread_field,
+                self.settings.codex_thread_id,
+                profile_id,
+            )
 
         def destination_name(self) -> str:
             return str(self.destination.currentData())
@@ -288,7 +407,15 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             due = datetime.fromtimestamp(
                 settings.scheduled_prompt_due_at
             ).astimezone()
-            return f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; one attempt only."
+            red_gate = (
+                " It will then wait for red inactivity."
+                if settings.scheduled_prompt_require_red_inactivity
+                else ""
+            )
+            return (
+                f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; one attempt only."
+                f"{red_gate}"
+            )
         labels = {
             "dispatching": "Dispatch was claimed; automatic retry is disabled.",
             "dispatch_started": (
@@ -304,7 +431,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     tray = QSystemTrayIcon(icon(), app)
     tray.setToolTip("AI Presence Monitor")
     menu = QMenu()
-    automation_action = QAction("Enable task automation", menu)
+    automation_action = QAction("Enable task automation (global default)", menu)
     automation_action.setCheckable(True)
     automation_action.setChecked(load_settings().task_automation_enabled)
     respond_action = QAction("Respond to message...", menu)
@@ -336,26 +463,26 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
     def show_preferences() -> None:
         try:
-            dialog = PreferencesDialog(load_settings())
+            dialog = PreferencesDialog()
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
             settings = dialog.result_settings()
-            control_store.save(settings)
-            automation_action.blockSignals(True)
-            automation_action.setChecked(settings.task_automation_enabled)
-            automation_action.blockSignals(False)
+            control_store.save(settings, dialog.profile_id())
+            if dialog.profile_id() is None:
+                automation_action.blockSignals(True)
+                automation_action.setChecked(settings.task_automation_enabled)
+                automation_action.blockSignals(False)
             check_scheduled_prompt()
         except (ControlError, OSError) as exc:
             show_error("Unable to save preferences", exc)
 
     def respond() -> None:
         try:
-            settings = load_settings()
-            dialog = MessageDialog(settings)
+            dialog = MessageDialog()
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
             result = dispatch_tray_message(
-                settings=settings,
+                settings=dialog.settings,
                 message=dialog.message.toPlainText(),
                 destination=dialog.destination_name(),
                 thread_id=selected_session(dialog.thread_field),
@@ -373,15 +500,15 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             show_preferences()
 
-    last_schedule_notice: list[str | None] = [None]
+    last_schedule_notice: dict[str, str | None] = {}
 
     def check_scheduled_prompt() -> None:
         try:
-            result = process_due_scheduled_prompt(store=control_store)
+            profile_ids = control_store.list_profile_ids()
         except (ControlError, OSError) as exc:
-            notice_key = f"error:{type(exc).__name__}:{exc}"
-            if last_schedule_notice[0] != notice_key:
-                last_schedule_notice[0] = notice_key
+            notice_key = f"profiles:{type(exc).__name__}:{exc}"
+            if last_schedule_notice.get("profiles") != notice_key:
+                last_schedule_notice["profiles"] = notice_key
                 tray.showMessage(
                     "Scheduled prompt unavailable",
                     str(exc),
@@ -389,26 +516,47 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                     5000,
                 )
             return
-        if result.state in {"disabled", "waiting"}:
-            last_schedule_notice[0] = None
-            return
-        if last_schedule_notice[0] == result.state:
-            return
-        last_schedule_notice[0] = result.state
-        if result.state == "failed_or_uncertain":
+        last_schedule_notice["profiles"] = None
+        for profile_id in (None, *profile_ids):
+            notice_profile = profile_id or "global"
+            try:
+                result = process_due_scheduled_prompt(
+                    store=control_store,
+                    profile_id=profile_id,
+                    presence_store=presence_store,
+                )
+            except (ControlError, OSError) as exc:
+                notice_key = f"error:{type(exc).__name__}:{exc}"
+                if last_schedule_notice.get(notice_profile) != notice_key:
+                    last_schedule_notice[notice_profile] = notice_key
+                    tray.showMessage(
+                        "Scheduled prompt unavailable",
+                        f"{notice_profile}: {exc}",
+                        QSystemTrayIcon.MessageIcon.Critical,
+                        5000,
+                    )
+                continue
+            if result.state in {"disabled", "waiting", "waiting_for_red"}:
+                last_schedule_notice[notice_profile] = None
+                continue
+            if last_schedule_notice.get(notice_profile) == result.state:
+                continue
+            last_schedule_notice[notice_profile] = result.state
+            if result.state == "failed_or_uncertain":
+                tray.showMessage(
+                    "Scheduled prompt not confirmed",
+                    f"{notice_profile}: the one-shot attempt failed or was "
+                    "uncertain and will not retry.",
+                    QSystemTrayIcon.MessageIcon.Warning,
+                    5000,
+                )
+                continue
             tray.showMessage(
-                "Scheduled prompt not confirmed",
-                "The one-shot attempt failed or was uncertain and will not retry.",
-                QSystemTrayIcon.MessageIcon.Warning,
-                5000,
+                "Scheduled prompt dispatched",
+                f"{notice_profile}: transport started. Await later session evidence.",
+                QSystemTrayIcon.MessageIcon.Information,
+                4000,
             )
-            return
-        tray.showMessage(
-            "Scheduled prompt dispatched",
-            "The one-shot transport started. Await later session evidence.",
-            QSystemTrayIcon.MessageIcon.Information,
-            4000,
-        )
 
     automation_action.toggled.connect(toggle_automation)
     respond_action.triggered.connect(respond)

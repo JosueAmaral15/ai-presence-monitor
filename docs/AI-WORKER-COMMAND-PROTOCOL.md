@@ -254,7 +254,7 @@ controlar mouse ou teclado; X11/Win32 e apenas fallback. Ele nao e necessario
 para registrar atividade comum:
 
 ```bash
-ai-presence control show
+ai-presence control show --profile WORKER_ID
 ai-presence --dry-run continue --project "$PROJECT" --thread SESSAO_EXATA
 ai-presence continue --project "$PROJECT"
 ```
@@ -276,10 +276,13 @@ do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
 uma falha. Consulte [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md).
 
 A bandeja possui um agendamento humano one-shot separado, com default de 210
-minutos e `continue`. Um AI-worker pode consultar o estado sanitizado por
-`control show`, mas nao deve armar, postergar ou repetir esse agendamento em
-nome do usuario. O vencimento nao e heartbeat nem evidencia de trabalho; apenas
-um hook posterior registra atividade normal da sessao.
+minutos e `continue`, salvo no perfil do `worker_id`. Um checkbox humano opcional
+faz o scheduler aguardar, alem do prazo, o vermelho de 30 minutos do Protocolo 1
+ou 15 minutos do Protocolo 2. Um AI-worker pode consultar seu estado sanitizado
+por `control show --profile WORKER_ID`, mas nao deve armar, postergar ou repetir
+esse agendamento em nome do usuario. O vencimento e o vermelho nao sao heartbeat
+nem evidencia de trabalho; apenas um hook posterior registra atividade normal
+da sessao.
 
 No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_presence_monitor.codex_input import (
     CodexInputError,
@@ -13,6 +14,7 @@ from ai_presence_monitor.scheduled_prompt import (
     configure_scheduled_prompt,
     process_due_scheduled_prompt,
 )
+from ai_presence_monitor.store import PresenceStore
 
 
 class FakeClient:
@@ -246,6 +248,115 @@ class ScheduledPromptTests(unittest.TestCase):
                 store.load().scheduled_prompt_last_state,
                 "failed_or_uncertain",
             )
+
+    def test_red_gate_uses_each_protocol_clock_and_threshold(self) -> None:
+        cases = (
+            ("protocol1", 2_799.0, 2_800.0),
+            ("protocol2", 1_899.0, 1_900.0),
+        )
+        for protocol, before_red, at_red in cases:
+            with self.subTest(protocol=protocol), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                control_store = ControlStore(
+                    root / "control.json",
+                    ControlSettings(),
+                )
+                presence_store = PresenceStore(root / "presence.db")
+                worker_id = f"worker-{protocol}"
+                with patch("ai_presence_monitor.store.time.time", return_value=1_000.0):
+                    presence_store.record_event(
+                        worker_id=worker_id,
+                        computer="computer",
+                        ia_name="codex",
+                        protocol=protocol,
+                        event_type="start",
+                        task="task",
+                    )
+                control_store.save(
+                    configure_scheduled_prompt(
+                        ControlSettings(native_input_enabled=True),
+                        enabled=True,
+                        delay_minutes=1,
+                        text="continue",
+                        thread_id="session-1",
+                        require_red_inactivity=True,
+                        now=1_000.0,
+                        schedule_id=f"schedule-{protocol}",
+                    ),
+                    worker_id,
+                )
+                client = FakeClient()
+
+                waiting = process_due_scheduled_prompt(
+                    store=control_store,
+                    profile_id=worker_id,
+                    presence_store=presence_store,
+                    now=before_red,
+                    client=client,  # type: ignore[arg-type]
+                )
+                sent = process_due_scheduled_prompt(
+                    store=control_store,
+                    profile_id=worker_id,
+                    presence_store=presence_store,
+                    now=at_red,
+                    client=client,  # type: ignore[arg-type]
+                )
+                repeated = process_due_scheduled_prompt(
+                    store=control_store,
+                    profile_id=worker_id,
+                    presence_store=presence_store,
+                    now=at_red + 600,
+                    client=client,  # type: ignore[arg-type]
+                )
+
+                self.assertEqual(waiting.state, "waiting_for_red")
+                self.assertEqual(sent.state, "dispatch_started")
+                self.assertEqual(repeated.state, "disabled")
+                self.assertEqual(len(client.calls), 1)
+
+    def test_red_gate_does_not_dispatch_for_idle_or_missing_worker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control_store = ControlStore(root / "control.json", ControlSettings())
+            presence_store = PresenceStore(root / "presence.db")
+            client = FakeClient()
+            for worker_id in ("idle-worker", "missing-worker"):
+                if worker_id == "idle-worker":
+                    with patch(
+                        "ai_presence_monitor.store.time.time",
+                        return_value=1_000.0,
+                    ):
+                        presence_store.record_event(
+                            worker_id=worker_id,
+                            computer="computer",
+                            ia_name="codex",
+                            protocol="protocol2",
+                            event_type="finish",
+                        )
+                control_store.save(
+                    configure_scheduled_prompt(
+                        ControlSettings(native_input_enabled=True),
+                        enabled=True,
+                        delay_minutes=1,
+                        text="continue",
+                        thread_id="session-1",
+                        require_red_inactivity=True,
+                        now=1_000.0,
+                        schedule_id=f"schedule-{worker_id}",
+                    ),
+                    worker_id,
+                )
+
+                result = process_due_scheduled_prompt(
+                    store=control_store,
+                    profile_id=worker_id,
+                    presence_store=presence_store,
+                    now=3_000.0,
+                    client=client,  # type: ignore[arg-type]
+                )
+
+                self.assertEqual(result.state, "waiting_for_red")
+            self.assertEqual(client.calls, [])
 
 
 if __name__ == "__main__":

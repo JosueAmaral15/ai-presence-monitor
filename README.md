@@ -597,7 +597,7 @@ Native input uses `codex queue` and does not take over the mouse, keyboard, or
 clipboard:
 
 ```bash
-ai-presence control enable task-automation
+ai-presence control enable task-automation --profile EXACT_WORKER_ID
 ai-presence --dry-run continue \
   --worker EXACT_WORKER_ID \
   --thread EXACT_SESSION_ID
@@ -641,11 +641,15 @@ transport failure, and inactive workers do not count as activity. Enabling task
 automation grants permission; it does not start a periodic timer.
 
 The optional system tray also provides a separate one-shot scheduler. Select
-an exact session, enable **Send one prompt after a delay**, choose the delay in
-minutes and enter the prompt. Its defaults are 210 minutes and `continue`.
-The schedule is persisted across tray restarts, disarmed before transport and
-never retried automatically. The tray must be running when the due time is
-evaluated; an overdue armed prompt is processed when the tray starts again.
+a project or agent profile and one of its exact sessions, enable **Send one
+prompt after a delay**, choose the delay in minutes and enter the prompt. Its
+defaults are 210 minutes and `continue`. Every checkbox and field is stored
+independently for that worker. An optional second checkbox waits for both the
+configured due time and red inactivity: 30 minutes in Protocol 1 or 15 minutes
+in Protocol 2. The schedule is persisted across tray restarts, disarmed before
+transport and never retried automatically. The tray must be running when the
+conditions are evaluated; an overdue armed prompt is processed when the tray
+starts again and all enabled gates pass.
 
 See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) and the
 [system tray guide](docs/SYSTEM-TRAY-NATIVE-INPUT.md) for controls, background

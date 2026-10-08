@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-10-08 - Controles por worker e gate vermelho adicional
+
+**Decisao**: persistir cada conjunto completo de controles sob o `worker_id` e
+tratar o checkbox de inatividade vermelha como uma condicao adicional ao atraso
+do prompt temporizado.
+
+O documento mantem `settings` como defaults globais e adiciona `profiles` sem
+alterar a versao do formato. No Protocolo 1, vermelho significa 30 minutos desde
+`last_signal_at`; no Protocolo 2, 15 minutos desde `last_activity_at`.
+
+**Motivo**: projetos e agentes diferentes nao devem compartilhar autorizacoes,
+destinos ou timers por acidente. Manter o atraso como prazo minimo preserva a
+utilidade do campo de 210 minutos e evita que marcar o novo checkbox transforme
+o scheduler em um simples disparo aos 15/30 minutos.
+
+**Alternativas consideradas**:
+
+- arquivo separado por projeto: rejeitado por multiplicar caminhos e tornar a
+  bandeja incapaz de observar todos os perfis de uma vez;
+- chave por sessao: rejeitada porque uma nova sessao perderia as preferencias do
+  projeto/agente;
+- substituir o atraso pelo limiar vermelho: rejeitado porque tornaria o campo de
+  minutos enganoso;
+- usar `last_alert_level`: rejeitado porque notificacao e elegibilidade de input
+  devem permanecer independentes.
+
+**Consequencia**: o isolamento segue o escopo do worker. Com escopo `project`,
+Clarify e Ethos Agenda possuem perfis distintos; com escopo global, compartilham
+o mesmo worker. A bandeja precisa continuar ativa para avaliar os perfis.
+
 ## 2026-10-08 - Prompt temporizado e one-shot, nao heartbeat periodico
 
 **Decisao**: permitir que o usuario programe pela bandeja uma unica mensagem

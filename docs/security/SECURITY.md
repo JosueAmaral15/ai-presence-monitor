@@ -477,6 +477,29 @@ argumentos locais de `codex queue`; nao use segredos. Se a bandeja estiver
 fechada ou o computador suspenso, a tentativa vencida ocorre na proxima
 execucao. `dispatch_started` nao confirma processamento e nao autoriza retry.
 
+## Task 028 - Perfis e gate de inatividade vermelha
+
+- [x] Perfis usam o `worker_id` limitado e rejeitam vazio, quebra de linha, NUL
+      ou tamanho excessivo.
+- [x] O formato mantem defaults globais e adiciona perfis sem migracao
+      destrutiva; uma gravacao preserva os demais perfis.
+- [x] O seletor de perfil filtra sessoes observadas do mesmo worker.
+- [x] O gate usa somente status ativo, relogio monitorado e threshold vermelho
+      definidos pelo protocolo; nao usa estado de notificacao como autorizacao.
+- [x] Worker ausente, idle, protocolo desconhecido ou relogio ausente falha
+      fechado e nao envia input.
+- [x] O prazo configurado continua obrigatorio e o claim one-shot ocorre antes
+      do transporte, sem retry ou fallback.
+- [x] Texto do prompt continua omitido da saida de `control show`.
+
+### Risco residual
+
+O `worker_id` e uma fronteira logica dentro da conta local, nao autenticacao
+contra outro processo do mesmo usuario. Um perfil com gate vermelho depende de
+hooks/heartbeats corretos; evidencia ausente pode tornar o worker vermelho mesmo
+durante trabalho real. O envio continua sendo um input previamente autorizado,
+nao prova processamento nem progresso, e requer hook posterior para atividade.
+
 ## Task 016 - Bandeja e entrada nativa
 
 - [x] `codex queue` recebe lista de argumentos e nunca usa shell.

@@ -2,7 +2,7 @@
 
 ## Resultado
 
-A versao 0.6.1 oferece duas formas de enviar texto ao Codex:
+A interface atual oferece duas formas de enviar texto ao Codex:
 
 1. **entrada nativa**, por `codex queue`, sem mover mouse, usar teclado ou
    alterar clipboard;
@@ -116,8 +116,8 @@ Nao use uma unidade systemd sem acesso ao barramento grafico.
 
 O menu de contexto possui os tres comandos solicitados:
 
-- **Enable task automation**: habilita ou desabilita a autorizacao persistente
-  para o procedimento `continue`;
+- **Enable task automation (global default)**: habilita ou desabilita o default
+  herdado por novos perfis; preferencias de um worker sao alteradas no dialogo;
 - **Respond to message...**: abre o compositor e permite escolher este
   computador ou o computador cliente;
 - **Exit**: remove o icone e encerra a bandeja.
@@ -127,6 +127,9 @@ Um clique simples no icone abre as preferencias.
 ## Preferencias e Checkboxes
 
 As preferencias oferecem:
+
+- **Project or agent**: escolhe o perfil identificado pelo `worker_id`; o item
+  **Global defaults** define somente a heranca de perfis ainda inexistentes;
 
 - **Enable task automation**: permite que `ai-presence continue` seja acionado
   por um AI-worker que cumpra a norma de continuidade;
@@ -139,8 +142,8 @@ As preferencias oferecem:
 
 Os campos de destino sao:
 
-- **Codex session**: seletor editavel com tarefa, worker e sessoes vistas pelos
-  hooks; tambem aceita UUID ou nome exato digitado;
+- **Codex session**: para um perfil, mostra somente sessoes vistas pelos hooks do
+  mesmo worker; nos defaults globais, permanece editavel para compatibilidade;
 - **Client endpoint**: endereco `ws://`, `wss://` ou `unix://` do app-server;
 - **Token variable**: nome da variavel de ambiente que contem o bearer token.
 
@@ -150,15 +153,31 @@ O valor do token nao e exibido nem salvo pela bandeja.
 
 Nas preferencias:
 
-1. selecione a sessao exata em **Codex session**;
-2. marque **Send one prompt after a delay**;
-3. informe **Delay**, em minutos; o default e `210 min`;
-4. informe **Prompt**; o default e `continue`;
-5. pressione **Save**.
+1. selecione o worker em **Project or agent**;
+2. selecione uma sessao dele em **Codex session**;
+3. marque **Send one prompt after a delay**;
+4. opcionalmente marque **Send only after red inactivity for this project or
+   agent**;
+5. informe **Delay**, em minutos; o default e `210 min`;
+6. informe **Prompt**; o default e `continue`;
+7. pressione **Save**.
 
 A interface mostra o vencimento local. Salvar novamente sem mudar habilitacao,
 minutos, texto ou sessao preserva o vencimento original. Alterar qualquer um
 desses campos rearma a contagem; desmarcar cancela a tentativa pendente.
+
+O checkbox vermelho nao substitui o atraso. Com `210 min`, o scheduler nunca
+envia antes de 210 minutos. Depois desse prazo, ele envia somente quando o
+worker selecionado estiver ativo e tambem tiver atingido:
+
+| Protocolo | Relogio | Vermelho |
+|---|---|---|
+| Protocolo 1 | `last_signal_at` | 30 minutos |
+| Protocolo 2 | `last_activity_at` | 15 minutos |
+
+Um worker ausente, finalizado (`idle`) ou com protocolo/relogio invalido
+permanece aguardando e nao libera input. O gate consulta a inatividade atual,
+nao o ultimo alerta enviado ao Discord.
 
 O recurso usa somente `codex queue` local. No vencimento, o estado e desarmado
 antes de criar o processo destacado. Assim, encerramento da bandeja, falha ou
@@ -178,29 +197,31 @@ Consultar o estado:
 ```bash
 ai-presence control
 ai-presence control show --json
+ai-presence control show --profile WORKER_ID --json
 ```
 
 Habilitar e desabilitar recursos:
 
 ```bash
-ai-presence control enable task-automation
-ai-presence control disable task-automation
-ai-presence control enable native-input
-ai-presence control disable gui-fallback
-ai-presence control enable remote-input
-ai-presence control enable activity-sync
+ai-presence control enable task-automation --profile WORKER_ID
+ai-presence control disable task-automation --profile WORKER_ID
+ai-presence control enable native-input --profile WORKER_ID
+ai-presence control disable gui-fallback --profile WORKER_ID
+ai-presence control enable remote-input --profile WORKER_ID
+ai-presence control enable activity-sync --profile WORKER_ID
 ```
 
 Definir o alvo local:
 
 ```bash
-ai-presence control target --thread SESSAO_EXATA
+ai-presence control target --profile WORKER_ID --thread SESSAO_EXATA
 ```
 
 Definir o computador cliente:
 
 ```bash
 ai-presence control target \
+  --profile WORKER_ID \
   --thread SESSAO_EXATA \
   --remote 'wss://cliente.exemplo/app-server' \
   --remote-auth-token-env CODEX_REMOTE_AUTH_TOKEN
@@ -209,7 +230,7 @@ ai-presence control target \
 Remover alvos persistidos:
 
 ```bash
-ai-presence control target --clear-thread --clear-remote
+ai-presence control target --profile WORKER_ID --clear-thread --clear-remote
 ```
 
 ## Enviar uma Mensagem
@@ -225,7 +246,7 @@ ai-presence --dry-run send-input \
 Envio local real:
 
 ```bash
-ai-presence send-input --message 'Resposta para o agente'
+ai-presence send-input --profile WORKER_ID --message 'Resposta para o agente'
 ```
 
 Para escolher explicitamente o modo nao bloqueante:
@@ -255,7 +276,7 @@ que um AI-worker execute o procedimento quando houver uma proxima tarefa
 concreta, sem pergunta ou bloqueio pendente:
 
 ```bash
-ai-presence control enable task-automation
+ai-presence control enable task-automation --profile WORKER_ID
 ai-presence --dry-run continue \
   --project /caminho/absoluto/do/projeto
 ai-presence continue \
@@ -312,11 +333,18 @@ No Windows, normalmente fica sob:
 ```
 
 O arquivo e gravado por substituicao atomica e recebe modo `600` em sistemas
-POSIX. Ele contem flags, sessao, endpoint, **nome** da variavel de token e, se
-configurado, o prompt temporizado. Nunca contem o valor do token. O comando
-`control show` informa apenas que existe texto configurado, sem imprimi-lo.
-Depois que o arquivo existe, seus valores substituem os defaults do `.env`.
-Para voltar aos defaults, encerre a bandeja e remova somente `control.json`.
+POSIX. `settings` contem os defaults globais e `profiles` contem uma configuracao
+completa por `worker_id`: flags, sessao, endpoint, **nome** da variavel de token,
+checkboxes, atraso, texto e estado do prompt temporizado. Nunca contem o valor do
+token. O comando `control show` informa apenas que existe texto configurado, sem
+imprimi-lo.
+
+Um perfil novo herda os defaults globais ate ser salvo. Depois disso, suas
+mudancas nao alteram outros workers. A separacao real depende do escopo do
+worker: use `PRESENCE_CODEX_WORKER_SCOPE=project` para manter, por exemplo,
+Clarify e Ethos Agenda independentes. Para voltar a todos os defaults, encerre a
+bandeja e remova somente `control.json`; isso tambem remove todos os perfis e
+agendamentos, portanto faca backup quando quiser preservar as escolhas.
 
 Defina `PRESENCE_CONTROL_PATH` apenas para substituir esse local. Um caminho
 relativo explicito e resolvido a partir do diretorio do `.env`.

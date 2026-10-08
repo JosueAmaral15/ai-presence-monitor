@@ -12,6 +12,13 @@
   detached local `codex queue` attempt and is never retried automatically.
 - Preserved existing `control.json` files through additive defaults without a
   control-format or SQLite-schema migration.
+- Added full control profiles keyed by worker so projects and agents can retain
+  independent permissions, targets, scheduled delays, prompt text and states.
+- Added an optional red-inactivity gate that dispatches only after both the
+  configured delay and the canonical 30-minute Protocol 1 or 15-minute
+  Protocol 2 red threshold have been reached.
+- Made continuation, Discord question/reply delivery, manual answer retry and
+  diagnostic recovery resolve the matching worker profile.
 
 ## 2026-09-24 - v0.9.0
 

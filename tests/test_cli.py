@@ -598,6 +598,47 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertNotIn("private scheduled prompt", payload)
             self.assertIn('"scheduled_prompt_text_configured": true', payload)
 
+    def test_control_and_send_input_use_explicit_worker_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(make_config(root), control_path=root / "control.json")
+            enable_args = argparse.Namespace(
+                action="enable",
+                control_name="task-automation",
+                profile="worker-clarify",
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=False,
+                dry_run=False,
+            )
+
+            with redirect_stdout(StringIO()):
+                self.assertEqual(_control(enable_args, config), 0)
+
+            store = ControlStore.from_config(config)
+            self.assertFalse(store.load().task_automation_enabled)
+            self.assertTrue(store.load("worker-clarify").task_automation_enabled)
+            store.save(
+                replace(
+                    store.load("worker-clarify"),
+                    codex_thread_id="clarify-session",
+                ),
+                "worker-clarify",
+            )
+            input_args = argparse.Namespace(
+                profile="worker-clarify",
+                destination="local",
+                thread=None,
+                message="continue",
+                dry_run=True,
+            )
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_send_input(input_args, config), 0)
+            self.assertIn("sessao=clarify-session", output.getvalue())
+
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
         outcomes = (

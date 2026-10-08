@@ -401,10 +401,14 @@ SQLite.
 
 ## Bandeja e Politica de Automacao
 
-`control.py` persiste `ControlSettings` em JSON por substituicao atomica. Por
-padrao, o arquivo fica na area de estado do usuario, fora do checkout, e nao
-armazena token, somente o nome da variavel de ambiente. CLI e `tray.py` leem o
-mesmo arquivo.
+`control.py` persiste `ControlSettings` em JSON por substituicao atomica. O
+objeto `settings` continua sendo o default global compativel; o mapa aditivo
+`profiles` guarda uma copia completa por `worker_id`. Um perfil ausente herda as
+preferencias globais sem escrita, mas nao herda tentativa armada, sessao,
+vencimento ou UUID; a primeira gravacao cria seu snapshot independente.
+Salvar um perfil preserva todos os demais. Por padrao, o arquivo fica na area de
+estado do usuario, fora do checkout, e nao armazena token, somente o nome da
+variavel de ambiente. CLI e `tray.py` leem o mesmo arquivo.
 
 `tray.py` importa PySide6 apenas ao iniciar a interface. Isso mantem a camada
 grafica fora da dependencia base e permite executar monitor/hooks em ambientes
@@ -416,9 +420,13 @@ executar `continue` continua pertencendo ao AI-worker e as pre-condicoes
 normativas da tarefa.
 
 `scheduled_prompt.py` implementa um scheduler diferente e explicitamente
-humano: uma unica mensagem, sessao local exata e vencimento absoluto. A bandeja
-consulta o vencimento com `QTimer`, mas o nucleo e independente de Qt. Antes de
-chamar `codex queue`, ele grava o agendamento como desabilitado e
+humano: uma unica mensagem, sessao local exata e vencimento absoluto por perfil.
+A bandeja consulta todos os perfis com `QTimer`, mas o nucleo e independente de
+Qt. O gate opcional consulta o worker exato no `PresenceStore`, usa
+`last_signal_at`/30 minutos no Protocolo 1 e `last_activity_at`/15 minutos no
+Protocolo 2. O prazo configurado e o minimo: depois dele, um worker ainda nao
+vermelho permanece armado. Worker ausente ou idle falha fechado. Antes de chamar
+`codex queue`, o scheduler grava o agendamento como desabilitado e
 `dispatching`; conclusao, falha ou incerteza apenas atualizam o estado e nunca
 rearmam a tentativa. Um UUID impede que a conclusao de uma tentativa antiga
 sobrescreva um novo agendamento criado concorrentemente.

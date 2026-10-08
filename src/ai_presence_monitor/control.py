@@ -14,6 +14,7 @@ DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES = 210
 DEFAULT_SCHEDULED_PROMPT_TEXT = "continue"
 MAX_SCHEDULED_PROMPT_DELAY_MINUTES = 10_080
 MAX_SCHEDULED_PROMPT_TEXT_LENGTH = 4_000
+MAX_CONTROL_PROFILE_ID_LENGTH = 512
 SCHEDULED_PROMPT_STATES = frozenset(
     {
         "disabled",
@@ -50,6 +51,7 @@ class ControlSettings:
     scheduled_prompt_enabled: bool = False
     scheduled_prompt_delay_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
     scheduled_prompt_text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
+    scheduled_prompt_require_red_inactivity: bool = False
     scheduled_prompt_thread_id: str | None = None
     scheduled_prompt_due_at: float | None = None
     scheduled_prompt_id: str | None = None
@@ -109,9 +111,54 @@ class ControlStore:
         path = config.control_path or config.env_path.parent / "control.json"
         return cls(path, ControlSettings.from_config(config))
 
-    def load(self) -> ControlSettings:
+    def load(self, profile_id: str | None = None) -> ControlSettings:
+        clean_profile_id = _clean_profile_id(profile_id)
+        payload = self._read_payload()
+        global_settings = self._settings_from_values(
+            self._global_values(payload),
+            defaults=self.defaults,
+        )
+        if clean_profile_id is None:
+            return global_settings
+        profile_defaults = _profile_defaults(global_settings)
+        profiles = self._profile_values(payload)
+        values = profiles.get(clean_profile_id)
+        if values is None:
+            return profile_defaults
+        return self._settings_from_values(values, defaults=profile_defaults)
+
+    def list_profile_ids(self) -> tuple[str, ...]:
+        payload = self._read_payload()
+        profiles = self._profile_values(payload)
+        return tuple(sorted(profiles))
+
+    def save(
+        self,
+        settings: ControlSettings,
+        profile_id: str | None = None,
+    ) -> None:
+        _validate_scheduled_prompt(settings)
+        clean_profile_id = _clean_profile_id(profile_id)
+        existing = self._read_payload()
+        global_settings = self._settings_from_values(
+            self._global_values(existing),
+            defaults=self.defaults,
+        )
+        profiles = dict(self._profile_values(existing))
+        if clean_profile_id is None:
+            global_settings = settings
+        else:
+            profiles[clean_profile_id] = asdict(settings)
+        payload = {
+            "version": CONTROL_VERSION,
+            "settings": asdict(global_settings),
+            "profiles": profiles,
+        }
+        self._write_payload(payload)
+
+    def _read_payload(self) -> dict[str, Any]:
         if not self.path.exists():
-            return self.defaults
+            return {}
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -123,108 +170,140 @@ class ControlStore:
             raise ControlError(
                 f"Versao de controle nao suportada em {self.path}: {version!r}."
             )
+        return payload
+
+    def _global_values(self, payload: dict[str, Any]) -> dict[str, Any]:
         values = payload.get("settings", payload)
         if not isinstance(values, dict):
             raise ControlError(f"Controle invalido em {self.path}: settings ausente.")
+        return values
+
+    def _profile_values(
+        self,
+        payload: dict[str, Any],
+    ) -> dict[str, dict[str, Any]]:
+        raw_profiles = payload.get("profiles", {})
+        if not isinstance(raw_profiles, dict):
+            raise ControlError(f"Controle invalido em {self.path}: profiles invalido.")
+        profiles: dict[str, dict[str, Any]] = {}
+        for profile_id, values in raw_profiles.items():
+            clean_profile_id = _clean_profile_id(profile_id)
+            if clean_profile_id is None or clean_profile_id != profile_id:
+                raise ControlError(
+                    f"Controle invalido em {self.path}: perfil invalido."
+                )
+            if not isinstance(values, dict):
+                raise ControlError(
+                    f"Controle invalido em {self.path}: perfil sem settings."
+                )
+            profiles[clean_profile_id] = values
+        return profiles
+
+    def _settings_from_values(
+        self,
+        values: dict[str, Any],
+        *,
+        defaults: ControlSettings,
+    ) -> ControlSettings:
         settings = ControlSettings(
             task_automation_enabled=_bool_value(
                 values,
                 "task_automation_enabled",
-                self.defaults.task_automation_enabled,
+                defaults.task_automation_enabled,
             ),
             native_input_enabled=_bool_value(
                 values,
                 "native_input_enabled",
-                self.defaults.native_input_enabled,
+                defaults.native_input_enabled,
             ),
             gui_fallback_enabled=_bool_value(
                 values,
                 "gui_fallback_enabled",
-                self.defaults.gui_fallback_enabled,
+                defaults.gui_fallback_enabled,
             ),
             remote_input_enabled=_bool_value(
                 values,
                 "remote_input_enabled",
-                self.defaults.remote_input_enabled,
+                defaults.remote_input_enabled,
             ),
             sync_activity_enabled=_bool_value(
                 values,
                 "sync_activity_enabled",
-                self.defaults.sync_activity_enabled,
+                defaults.sync_activity_enabled,
             ),
             codex_thread_id=_optional_string(
                 values,
                 "codex_thread_id",
-                self.defaults.codex_thread_id,
+                defaults.codex_thread_id,
             ),
             codex_remote=_optional_string(
                 values,
                 "codex_remote",
-                self.defaults.codex_remote,
+                defaults.codex_remote,
             ),
             remote_auth_token_env=_optional_string(
                 values,
                 "remote_auth_token_env",
-                self.defaults.remote_auth_token_env,
+                defaults.remote_auth_token_env,
             ),
             scheduled_prompt_enabled=_bool_value(
                 values,
                 "scheduled_prompt_enabled",
-                self.defaults.scheduled_prompt_enabled,
+                defaults.scheduled_prompt_enabled,
             ),
             scheduled_prompt_delay_minutes=_int_value(
                 values,
                 "scheduled_prompt_delay_minutes",
-                self.defaults.scheduled_prompt_delay_minutes,
+                defaults.scheduled_prompt_delay_minutes,
                 minimum=1,
                 maximum=MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
             ),
             scheduled_prompt_text=_required_string(
                 values,
                 "scheduled_prompt_text",
-                self.defaults.scheduled_prompt_text,
+                defaults.scheduled_prompt_text,
                 maximum_length=MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
+            ),
+            scheduled_prompt_require_red_inactivity=_bool_value(
+                values,
+                "scheduled_prompt_require_red_inactivity",
+                defaults.scheduled_prompt_require_red_inactivity,
             ),
             scheduled_prompt_thread_id=_optional_string(
                 values,
                 "scheduled_prompt_thread_id",
-                self.defaults.scheduled_prompt_thread_id,
+                defaults.scheduled_prompt_thread_id,
             ),
             scheduled_prompt_due_at=_optional_number(
                 values,
                 "scheduled_prompt_due_at",
-                self.defaults.scheduled_prompt_due_at,
+                defaults.scheduled_prompt_due_at,
             ),
             scheduled_prompt_id=_optional_string(
                 values,
                 "scheduled_prompt_id",
-                self.defaults.scheduled_prompt_id,
+                defaults.scheduled_prompt_id,
             ),
             scheduled_prompt_last_state=_choice_value(
                 values,
                 "scheduled_prompt_last_state",
-                self.defaults.scheduled_prompt_last_state,
+                defaults.scheduled_prompt_last_state,
                 choices=SCHEDULED_PROMPT_STATES,
             ),
             scheduled_prompt_last_attempt_at=_optional_number(
                 values,
                 "scheduled_prompt_last_attempt_at",
-                self.defaults.scheduled_prompt_last_attempt_at,
+                defaults.scheduled_prompt_last_attempt_at,
             ),
         )
         _validate_scheduled_prompt(settings)
         return settings
 
-    def save(self, settings: ControlSettings) -> None:
-        _validate_scheduled_prompt(settings)
+    def _write_payload(self, payload: dict[str, Any]) -> None:
         parent_existed = self.path.parent.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not parent_existed:
             _chmod(self.path.parent, 0o700)
-        payload = {
-            "version": CONTROL_VERSION,
-            "settings": asdict(settings),
-        }
         fd, temporary_name = tempfile.mkstemp(
             prefix=f".{self.path.name}.",
             suffix=".tmp",
@@ -259,6 +338,36 @@ def _clean_optional(value: str | None) -> str | None:
         return None
     clean = value.strip()
     return clean or None
+
+
+def _profile_defaults(settings: ControlSettings) -> ControlSettings:
+    return replace(
+        settings,
+        scheduled_prompt_enabled=False,
+        scheduled_prompt_thread_id=None,
+        scheduled_prompt_due_at=None,
+        scheduled_prompt_id=None,
+        scheduled_prompt_last_state="disabled",
+        scheduled_prompt_last_attempt_at=None,
+    )
+
+
+def _clean_profile_id(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ControlError("O identificador do perfil precisa ser texto.")
+    clean = value.strip()
+    if not clean:
+        raise ControlError("O identificador do perfil nao pode ficar vazio.")
+    if any(character in clean for character in ("\r", "\n", "\x00")):
+        raise ControlError("O identificador do perfil precisa ter uma linha.")
+    if len(clean) > MAX_CONTROL_PROFILE_ID_LENGTH:
+        raise ControlError(
+            "O identificador do perfil excede o limite de "
+            f"{MAX_CONTROL_PROFILE_ID_LENGTH} caracteres."
+        )
+    return clean
 
 
 def _bool_value(values: dict[str, Any], key: str, default: bool) -> bool:
