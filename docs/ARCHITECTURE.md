@@ -431,6 +431,26 @@ vermelho permanece armado. Worker ausente ou idle falha fechado. Antes de chamar
 rearmam a tentativa. Um UUID impede que a conclusao de uma tentativa antiga
 sobrescreva um novo agendamento criado concorrentemente.
 
+`prompt_rules.py` generaliza esse contrato sem remover a compatibilidade
+legada. Cada perfil possui uma colecao limitada de regras com ID estavel,
+gatilho por ativacao ou vermelho, atraso, texto e repeticao limitada. O estado
+de cada regra vive no mesmo `control.json`, portanto reiniciar a bandeja nao
+perde checkboxes, campos, vencimentos ou espera de confirmacao. O scheduler
+processa no maximo um transporte por perfil em cada ciclo, faz claim antes do
+input e desabilita a regra em falha ou incerteza.
+
+Depois de um envio repetitivo, a regra permanece em
+`waiting_for_confirmation`. Somente uma observacao posterior do mesmo
+`worker_id` e da mesma sessao exata cria o proximo vencimento. Isso evita que um
+timer isolado simule continuidade indefinida. `task_automation_enabled` e o
+interruptor superior tanto das regras quanto do scheduler legado.
+
+`disable-current-automation` deriva o perfil do diretorio atual, escopo
+configurado e ID de sessao no ambiente, sem argumentos de identidade. Mutacoes
+de `control --profile` sao rejeitadas; a bandeja e a superficie humana de
+edicao. Essa separacao e uma barreira contra erro acidental, nao autenticacao
+contra processos executados pelo mesmo usuario local.
+
 ## Source Layout
 
 O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam

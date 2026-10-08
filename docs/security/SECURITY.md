@@ -500,6 +500,28 @@ hooks/heartbeats corretos; evidencia ausente pode tornar o worker vermelho mesmo
 durante trabalho real. O envio continua sendo um input previamente autorizado,
 nao prova processamento nem progresso, e requer hook posterior para atividade.
 
+## Task 029 - Regras persistentes e limite por projeto
+
+- [x] Cada regra possui ID unico, sessao exata, gatilho, atraso, texto,
+      repeticao limitada e estado persistente.
+- [x] Um perfil aceita no maximo 20 regras e cada repeticao no maximo 100
+      ocorrencias.
+- [x] Claim persistido ocorre antes de qualquer transporte.
+- [x] Falha ou incerteza desabilita a regra sem retry.
+- [x] Repeticao exige hook posterior do mesmo worker e da mesma sessao.
+- [x] `task-automation` suspende regras e scheduler legado sem apagar campos.
+- [x] `disable-current-automation` nao aceita overrides de identidade.
+- [x] Mutacao de perfil explicito pela CLI e rejeitada; consulta permanece
+      sanitizada e nao imprime os textos das regras.
+
+### Risco residual
+
+O limite de projeto evita erros de selecao, mas nao e uma fronteira de
+seguranca do sistema operacional. Um processo sob o mesmo usuario pode mudar o
+diretorio de trabalho ou editar `control.json`. Textos persistidos e argumentos
+locais de `codex queue` nao devem conter segredos. Um hook posterior comprova
+atividade da sessao, nao que o prompt especifico foi compreendido.
+
 ## Task 016 - Bandeja e entrada nativa
 
 - [x] `codex queue` recebe lista de argumentos e nunca usa shell.

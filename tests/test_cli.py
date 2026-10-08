@@ -19,6 +19,7 @@ from ai_presence_monitor.cli import (
     _command_allowed_while_runtime_disabled,
     _continue_task,
     _control,
+    _disable_current_automation,
     _dispatch_answer,
     _identity,
     _install_background_service,
@@ -44,7 +45,12 @@ from ai_presence_monitor.cli import (
     main,
 )
 from ai_presence_monitor.config import AppConfig
-from ai_presence_monitor.control import ControlSettings, ControlStore
+from ai_presence_monitor.control import (
+    ControlError,
+    ControlSettings,
+    ControlStore,
+    PromptRule,
+)
 from ai_presence_monitor.notify import NotificationError
 from ai_presence_monitor.store import PresenceStore
 
@@ -164,6 +170,14 @@ class CliBehaviorTests(unittest.TestCase):
         )
         self.assertEqual(control_args.action, "enable")
         self.assertEqual(control_args.control_name, "task-automation")
+
+        disable_current_args = parser.parse_args(
+            ["--dry-run", "disable-current-automation"]
+        )
+        self.assertEqual(
+            disable_current_args.command,
+            "disable-current-automation",
+        )
 
         input_args = parser.parse_args(
             [
@@ -577,6 +591,12 @@ class CliBehaviorTests(unittest.TestCase):
                     scheduled_prompt_due_at=20_000.0,
                     scheduled_prompt_id="schedule-1",
                     scheduled_prompt_last_state="armed",
+                    prompt_rules=(
+                        PromptRule(
+                            rule_id="private-rule",
+                            text="private rule prompt",
+                        ),
+                    ),
                 )
             )
             args = argparse.Namespace(
@@ -596,9 +616,11 @@ class CliBehaviorTests(unittest.TestCase):
 
             payload = output.getvalue()
             self.assertNotIn("private scheduled prompt", payload)
+            self.assertNotIn("private rule prompt", payload)
             self.assertIn('"scheduled_prompt_text_configured": true', payload)
+            self.assertIn('"prompt_rule_count": 1', payload)
 
-    def test_control_and_send_input_use_explicit_worker_profile(self) -> None:
+    def test_profile_mutation_is_rejected_but_profile_remains_readable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = replace(make_config(root), control_path=root / "control.json")
@@ -615,15 +637,15 @@ class CliBehaviorTests(unittest.TestCase):
                 dry_run=False,
             )
 
-            with redirect_stdout(StringIO()):
-                self.assertEqual(_control(enable_args, config), 0)
+            with self.assertRaisesRegex(ControlError, "somente leitura"):
+                _control(enable_args, config)
 
             store = ControlStore.from_config(config)
             self.assertFalse(store.load().task_automation_enabled)
-            self.assertTrue(store.load("worker-clarify").task_automation_enabled)
             store.save(
                 replace(
                     store.load("worker-clarify"),
+                    task_automation_enabled=True,
                     codex_thread_id="clarify-session",
                 ),
                 "worker-clarify",
@@ -638,6 +660,38 @@ class CliBehaviorTests(unittest.TestCase):
             with redirect_stdout(StringIO()) as output:
                 self.assertEqual(_send_input(input_args, config), 0)
             self.assertIn("sessao=clarify-session", output.getvalue())
+
+    def test_disable_current_automation_only_changes_derived_project_profile(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "current-project"
+            project.mkdir()
+            config = replace(make_config(root), control_path=root / "control.json")
+            store = ControlStore.from_config(config)
+            current_worker = _identity(
+                event_args(project, ai=None, project=project),
+                config,
+            )[0]
+            other_worker = "other-worker"
+            store.save(
+                replace(ControlSettings(), task_automation_enabled=True),
+                current_worker,
+            )
+            store.save(
+                replace(ControlSettings(), task_automation_enabled=True),
+                other_worker,
+            )
+            args = argparse.Namespace(dry_run=False)
+
+            with patch("pathlib.Path.cwd", return_value=project), redirect_stdout(
+                StringIO()
+            ):
+                self.assertEqual(_disable_current_automation(args, config), 0)
+
+            self.assertFalse(store.load(current_worker).task_automation_enabled)
+            self.assertTrue(store.load(other_worker).task_automation_enabled)
 
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
@@ -809,6 +863,7 @@ class CliBehaviorTests(unittest.TestCase):
     def test_disabled_runtime_preserves_only_diagnostics_and_recovery(self) -> None:
         for command in (
             "doctor",
+            "disable-current-automation",
             "finish",
             "protocols",
             "questions",

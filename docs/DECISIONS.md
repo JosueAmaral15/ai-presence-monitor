@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-10-08 - Regras persistentes e desativacao limitada ao worker corrente
+
+**Decisao**: substituir o editor unico por ate 20 regras persistentes em cada
+perfil. Cada regra pode ser one-shot ou repetir de forma limitada, com default
+de tres e maximo de 100 envios. Repeticao exige evidencia de hook posterior da
+mesma sessao. Um agente pode apenas executar `disable-current-automation`, que
+deriva o worker do contexto local e nao aceita alvo arbitrario.
+
+**Motivo**: projetos precisam de prazos e mensagens diferentes sem perder
+estado ao fechar a interface. Repeticao ilimitada ou baseada apenas em timer
+poderia continuar enviando input sem evidencia de atividade. Permitir
+`control disable --profile` a um agente tambem deixaria uma troca acidental de
+ID interferir em outro projeto.
+
+**Consequencias**: checkboxes, campos e runtime ficam no `control.json`; a
+bandeja continua necessaria para avaliar prazos. `task-automation` suspende as
+regras sem apaga-las. Perfis explicitos sao somente leitura pela CLI e editados
+por humanos na bandeja. A protecao e logica e nao resiste a um processo
+malicioso com acesso ao mesmo usuario e arquivo.
+
 ## 2026-10-08 - Controles por worker e gate vermelho adicional
 
 **Decisao**: persistir cada conjunto completo de controles sob o `worker_id` e

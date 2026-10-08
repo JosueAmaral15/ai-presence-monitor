@@ -10,7 +10,12 @@ from unittest.mock import patch
 
 from test_cli import make_config
 
-from ai_presence_monitor.control import ControlError, ControlSettings, ControlStore
+from ai_presence_monitor.control import (
+    ControlError,
+    ControlSettings,
+    ControlStore,
+    PromptRule,
+)
 
 
 class ControlStoreTests(unittest.TestCase):
@@ -49,6 +54,20 @@ class ControlStoreTests(unittest.TestCase):
                 scheduled_prompt_due_at=13_600.0,
                 scheduled_prompt_id="schedule-1",
                 scheduled_prompt_last_state="armed",
+                prompt_rules=(
+                    PromptRule(
+                        rule_id="rule-1",
+                        enabled=True,
+                        thread_id="thread-1",
+                        delay_minutes=30,
+                        text="proceed",
+                        repeat_enabled=True,
+                        repeat_interval_minutes=10,
+                        max_occurrences=4,
+                        next_due_at=2_000.0,
+                        last_state="armed",
+                    ),
+                ),
             )
 
             store.save(settings)
@@ -149,6 +168,7 @@ class ControlStoreTests(unittest.TestCase):
             self.assertIsNone(profile.scheduled_prompt_due_at)
             self.assertIsNone(profile.scheduled_prompt_id)
             self.assertEqual(profile.scheduled_prompt_last_state, "disabled")
+            self.assertEqual(profile.prompt_rules, ())
 
     def test_invalid_profile_document_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

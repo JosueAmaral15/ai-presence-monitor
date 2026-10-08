@@ -26,7 +26,8 @@ The project also provides:
 - direct Codex session input through `codex queue`, without taking over the
   user's mouse or keyboard;
 - an optional system tray for automation permissions and local/remote input;
-- one-shot scheduled session prompts through native Codex input;
+- persistent per-worker prompt rules with delay, red-inactivity and bounded
+  repetition through native Codex input;
 - immediate `continue` input with native-first transport and guarded GUI fallback;
 - one-shot red alerts with a bounded local alarm;
 - stable Linux operational adapters, with preserved Windows adapters behind an
@@ -597,7 +598,7 @@ Native input uses `codex queue` and does not take over the mouse, keyboard, or
 clipboard:
 
 ```bash
-ai-presence control enable task-automation --profile EXACT_WORKER_ID
+# Enable task automation for this worker in the system tray first.
 ai-presence --dry-run continue \
   --worker EXACT_WORKER_ID \
   --thread EXACT_SESSION_ID
@@ -640,16 +641,29 @@ Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
 transport failure, and inactive workers do not count as activity. Enabling task
 automation grants permission; it does not start a periodic timer.
 
-The optional system tray also provides a separate one-shot scheduler. Select
-a project or agent profile and one of its exact sessions, enable **Send one
-prompt after a delay**, choose the delay in minutes and enter the prompt. Its
-defaults are 210 minutes and `continue`. Every checkbox and field is stored
-independently for that worker. An optional second checkbox waits for both the
-configured due time and red inactivity: 30 minutes in Protocol 1 or 15 minutes
-in Protocol 2. The schedule is persisted across tray restarts, disarmed before
-transport and never retried automatically. The tray must be running when the
-conditions are evaluated; an overdue armed prompt is processed when the tray
-starts again and all enabled gates pass.
+The optional system tray also provides persistent prompt rules. Select a
+project or agent profile and add one or more rules. Each rule stores its exact
+session, enabled state, trigger, delay, prompt, repetition interval and maximum
+send count independently for that worker. Defaults are 210 minutes, `continue`
+and three sends when bounded repetition is enabled. A rule may start after it
+is armed or after canonical red inactivity: 30 minutes in Protocol 1 or 15
+minutes in Protocol 2, followed by the rule's delay. One-shot rules are
+disarmed before transport. Repeating rules pause after every send until a later
+hook from the same exact session is observed; failure or uncertainty disables
+the rule. The tray must be running when conditions are evaluated, but saved
+fields and runtime state survive restarts.
+
+An AI-worker can suspend automation only for the worker derived from its
+current directory and configured scope:
+
+```bash
+ai-presence disable-current-automation
+```
+
+The command accepts no worker or project override. Explicit profile mutation
+through `control --profile` is rejected; human profile editing belongs to the
+tray. This prevents accidental cross-project changes, but is not a security
+boundary against another process running as the same OS user.
 
 See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) and the
 [system tray guide](docs/SYSTEM-TRAY-NATIVE-INPUT.md) for controls, background

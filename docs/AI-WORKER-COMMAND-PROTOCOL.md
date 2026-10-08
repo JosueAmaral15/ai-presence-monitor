@@ -275,14 +275,26 @@ Na ausencia de `PRESENCE_CODEX_THREAD_ID`, o comando real pode inferir a sessao
 do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
 uma falha. Consulte [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md).
 
-A bandeja possui um agendamento humano one-shot separado, com default de 210
-minutos e `continue`, salvo no perfil do `worker_id`. Um checkbox humano opcional
-faz o scheduler aguardar, alem do prazo, o vermelho de 30 minutos do Protocolo 1
-ou 15 minutos do Protocolo 2. Um AI-worker pode consultar seu estado sanitizado
-por `control show --profile WORKER_ID`, mas nao deve armar, postergar ou repetir
-esse agendamento em nome do usuario. O vencimento e o vermelho nao sao heartbeat
-nem evidencia de trabalho; apenas um hook posterior registra atividade normal
-da sessao.
+A bandeja possui regras humanas persistentes de prompt por `worker_id`. Elas
+podem ser one-shot ou repetitivas e usar atraso desde a ativacao ou desde o
+vermelho canonico do protocolo. Repeticoes sao limitadas e ficam pausadas ate
+um hook posterior da mesma sessao exata. Um AI-worker pode consultar o estado
+sanitizado por `control show --profile WORKER_ID`, mas nao deve armar,
+postergar, remover ou editar regras em nome do usuario.
+
+O unico comando de mutacao de perfil permitido a um AI-worker e:
+
+```bash
+ai-presence disable-current-automation
+```
+
+Ele deriva o worker exclusivamente do diretorio corrente, do escopo configurado
+e, quando aplicavel, da sessao presente no ambiente. Nao aceita identificador de
+outro perfil. `control enable`, `control disable` e `control target` com
+`--profile` sao proibidos e rejeitados. Desabilitar a automacao suspende os
+agendamentos sem apagar seus campos. O vencimento, o vermelho e o timer nao sao
+heartbeat nem evidencia de trabalho; somente atividade real observada por hook
+cumpre esse papel.
 
 No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para

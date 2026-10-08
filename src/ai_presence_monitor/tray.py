@@ -13,8 +13,20 @@ from .codex_input import (
     send_native_message,
 )
 from .config import AppConfig, load_config
-from .control import ControlError, ControlSettings, ControlStore
+from .control import (
+    DEFAULT_PROMPT_RULE_OCCURRENCES,
+    MAX_PROMPT_RULES,
+    ControlError,
+    ControlSettings,
+    ControlStore,
+    PromptRule,
+)
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
+from .prompt_rules import (
+    configure_prompt_rule,
+    process_prompt_rules,
+    replace_prompt_rules,
+)
 from .scheduled_prompt import (
     configure_scheduled_prompt,
     process_due_scheduled_prompt,
@@ -62,14 +74,19 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             QDialog,
             QDialogButtonBox,
             QFormLayout,
+            QGridLayout,
+            QHBoxLayout,
             QLabel,
             QLineEdit,
             QMenu,
             QMessageBox,
             QPlainTextEdit,
+            QScrollArea,
             QSpinBox,
             QSystemTrayIcon,
+            QToolButton,
             QVBoxLayout,
+            QWidget,
         )
     except ImportError as exc:
         raise TrayUnavailableError(
@@ -145,8 +162,9 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             combo.addItem(label, session.session_id)
             if session.session_id == configured:
                 configured_index = combo.count() - 1
-        if configured and configured_index < 0 and profile_id is None:
-            combo.insertItem(0, configured, configured)
+        if configured and configured_index < 0:
+            label = configured if profile_id is None else f"saved session | {configured}"
+            combo.insertItem(0, label, configured)
             configured_index = 0
         if configured_index >= 0:
             combo.setCurrentIndex(configured_index)
@@ -172,6 +190,118 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             if isinstance(data, str) and data.strip():
                 return data.strip()
         return combo.currentText().strip() or None
+
+    class PromptRuleEditor(QWidget):
+        def __init__(
+            self,
+            *,
+            rule: PromptRule | None,
+            profile_id: str | None,
+            remove_callback: Any,
+        ):
+            super().__init__()
+            self.original = rule
+            layout = QGridLayout(self)
+            layout.setContentsMargins(0, 8, 0, 8)
+
+            self.enabled = QCheckBox("Enabled")
+            self.enabled.setChecked(rule.enabled if rule else False)
+            layout.addWidget(self.enabled, 0, 0)
+
+            self.trigger = QComboBox()
+            self.trigger.addItem("After arming", "after_delay")
+            if profile_id is not None:
+                self.trigger.addItem("After red inactivity", "red_inactivity")
+            trigger = rule.trigger if rule else "after_delay"
+            trigger_index = self.trigger.findData(trigger)
+            self.trigger.setCurrentIndex(max(0, trigger_index))
+            layout.addWidget(self.trigger, 0, 1)
+
+            self.remove = QToolButton()
+            self.remove.setText("-")
+            self.remove.setToolTip("Remove prompt rule")
+            self.remove.setFixedSize(28, 28)
+            self.remove.clicked.connect(lambda: remove_callback(self))
+            layout.addWidget(self.remove, 0, 2)
+
+            self.session = session_combo(
+                rule.thread_id if rule else None,
+                profile_id,
+            )
+            layout.addWidget(QLabel("Session"), 1, 0)
+            layout.addWidget(self.session, 1, 1, 1, 2)
+
+            self.delay = QSpinBox()
+            self.delay.setRange(1, 10_080)
+            self.delay.setSuffix(" min")
+            self.delay.setValue(rule.delay_minutes if rule else 210)
+            layout.addWidget(QLabel("Delay"), 2, 0)
+            layout.addWidget(self.delay, 2, 1, 1, 2)
+
+            self.text = QLineEdit(rule.text if rule else "continue")
+            self.text.setMaxLength(4_000)
+            self.text.setPlaceholderText("continue")
+            layout.addWidget(QLabel("Prompt"), 3, 0)
+            layout.addWidget(self.text, 3, 1, 1, 2)
+
+            self.repeat = QCheckBox("Repeat after confirmed session activity")
+            self.repeat.setChecked(rule.repeat_enabled if rule else False)
+            layout.addWidget(self.repeat, 4, 0, 1, 3)
+
+            self.repeat_interval = QSpinBox()
+            self.repeat_interval.setRange(1, 10_080)
+            self.repeat_interval.setSuffix(" min")
+            self.repeat_interval.setValue(
+                rule.repeat_interval_minutes if rule else 210
+            )
+            layout.addWidget(QLabel("Repeat interval"), 5, 0)
+            layout.addWidget(self.repeat_interval, 5, 1, 1, 2)
+
+            self.max_occurrences = QSpinBox()
+            self.max_occurrences.setRange(1, 100)
+            self.max_occurrences.setValue(
+                rule.max_occurrences
+                if rule
+                else DEFAULT_PROMPT_RULE_OCCURRENCES
+            )
+            layout.addWidget(QLabel("Maximum sends"), 6, 0)
+            layout.addWidget(self.max_occurrences, 6, 1, 1, 2)
+
+            self.status = QLabel(_prompt_rule_status(rule))
+            self.status.setWordWrap(True)
+            layout.addWidget(self.status, 7, 0, 1, 3)
+            self.repeat.toggled.connect(self._update_repeat_fields)
+            self.enabled.toggled.connect(self._update_enabled_fields)
+            self._update_enabled_fields(self.enabled.isChecked())
+
+        def _update_repeat_fields(self, _checked: bool) -> None:
+            active = self.enabled.isChecked() and self.repeat.isChecked()
+            self.repeat_interval.setEnabled(active)
+            self.max_occurrences.setEnabled(active)
+
+        def _update_enabled_fields(self, checked: bool) -> None:
+            for widget in (
+                self.trigger,
+                self.session,
+                self.delay,
+                self.text,
+                self.repeat,
+            ):
+                widget.setEnabled(checked)
+            self._update_repeat_fields(self.repeat.isChecked())
+
+        def result_rule(self) -> PromptRule:
+            return configure_prompt_rule(
+                self.original,
+                enabled=self.enabled.isChecked(),
+                thread_id=selected_session(self.session),
+                trigger=str(self.trigger.currentData()),
+                delay_minutes=self.delay.value(),
+                text=self.text.text(),
+                repeat_enabled=self.repeat.isChecked(),
+                repeat_interval_minutes=self.repeat_interval.value(),
+                max_occurrences=self.max_occurrences.value(),
+            )
 
     class PreferencesDialog(QDialog):
         def __init__(self):
@@ -215,10 +345,10 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
             form = QFormLayout()
             self.thread_field = session_combo(
-                settings.scheduled_prompt_thread_id or settings.codex_thread_id,
+                settings.codex_thread_id,
                 selected_profile(self.profile),
             )
-            form.addRow("Codex session", self.thread_field)
+            form.addRow("Default Codex session", self.thread_field)
             self.endpoint = QLineEdit(settings.codex_remote or "")
             self.endpoint.setPlaceholderText("wss://client.example/app-server")
             form.addRow("Client endpoint", self.endpoint)
@@ -227,44 +357,30 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             form.addRow("Token variable", self.auth_env)
             layout.addLayout(form)
 
-            scheduled_title = QLabel("Scheduled one-shot prompt")
+            scheduled_title = QLabel("Prompt rules")
             scheduled_title.setStyleSheet("font-size: 14px; font-weight: 600;")
             layout.addWidget(scheduled_title)
-            self.scheduled_prompt = QCheckBox("Send one prompt after a delay")
-            self.scheduled_prompt.setChecked(settings.scheduled_prompt_enabled)
-            layout.addWidget(self.scheduled_prompt)
-            self.require_red = QCheckBox(
-                "Send only after red inactivity for this project or agent"
-            )
-            self.require_red.setChecked(
-                settings.scheduled_prompt_require_red_inactivity
-            )
-            layout.addWidget(self.require_red)
-            scheduled_form = QFormLayout()
-            self.scheduled_delay = QSpinBox()
-            self.scheduled_delay.setRange(1, 10_080)
-            self.scheduled_delay.setSuffix(" min")
-            self.scheduled_delay.setValue(settings.scheduled_prompt_delay_minutes)
-            scheduled_form.addRow("Delay", self.scheduled_delay)
-            self.scheduled_text = QLineEdit(settings.scheduled_prompt_text)
-            self.scheduled_text.setMaxLength(4_000)
-            self.scheduled_text.setPlaceholderText("continue")
-            scheduled_form.addRow("Prompt", self.scheduled_text)
-            layout.addLayout(scheduled_form)
-            self.scheduled_status = QLabel(_scheduled_status(settings))
-            self.scheduled_status.setWordWrap(True)
-            layout.addWidget(self.scheduled_status)
+            self.rule_editors: list[PromptRuleEditor] = []
+            self.rules_widget = QWidget()
+            self.rules_layout = QVBoxLayout(self.rules_widget)
+            self.rules_layout.setContentsMargins(0, 0, 0, 0)
+            rules_scroll = QScrollArea()
+            rules_scroll.setWidgetResizable(True)
+            rules_scroll.setMaximumHeight(420)
+            rules_scroll.setWidget(self.rules_widget)
+            layout.addWidget(rules_scroll)
+            add_row = QHBoxLayout()
+            self.add_rule_button = QToolButton()
+            self.add_rule_button.setText("+")
+            self.add_rule_button.setToolTip("Add prompt rule")
+            self.add_rule_button.setFixedSize(28, 28)
+            self.add_rule_button.clicked.connect(lambda: self._add_rule())
+            add_row.addWidget(self.add_rule_button)
+            add_row.addStretch()
+            layout.addLayout(add_row)
 
-            def update_scheduled_fields(enabled: bool) -> None:
-                self.scheduled_delay.setEnabled(enabled)
-                self.scheduled_text.setEnabled(enabled)
-                self.require_red.setEnabled(
-                    enabled and selected_profile(self.profile) is not None
-                )
-
-            self.scheduled_prompt.toggled.connect(update_scheduled_fields)
             self.profile.currentIndexChanged.connect(self._load_selected_profile)
-            update_scheduled_fields(self.scheduled_prompt.isChecked())
+            self._rebuild_rules(settings)
 
             note = QLabel(
                 "Token values stay in the operating-system environment and are "
@@ -291,21 +407,74 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.sync.setChecked(settings.sync_activity_enabled)
             populate_session_combo(
                 self.thread_field,
-                settings.scheduled_prompt_thread_id or settings.codex_thread_id,
+                settings.codex_thread_id,
                 profile_id,
             )
             self.endpoint.setText(settings.codex_remote or "")
             self.auth_env.setText(settings.remote_auth_token_env or "")
-            self.scheduled_prompt.setChecked(settings.scheduled_prompt_enabled)
-            self.require_red.setChecked(
-                settings.scheduled_prompt_require_red_inactivity
+            self._rebuild_rules(settings)
+
+        def _rules_for_settings(
+            self,
+            settings: ControlSettings,
+        ) -> tuple[PromptRule, ...]:
+            if settings.prompt_rules:
+                return settings.prompt_rules
+            if not (
+                settings.scheduled_prompt_enabled
+                or settings.scheduled_prompt_thread_id
+                or settings.scheduled_prompt_last_state != "disabled"
+            ):
+                return ()
+            require_red = settings.scheduled_prompt_require_red_inactivity
+            return (
+                PromptRule(
+                    rule_id=settings.scheduled_prompt_id or "legacy-scheduled-prompt",
+                    enabled=settings.scheduled_prompt_enabled,
+                    thread_id=settings.scheduled_prompt_thread_id,
+                    trigger="red_inactivity" if require_red else "after_delay",
+                    delay_minutes=settings.scheduled_prompt_delay_minutes,
+                    text=settings.scheduled_prompt_text,
+                    next_due_at=(
+                        None if require_red else settings.scheduled_prompt_due_at
+                    ),
+                    last_state=(
+                        "waiting_for_event"
+                        if settings.scheduled_prompt_enabled and require_red
+                        else settings.scheduled_prompt_last_state
+                    ),
+                    last_attempt_at=settings.scheduled_prompt_last_attempt_at,
+                ),
             )
-            self.scheduled_delay.setValue(settings.scheduled_prompt_delay_minutes)
-            self.scheduled_text.setText(settings.scheduled_prompt_text)
-            self.scheduled_status.setText(_scheduled_status(settings))
-            self.require_red.setEnabled(
-                self.scheduled_prompt.isChecked() and profile_id is not None
+
+        def _rebuild_rules(self, settings: ControlSettings) -> None:
+            for editor in self.rule_editors:
+                self.rules_layout.removeWidget(editor)
+                editor.deleteLater()
+            self.rule_editors.clear()
+            for rule in self._rules_for_settings(settings):
+                self._add_rule(rule)
+            self.add_rule_button.setEnabled(len(self.rule_editors) < MAX_PROMPT_RULES)
+
+        def _add_rule(self, rule: PromptRule | None = None) -> None:
+            if len(self.rule_editors) >= MAX_PROMPT_RULES:
+                return
+            editor = PromptRuleEditor(
+                rule=rule,
+                profile_id=self.profile_id(),
+                remove_callback=self._remove_rule,
             )
+            self.rule_editors.append(editor)
+            self.rules_layout.addWidget(editor)
+            self.add_rule_button.setEnabled(len(self.rule_editors) < MAX_PROMPT_RULES)
+
+        def _remove_rule(self, editor: PromptRuleEditor) -> None:
+            if editor not in self.rule_editors:
+                return
+            self.rule_editors.remove(editor)
+            self.rules_layout.removeWidget(editor)
+            editor.deleteLater()
+            self.add_rule_button.setEnabled(True)
 
         def profile_id(self) -> str | None:
             return selected_profile(self.profile)
@@ -322,13 +491,17 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 codex_remote=self.endpoint.text().strip() or None,
                 remote_auth_token_env=self.auth_env.text().strip() or None,
             )
-            return configure_scheduled_prompt(
+            settings = configure_scheduled_prompt(
                 settings,
-                enabled=self.scheduled_prompt.isChecked(),
-                delay_minutes=self.scheduled_delay.value(),
-                text=self.scheduled_text.text(),
-                thread_id=selected_session(self.thread_field),
-                require_red_inactivity=self.require_red.isChecked(),
+                enabled=False,
+                delay_minutes=settings.scheduled_prompt_delay_minutes,
+                text=settings.scheduled_prompt_text,
+                thread_id=None,
+                require_red_inactivity=False,
+            )
+            return replace_prompt_rules(
+                settings,
+                [editor.result_rule() for editor in self.rule_editors],
             )
 
     class MessageDialog(QDialog):
@@ -428,6 +601,32 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         }
         return labels.get(settings.scheduled_prompt_last_state, "No prompt is armed.")
 
+    def _prompt_rule_status(rule: PromptRule | None) -> str:
+        if rule is None:
+            return "New rule; save to persist it."
+        if rule.awaiting_confirmation:
+            return (
+                f"Waiting for later activity from the exact session; "
+                f"{rule.occurrence_count}/{rule.max_occurrences} sends used."
+            )
+        if rule.enabled and rule.next_due_at is not None:
+            due = datetime.fromtimestamp(rule.next_due_at).astimezone()
+            return (
+                f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; "
+                f"{rule.occurrence_count}/{rule.max_occurrences} sends used."
+            )
+        if rule.enabled and rule.trigger == "red_inactivity":
+            return "Waiting for canonical red inactivity, then the configured delay."
+        labels = {
+            "dispatching": "Dispatch was claimed; automatic retry is disabled.",
+            "dispatch_started": "Dispatch started; await later session evidence.",
+            "input_emitted": "Input was emitted; await later session evidence.",
+            "failed_or_uncertain": (
+                "Last attempt failed or was uncertain; the rule is disabled."
+            ),
+        }
+        return labels.get(rule.last_state, "Rule is disabled.")
+
     tray = QSystemTrayIcon(icon(), app)
     tray.setToolTip("AI Presence Monitor")
     menu = QMenu()
@@ -519,12 +718,29 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         last_schedule_notice["profiles"] = None
         for profile_id in (None, *profile_ids):
             notice_profile = profile_id or "global"
+            result_state: str
+            result_rule_id: str | None
             try:
-                result = process_due_scheduled_prompt(
+                legacy_result = process_due_scheduled_prompt(
                     store=control_store,
                     profile_id=profile_id,
                     presence_store=presence_store,
                 )
+                if legacy_result.state in {
+                    "dispatch_started",
+                    "input_emitted",
+                    "failed_or_uncertain",
+                }:
+                    result_state = legacy_result.state
+                    result_rule_id = "legacy"
+                else:
+                    rule_result = process_prompt_rules(
+                        store=control_store,
+                        profile_id=profile_id,
+                        presence_store=presence_store,
+                    )
+                    result_state = rule_result.state
+                    result_rule_id = rule_result.rule_id
             except (ControlError, OSError) as exc:
                 notice_key = f"error:{type(exc).__name__}:{exc}"
                 if last_schedule_notice.get(notice_profile) != notice_key:
@@ -536,24 +752,32 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                         5000,
                     )
                 continue
-            if result.state in {"disabled", "waiting", "waiting_for_red"}:
+            if result_state in {
+                "disabled",
+                "automation_disabled",
+                "waiting",
+                "waiting_for_event",
+                "waiting_for_confirmation",
+            }:
                 last_schedule_notice[notice_profile] = None
                 continue
-            if last_schedule_notice.get(notice_profile) == result.state:
+            notice_state = f"{result_rule_id}:{result_state}"
+            if last_schedule_notice.get(notice_profile) == notice_state:
                 continue
-            last_schedule_notice[notice_profile] = result.state
-            if result.state == "failed_or_uncertain":
+            last_schedule_notice[notice_profile] = notice_state
+            if result_state == "failed_or_uncertain":
                 tray.showMessage(
                     "Scheduled prompt not confirmed",
-                    f"{notice_profile}: the one-shot attempt failed or was "
-                    "uncertain and will not retry.",
+                    f"{notice_profile} / {result_rule_id}: the attempt failed "
+                    "or was uncertain and the rule was disabled.",
                     QSystemTrayIcon.MessageIcon.Warning,
                     5000,
                 )
                 continue
             tray.showMessage(
                 "Scheduled prompt dispatched",
-                f"{notice_profile}: transport started. Await later session evidence.",
+                f"{notice_profile} / {result_rule_id}: transport started. "
+                "Await later session evidence.",
                 QSystemTrayIcon.MessageIcon.Information,
                 4000,
             )

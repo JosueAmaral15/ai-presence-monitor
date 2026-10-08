@@ -28,13 +28,16 @@ Operational rules:
    normative continuation checks pass. Diagnostic recovery, `dispatch-answer`
    and GUI automation always require explicit one-invocation authorization;
    never infer it from a persistent control.
-7. Treat `dispatch_started` and `input_emitted` as preliminary transport
+7. An AI-worker may run `disable-current-automation` to suspend only the worker
+   derived from its current project context. Never mutate another explicit
+   profile; profile editing belongs to the human tray.
+8. Treat `dispatch_started` and `input_emitted` as preliminary transport
    states, not proof that Codex processed the input. A later hook is necessary;
    an E2E claim also requires a unique marker that the human did not type.
-8. Check command exit status. Report failures instead of silently retrying GUI
+9. Check command exit status. Report failures instead of silently retrying GUI
    input.
-9. If the local alarm is audible, run `ai-presence stop-alarm` immediately.
-10. End each work session with a commit on its task branch. Promote validated,
+10. If the local alarm is audible, run `ai-presence stop-alarm` immediately.
+11. End each work session with a commit on its task branch. Promote validated,
     functional work to `develop`. Promote `develop` to `main` only when all
     required release checks and real integrations have passed; keep unresolved
     external validation documented instead of declaring the release ready.

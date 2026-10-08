@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 import time
 from dataclasses import replace
@@ -92,6 +93,7 @@ DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
     {
         "finish",
         "doctor",
+        "disable-current-automation",
         "protocols",
         "questions",
         "schema-status",
@@ -425,9 +427,7 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
     ):
         print(
             "Falha ao executar continue: automacao de tarefas desativada. "
-            "Habilite no perfil do worker com "
-            "'ai-presence control enable task-automation --profile WORKER_ID' "
-            "ou use "
+            "Habilite o perfil pela bandeja do sistema ou use "
             "--authorize-once para esta execucao.",
             file=sys.stderr,
         )
@@ -515,6 +515,12 @@ def _continue_task(args: argparse.Namespace, config: AppConfig) -> int:
 def _control(args: argparse.Namespace, config: AppConfig) -> int:
     store = ControlStore.from_config(config)
     profile_id = getattr(args, "profile", None)
+    if profile_id is not None and args.action != "show":
+        raise ControlError(
+            "Perfis de outros workers sao somente leitura na CLI. "
+            "Use a bandeja para edicao humana ou "
+            "'ai-presence disable-current-automation' no projeto corrente."
+        )
     settings = store.load(profile_id)
     if args.action in {"enable", "disable"}:
         if args.control_name is None:
@@ -554,6 +560,11 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
     settings_payload = dict(settings.__dict__)
     scheduled_text = settings_payload.pop("scheduled_prompt_text")
     settings_payload["scheduled_prompt_text_configured"] = bool(scheduled_text)
+    prompt_rules = settings_payload.pop("prompt_rules")
+    settings_payload["prompt_rule_count"] = len(prompt_rules)
+    settings_payload["enabled_prompt_rule_count"] = sum(
+        1 for rule in prompt_rules if rule.enabled
+    )
     payload = {
         "control_path": str(store.path),
         "profile_id": profile_id,
@@ -569,6 +580,41 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
             if key == "control_path":
                 continue
             print(f"{key}={value if value is not None else '-'}")
+    return 0
+
+
+def _disable_current_automation(
+    args: argparse.Namespace,
+    config: AppConfig,
+) -> int:
+    scope = config.codex_worker_scope
+    session_id = next(
+        (
+            value.strip()
+            for name in ("CODEX_THREAD_ID", "CODEX_SESSION_ID")
+            if (value := os.environ.get(name)) and value.strip()
+        ),
+        None,
+    )
+    if scope in {"session", "project-session"} and session_id is None:
+        raise ControlError(
+            "O escopo atual exige CODEX_THREAD_ID ou CODEX_SESSION_ID para "
+            "identificar o worker corrente."
+        )
+    ia_name = config.codex_ai_name or "codex"
+    base_worker_id = config.codex_worker_id or f"{config.computer_name}:{ia_name}"
+    worker_id = scoped_worker_id(
+        base_worker_id,
+        scope,
+        project_path=Path.cwd(),
+        session_id=session_id,
+    )
+    store = ControlStore.from_config(config)
+    settings = store.load(worker_id).with_control("task-automation", False)
+    if not args.dry_run:
+        store.save(settings, worker_id)
+    prefix = "[dry-run] " if args.dry_run else ""
+    print(f"{prefix}automacao desativada somente para worker={worker_id}")
     return 0
 
 
@@ -1652,6 +1698,17 @@ def build_parser() -> argparse.ArgumentParser:
     control_parser.add_argument("--clear-remote", action="store_true")
     control_parser.add_argument("--json", action="store_true")
     control_parser.set_defaults(func=lambda args, config: _control(args, config))
+
+    disable_current_parser = subparsers.add_parser(
+        "disable-current-automation",
+        help=(
+            "Desativa a automacao somente para o worker derivado do projeto "
+            "e da sessao correntes."
+        ),
+    )
+    disable_current_parser.set_defaults(
+        func=lambda args, config: _disable_current_automation(args, config)
+    )
 
     tray_parser = subparsers.add_parser(
         "tray",

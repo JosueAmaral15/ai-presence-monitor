@@ -142,33 +142,32 @@ As preferencias oferecem:
 
 Os campos de destino sao:
 
-- **Codex session**: para um perfil, mostra somente sessoes vistas pelos hooks do
-  mesmo worker; nos defaults globais, permanece editavel para compatibilidade;
+- **Default Codex session**: alvo padrao para comandos manuais; para um perfil,
+  mostra somente sessoes vistas pelos hooks do mesmo worker;
 - **Client endpoint**: endereco `ws://`, `wss://` ou `unix://` do app-server;
 - **Token variable**: nome da variavel de ambiente que contem o bearer token.
 
 O valor do token nao e exibido nem salvo pela bandeja.
 
-## Prompt Temporizado One-shot
+## Regras de Prompt
 
 Nas preferencias:
 
 1. selecione o worker em **Project or agent**;
-2. selecione uma sessao dele em **Codex session**;
-3. marque **Send one prompt after a delay**;
-4. opcionalmente marque **Send only after red inactivity for this project or
-   agent**;
-5. informe **Delay**, em minutos; o default e `210 min`;
-6. informe **Prompt**; o default e `continue`;
+2. pressione `+` para adicionar uma regra;
+3. marque **Enabled** e escolha uma sessao exata do mesmo worker;
+4. escolha **After arming** ou **After red inactivity**;
+5. informe **Delay** e **Prompt**; os defaults sao `210 min` e `continue`;
+6. se desejar repeticao, marque **Repeat after confirmed session activity**,
+   informe o intervalo e a quantidade maxima de envios;
 7. pressione **Save**.
 
-A interface mostra o vencimento local. Salvar novamente sem mudar habilitacao,
-minutos, texto ou sessao preserva o vencimento original. Alterar qualquer um
-desses campos rearma a contagem; desmarcar cancela a tentativa pendente.
+O botao `-` remove uma regra. Cada linha possui ID estavel e seu proprio estado.
+Salvar sem mudar seus campos preserva o vencimento; alterar configuracao ou
+reativar uma regra rearma a contagem. Desmarcar **Enabled** preserva os campos,
+mas cancela a execucao pendente.
 
-O checkbox vermelho nao substitui o atraso. Com `210 min`, o scheduler nunca
-envia antes de 210 minutos. Depois desse prazo, ele envia somente quando o
-worker selecionado estiver ativo e tambem tiver atingido:
+No gatilho vermelho, o atraso comeca depois que o worker ativo atinge:
 
 | Protocolo | Relogio | Vermelho |
 |---|---|---|
@@ -176,8 +175,18 @@ worker selecionado estiver ativo e tambem tiver atingido:
 | Protocolo 2 | `last_activity_at` | 15 minutos |
 
 Um worker ausente, finalizado (`idle`) ou com protocolo/relogio invalido
-permanece aguardando e nao libera input. O gate consulta a inatividade atual,
-nao o ultimo alerta enviado ao Discord.
+permanece aguardando e nao libera input. O gate consulta o relogio canonico de
+inatividade, nao o ultimo alerta enviado ao Discord.
+
+Uma regra sem repeticao e desarmada antes de uma unica tentativa. Uma regra
+repetitiva usa limite padrao de tres envios e limite absoluto de 100. Depois de
+cada transporte, ela aguarda um hook com `observed_at` posterior, do mesmo
+worker e da mesma sessao, antes de iniciar o proximo intervalo. Falha ou
+resultado incerto desabilita a regra sem retry. Em cada ciclo da bandeja, no
+maximo uma regra por perfil pode iniciar transporte.
+
+`task-automation` e um interruptor superior: quando desabilitado, as regras e o
+agendamento legado permanecem salvos, mas nao despacham.
 
 O recurso usa somente `codex queue` local. No vencimento, o estado e desarmado
 antes de criar o processo destacado. Assim, encerramento da bandeja, falha ou
@@ -200,28 +209,32 @@ ai-presence control show --json
 ai-presence control show --profile WORKER_ID --json
 ```
 
-Habilitar e desabilitar recursos:
+Os defaults globais podem ser administrados pela CLI:
 
 ```bash
-ai-presence control enable task-automation --profile WORKER_ID
-ai-presence control disable task-automation --profile WORKER_ID
-ai-presence control enable native-input --profile WORKER_ID
-ai-presence control disable gui-fallback --profile WORKER_ID
-ai-presence control enable remote-input --profile WORKER_ID
-ai-presence control enable activity-sync --profile WORKER_ID
+ai-presence control enable task-automation
+ai-presence control disable task-automation
+ai-presence control enable native-input
+ai-presence control disable gui-fallback
 ```
 
-Definir o alvo local:
+Perfis explicitos sao somente leitura na CLI. O usuario altera um perfil pela
+bandeja. Um AI-worker pode apenas suspender a automacao do perfil derivado do
+projeto corrente:
 
 ```bash
-ai-presence control target --profile WORKER_ID --thread SESSAO_EXATA
+ai-presence disable-current-automation
 ```
 
-Definir o computador cliente:
+O comando nao aceita overrides de identidade. Para escopos `session` e
+`project-session`, ele exige o ID da sessao no ambiente. A restricao protege
+contra alteracoes acidentais entre projetos, nao contra um processo malicioso
+executado pelo mesmo usuario do sistema operacional.
+
+Definir o alvo global local ou remoto:
 
 ```bash
 ai-presence control target \
-  --profile WORKER_ID \
   --thread SESSAO_EXATA \
   --remote 'wss://cliente.exemplo/app-server' \
   --remote-auth-token-env CODEX_REMOTE_AUTH_TOKEN
@@ -230,7 +243,7 @@ ai-presence control target \
 Remover alvos persistidos:
 
 ```bash
-ai-presence control target --profile WORKER_ID --clear-thread --clear-remote
+ai-presence control target --clear-thread --clear-remote
 ```
 
 ## Enviar uma Mensagem
@@ -276,7 +289,7 @@ que um AI-worker execute o procedimento quando houver uma proxima tarefa
 concreta, sem pergunta ou bloqueio pendente:
 
 ```bash
-ai-presence control enable task-automation --profile WORKER_ID
+# Habilite task automation no perfil pela bandeja.
 ai-presence --dry-run continue \
   --project /caminho/absoluto/do/projeto
 ai-presence continue \
@@ -334,10 +347,10 @@ No Windows, normalmente fica sob:
 
 O arquivo e gravado por substituicao atomica e recebe modo `600` em sistemas
 POSIX. `settings` contem os defaults globais e `profiles` contem uma configuracao
-completa por `worker_id`: flags, sessao, endpoint, **nome** da variavel de token,
-checkboxes, atraso, texto e estado do prompt temporizado. Nunca contem o valor do
-token. O comando `control show` informa apenas que existe texto configurado, sem
-imprimi-lo.
+completa por `worker_id`: flags, sessao, endpoint, **nome** da variavel de token
+e todas as regras com checkboxes, gatilhos, atrasos, textos, repeticoes, limites
+e estados de execucao. Nunca contem o valor do token. `control show` informa
+somente quantidades e se existe texto legado configurado, sem imprimir prompts.
 
 Um perfil novo herda os defaults globais ate ser salvo. Depois disso, suas
 mudancas nao alteram outros workers. A separacao real depende do escopo do

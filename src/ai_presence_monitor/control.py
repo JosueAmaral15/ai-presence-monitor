@@ -15,6 +15,23 @@ DEFAULT_SCHEDULED_PROMPT_TEXT = "continue"
 MAX_SCHEDULED_PROMPT_DELAY_MINUTES = 10_080
 MAX_SCHEDULED_PROMPT_TEXT_LENGTH = 4_000
 MAX_CONTROL_PROFILE_ID_LENGTH = 512
+MAX_PROMPT_RULES = 20
+MAX_PROMPT_RULE_ID_LENGTH = 128
+MAX_PROMPT_RULE_OCCURRENCES = 100
+DEFAULT_PROMPT_RULE_OCCURRENCES = 3
+PROMPT_RULE_TRIGGERS = frozenset({"after_delay", "red_inactivity"})
+PROMPT_RULE_STATES = frozenset(
+    {
+        "disabled",
+        "armed",
+        "waiting_for_event",
+        "waiting_for_confirmation",
+        "dispatching",
+        "dispatch_started",
+        "input_emitted",
+        "failed_or_uncertain",
+    }
+)
 SCHEDULED_PROMPT_STATES = frozenset(
     {
         "disabled",
@@ -39,6 +56,25 @@ class ControlError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class PromptRule:
+    rule_id: str
+    enabled: bool = False
+    thread_id: str | None = None
+    trigger: str = "after_delay"
+    delay_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
+    text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
+    repeat_enabled: bool = False
+    repeat_interval_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
+    max_occurrences: int = DEFAULT_PROMPT_RULE_OCCURRENCES
+    occurrence_count: int = 0
+    next_due_at: float | None = None
+    last_state: str = "disabled"
+    last_attempt_at: float | None = None
+    last_dispatch_at: float | None = None
+    awaiting_confirmation: bool = False
+
+
+@dataclass(frozen=True)
 class ControlSettings:
     task_automation_enabled: bool = False
     native_input_enabled: bool = True
@@ -57,6 +93,7 @@ class ControlSettings:
     scheduled_prompt_id: str | None = None
     scheduled_prompt_last_state: str = "disabled"
     scheduled_prompt_last_attempt_at: float | None = None
+    prompt_rules: tuple[PromptRule, ...] = ()
 
     @classmethod
     def from_config(cls, config: AppConfig) -> ControlSettings:
@@ -137,7 +174,7 @@ class ControlStore:
         settings: ControlSettings,
         profile_id: str | None = None,
     ) -> None:
-        _validate_scheduled_prompt(settings)
+        _validate_settings(settings)
         clean_profile_id = _clean_profile_id(profile_id)
         existing = self._read_payload()
         global_settings = self._settings_from_values(
@@ -295,8 +332,13 @@ class ControlStore:
                 "scheduled_prompt_last_attempt_at",
                 defaults.scheduled_prompt_last_attempt_at,
             ),
+            prompt_rules=_prompt_rules_value(
+                values,
+                "prompt_rules",
+                defaults.prompt_rules,
+            ),
         )
-        _validate_scheduled_prompt(settings)
+        _validate_settings(settings)
         return settings
 
     def _write_payload(self, payload: dict[str, Any]) -> None:
@@ -349,6 +391,7 @@ def _profile_defaults(settings: ControlSettings) -> ControlSettings:
         scheduled_prompt_id=None,
         scheduled_prompt_last_state="disabled",
         scheduled_prompt_last_attempt_at=None,
+        prompt_rules=(),
     )
 
 
@@ -460,6 +503,203 @@ def _choice_value(
             f"{', '.join(sorted(choices))}."
         )
     return value
+
+
+def _prompt_rules_value(
+    values: dict[str, Any],
+    key: str,
+    default: tuple[PromptRule, ...],
+) -> tuple[PromptRule, ...]:
+    raw_rules = values.get(key, default)
+    if isinstance(raw_rules, tuple) and all(
+        isinstance(rule, PromptRule) for rule in raw_rules
+    ):
+        return raw_rules
+    if not isinstance(raw_rules, (list, tuple)):
+        raise ControlError(f"Controle {key!r} precisa ser uma lista.")
+    rules: list[PromptRule] = []
+    for index, raw_rule in enumerate(raw_rules):
+        if isinstance(raw_rule, PromptRule):
+            rules.append(raw_rule)
+            continue
+        if not isinstance(raw_rule, dict):
+            raise ControlError(f"Regra de prompt {index + 1} precisa ser um objeto.")
+        prefix = f"prompt_rules[{index}]"
+        rules.append(
+            PromptRule(
+                rule_id=_required_string(
+                    raw_rule,
+                    "rule_id",
+                    "",
+                    maximum_length=MAX_PROMPT_RULE_ID_LENGTH,
+                ),
+                enabled=_bool_value(raw_rule, "enabled", False),
+                thread_id=_optional_string(raw_rule, "thread_id", None),
+                trigger=_choice_value(
+                    raw_rule,
+                    "trigger",
+                    "after_delay",
+                    choices=PROMPT_RULE_TRIGGERS,
+                ),
+                delay_minutes=_int_value(
+                    raw_rule,
+                    "delay_minutes",
+                    DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
+                    minimum=1,
+                    maximum=MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+                ),
+                text=_required_string(
+                    raw_rule,
+                    "text",
+                    DEFAULT_SCHEDULED_PROMPT_TEXT,
+                    maximum_length=MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
+                ),
+                repeat_enabled=_bool_value(
+                    raw_rule,
+                    "repeat_enabled",
+                    False,
+                ),
+                repeat_interval_minutes=_int_value(
+                    raw_rule,
+                    "repeat_interval_minutes",
+                    DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
+                    minimum=1,
+                    maximum=MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+                ),
+                max_occurrences=_int_value(
+                    raw_rule,
+                    "max_occurrences",
+                    DEFAULT_PROMPT_RULE_OCCURRENCES,
+                    minimum=1,
+                    maximum=MAX_PROMPT_RULE_OCCURRENCES,
+                ),
+                occurrence_count=_int_value(
+                    raw_rule,
+                    "occurrence_count",
+                    0,
+                    minimum=0,
+                    maximum=MAX_PROMPT_RULE_OCCURRENCES,
+                ),
+                next_due_at=_optional_number(raw_rule, "next_due_at", None),
+                last_state=_choice_value(
+                    raw_rule,
+                    "last_state",
+                    "disabled",
+                    choices=PROMPT_RULE_STATES,
+                ),
+                last_attempt_at=_optional_number(
+                    raw_rule,
+                    "last_attempt_at",
+                    None,
+                ),
+                last_dispatch_at=_optional_number(
+                    raw_rule,
+                    "last_dispatch_at",
+                    None,
+                ),
+                awaiting_confirmation=_bool_value(
+                    raw_rule,
+                    "awaiting_confirmation",
+                    False,
+                ),
+            )
+        )
+        if not rules[-1].rule_id:
+            raise ControlError(f"Controle {prefix!r} exige identificador.")
+    return tuple(rules)
+
+
+def _validate_settings(settings: ControlSettings) -> None:
+    _validate_scheduled_prompt(settings)
+    _validate_prompt_rules(settings)
+
+
+def _validate_prompt_rules(settings: ControlSettings) -> None:
+    rules = settings.prompt_rules
+    if not isinstance(rules, tuple) or not all(
+        isinstance(rule, PromptRule) for rule in rules
+    ):
+        raise ControlError("As regras de prompt precisam ser uma tupla de PromptRule.")
+    if len(rules) > MAX_PROMPT_RULES:
+        raise ControlError(
+            f"Um perfil aceita no maximo {MAX_PROMPT_RULES} regras de prompt."
+        )
+    seen: set[str] = set()
+    for rule in rules:
+        rule_id = rule.rule_id.strip()
+        if (
+            not rule_id
+            or len(rule_id) > MAX_PROMPT_RULE_ID_LENGTH
+            or any(character in rule_id for character in ("\r", "\n", "\x00"))
+        ):
+            raise ControlError("O identificador da regra de prompt e invalido.")
+        if rule_id in seen:
+            raise ControlError("Os identificadores das regras de prompt sao duplicados.")
+        seen.add(rule_id)
+        if rule.trigger not in PROMPT_RULE_TRIGGERS:
+            raise ControlError("O gatilho da regra de prompt e invalido.")
+        for label, value, minimum, maximum in (
+            (
+                "atraso",
+                rule.delay_minutes,
+                1,
+                MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+            ),
+            (
+                "intervalo",
+                rule.repeat_interval_minutes,
+                1,
+                MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+            ),
+            ("limite", rule.max_occurrences, 1, MAX_PROMPT_RULE_OCCURRENCES),
+            ("ocorrencias", rule.occurrence_count, 0, MAX_PROMPT_RULE_OCCURRENCES),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ControlError(f"O campo {label} da regra precisa ser inteiro.")
+            if not minimum <= value <= maximum:
+                raise ControlError(
+                    f"O campo {label} da regra precisa estar entre "
+                    f"{minimum} e {maximum}."
+                )
+        text = rule.text.strip()
+        if not text or len(text) > MAX_SCHEDULED_PROMPT_TEXT_LENGTH:
+            raise ControlError("O texto da regra de prompt e invalido.")
+        if any(character in text for character in ("\r", "\n", "\x00")):
+            raise ControlError("O texto da regra de prompt precisa ter uma linha.")
+        if rule.last_state not in PROMPT_RULE_STATES:
+            raise ControlError("O estado da regra de prompt e invalido.")
+        for label, timestamp_value in (
+            ("vencimento", rule.next_due_at),
+            ("ultima tentativa", rule.last_attempt_at),
+            ("ultimo envio", rule.last_dispatch_at),
+        ):
+            if timestamp_value is not None and (
+                isinstance(timestamp_value, bool)
+                or not isinstance(timestamp_value, (int, float))
+                or timestamp_value < 0
+            ):
+                raise ControlError(f"O campo {label} da regra de prompt e invalido.")
+        if rule.occurrence_count > rule.max_occurrences:
+            raise ControlError("A contagem da regra excede seu limite de ocorrencias.")
+        if rule.awaiting_confirmation and not rule.enabled:
+            raise ControlError("Regra aguardando confirmacao precisa estar habilitada.")
+        if not rule.enabled:
+            continue
+        if not settings.native_input_enabled:
+            raise ControlError("Regra de prompt habilitada exige entrada nativa.")
+        if not rule.thread_id:
+            raise ControlError("Regra de prompt habilitada exige sessao Codex exata.")
+        if rule.awaiting_confirmation:
+            if rule.last_attempt_at is None:
+                raise ControlError("Regra aguardando confirmacao exige tentativa anterior.")
+            continue
+        if rule.trigger == "after_delay" and rule.next_due_at is None:
+            raise ControlError("Regra por atraso habilitada exige vencimento.")
+        if rule.trigger == "red_inactivity" and rule.next_due_at is None:
+            if rule.last_state != "waiting_for_event":
+                raise ControlError(
+                    "Regra por inatividade sem vencimento precisa aguardar o evento."
+                )
 
 
 def _validate_scheduled_prompt(settings: ControlSettings) -> None:

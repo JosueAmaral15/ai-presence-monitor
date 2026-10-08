@@ -222,20 +222,23 @@
 - O projeto deve usar layout `src/` e produzir wheel independente do checkout.
 - Uma autorizacao persistente deve bloquear ou liberar a automacao, sem criar
   um temporizador de presenca artificial.
-- O agendamento solicitado explicitamente pelo usuario deve ser one-shot,
-  desabilitado por padrao e separado da autorizacao persistente do AI-worker.
-- O prompt temporizado deve usar uma sessao nativa exata, atraso padrao de 210
-  minutos e texto padrao `continue`.
-- A sessao e o vencimento devem ser congelados ao habilitar; salvar preferencias
-  inalteradas nao pode postergar o vencimento.
-- O agendamento deve ser desarmado antes do transporte. Falha,
-  `dispatch_started`, `input_emitted` ou incerteza nao podem causar retry.
+- O usuario deve poder criar ate 20 regras de prompt por perfil, desabilitadas
+  por padrao e separadas da decisao normativa do AI-worker.
+- Cada regra deve persistir sessao nativa exata, checkbox, gatilho, atraso,
+  texto, repeticao, intervalo, limite e estado de execucao.
+- Atraso e texto devem usar defaults de 210 minutos e `continue`.
+- Salvar uma regra inalterada nao pode postergar seu vencimento; alterar ou
+  reativar deve rearmar a contagem.
+- Regras one-shot devem ser desarmadas antes do transporte. Falha ou incerteza
+  nao pode causar retry.
+- Regras repetitivas devem possuir limite explicito de 1 a 100 ocorrencias,
+  default 3, e aguardar hook posterior da mesma sessao antes de cada repeticao.
 - O timer nao deve atualizar os relogios de presenca; somente um hook posterior
   registra atividade normal da sessao.
-- O prompt temporizado deve oferecer um gate opcional de inatividade vermelha.
-- Quando o gate estiver habilitado, o atraso configurado deve continuar sendo o
-  prazo minimo e o envio deve aguardar tambem 30 minutos sem `last_signal_at` no
-  Protocolo 1 ou 15 minutos sem `last_activity_at` no Protocolo 2.
+- A regra deve oferecer gatilho por ativacao ou por inatividade vermelha.
+- No gatilho vermelho, o atraso configurado deve iniciar depois de 30 minutos
+  sem `last_signal_at` no Protocolo 1 ou 15 minutos sem `last_activity_at` no
+  Protocolo 2.
 - Worker ausente, idle, protocolo desconhecido ou relogio ausente nao deve
   liberar o envio.
 
@@ -246,14 +249,16 @@
 - A bandeja deve oferecer habilitar automacao, responder mensagem e sair.
 - Preferencias devem separar entrada nativa, fallback GUI, destino remoto e
   sincronizacao de atividade.
-- Preferencias devem oferecer checkbox do prompt temporizado, minutos e texto,
-  reutilizando o seletor de sessao exata.
+- Preferencias devem permitir adicionar e remover regras completas de prompt.
 - Todos os checkboxes e campos devem ser persistidos como um perfil completo por
   `worker_id`, preservando valores diferentes entre projetos ou agentes.
 - Um perfil ainda inexistente deve herdar os defaults globais; salvar um perfil
   nao pode alterar outro perfil nem os defaults globais.
-- A bandeja deve filtrar sessoes pelo worker selecionado e a CLI deve permitir
-  consultar ou alterar um perfil explicito.
+- A bandeja deve filtrar sessoes pelo worker selecionado. A CLI pode consultar
+  perfil explicito, mas deve rejeitar sua mutacao arbitraria.
+- Um AI-worker deve poder desabilitar `task-automation` somente para o worker
+  derivado do diretorio, escopo e sessao correntes, sem overrides de identidade.
+- Desabilitar `task-automation` deve suspender regras sem apagar configuracao.
 - O compositor deve enviar para este computador ou para um endpoint Codex
   remoto autenticado.
 - A dependencia da bandeja deve ser opcional para preservar instalacoes CLI.

@@ -316,15 +316,19 @@ No Protocolo 1, `last_signal_at` nao e alterado; o heartbeat publico continua
 obrigatorio. Agendamento, `dry-run`, falha GUI e worker inativo nao contam como
 atividade.
 
-A bandeja oferece tambem um agendamento one-shot separado. Selecione o perfil do
-projeto/agente e uma sessao Codex desse worker, marque **Send one prompt after a
-delay** e ajuste os campos de minutos e texto. Os defaults sao 210 minutos e
-`continue`. Todos os checkboxes e campos ficam independentes por `worker_id`.
-Um checkbox adicional pode exigir que, alem do prazo configurado, o worker
-atinja vermelho: 30 minutos no Protocolo 1 ou 15 minutos no Protocolo 2. O
-agendamento e desarmado antes de uma unica tentativa nativa e nunca se repete
-automaticamente. A bandeja precisa permanecer em execucao ou ser iniciada
-depois do vencimento para processar a tentativa quando todos os gates passarem.
+A bandeja oferece regras persistentes de prompt por projeto/agente. O usuario
+pode adicionar varias regras e configurar, em cada uma, sessao exata, gatilho,
+atraso, texto, repeticao, intervalo e quantidade maxima de envios. O gatilho
+pode contar desde a ativacao ou desde o vermelho canonico: 30 minutos no
+Protocolo 1 e 15 minutos no Protocolo 2. Regras one-shot sao desarmadas antes do
+transporte. Uma regra repetitiva somente rearma depois de um hook posterior da
+mesma sessao, e falha ou incerteza a desabilita. Checkboxes, campos e estado de
+execucao sobrevivem ao fechamento e reabertura da bandeja.
+
+Um agente pode suspender somente a automacao do worker derivado do diretorio e
+escopo correntes com `ai-presence disable-current-automation`. O comando nao
+aceita outro worker ou projeto como argumento; edicao humana dos perfis ocorre
+pela bandeja.
 
 Consulte [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) para configuracao,
 execucao em segundo plano, sincronizacao e rollback, e

@@ -19,6 +19,7 @@ from .store import PresenceStore
 
 ScheduledPromptRunState = Literal[
     "disabled",
+    "automation_disabled",
     "waiting",
     "waiting_for_red",
     "dispatch_started",
@@ -109,6 +110,8 @@ def process_due_scheduled_prompt(
     settings = store.load(profile_id)
     if not settings.scheduled_prompt_enabled:
         return ScheduledPromptRunResult("disabled")
+    if not settings.task_automation_enabled:
+        return ScheduledPromptRunResult("automation_disabled")
     due_at = settings.scheduled_prompt_due_at
     if due_at is None or due_at > checked_at:
         return ScheduledPromptRunResult("waiting", due_at=due_at)

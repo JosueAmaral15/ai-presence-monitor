@@ -2,6 +2,19 @@
 
 ## Unreleased - v0.10.0
 
+- Replaced the single tray scheduler editor with up to 20 persistent prompt
+  rules per worker profile, each with its own session, trigger, delay and text.
+- Added one-shot or bounded repetition with configurable interval and maximum
+  occurrence count; every repeat waits for later exact-session hook evidence.
+- Added canonical red-inactivity triggers whose configured delay begins after
+  the Protocol 1 or Protocol 2 red threshold.
+- Added `disable-current-automation`, which derives the current worker without
+  accepting cross-project identity overrides.
+- Made explicit profile mutation read-only in the CLI and kept human profile
+  editing in the tray.
+- Made `task-automation` suspend both prompt rules and the legacy scheduler
+  without deleting persisted fields.
+
 - Added a disabled-by-default tray checkbox for one scheduled prompt to an
   exact Codex session.
 - Added configurable delay and text fields with defaults of 210 minutes and

@@ -176,7 +176,10 @@ class ScheduledPromptTests(unittest.TestCase):
             store = ControlStore(Path(tmp) / "control.json", ControlSettings())
             store.save(
                 configure_scheduled_prompt(
-                    ControlSettings(native_input_enabled=True),
+                    ControlSettings(
+                        task_automation_enabled=True,
+                        native_input_enabled=True,
+                    ),
                     enabled=True,
                     delay_minutes=1,
                     text="continue",
@@ -219,7 +222,10 @@ class ScheduledPromptTests(unittest.TestCase):
             store = ControlStore(Path(tmp) / "control.json", ControlSettings())
             store.save(
                 configure_scheduled_prompt(
-                    ControlSettings(native_input_enabled=True),
+                    ControlSettings(
+                        task_automation_enabled=True,
+                        native_input_enabled=True,
+                    ),
                     enabled=True,
                     delay_minutes=1,
                     text="continue",
@@ -274,7 +280,10 @@ class ScheduledPromptTests(unittest.TestCase):
                     )
                 control_store.save(
                     configure_scheduled_prompt(
-                        ControlSettings(native_input_enabled=True),
+                        ControlSettings(
+                            task_automation_enabled=True,
+                            native_input_enabled=True,
+                        ),
                         enabled=True,
                         delay_minutes=1,
                         text="continue",
@@ -335,7 +344,10 @@ class ScheduledPromptTests(unittest.TestCase):
                         )
                 control_store.save(
                     configure_scheduled_prompt(
-                        ControlSettings(native_input_enabled=True),
+                        ControlSettings(
+                            task_automation_enabled=True,
+                            native_input_enabled=True,
+                        ),
                         enabled=True,
                         delay_minutes=1,
                         text="continue",

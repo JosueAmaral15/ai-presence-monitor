@@ -5,8 +5,8 @@
 ### Task 028 - E2E do scheduler 0.10.0 e promocao para main
 
 **Prioridade**: Critica
-**Status**: preflight concluido; aguardando autorizacao explicita para uma unica
-emissao real na sessao Codex atual
+**Status**: preflight concluido; suspensa ate a Task 029 compor o novo candidato
+e receber autorizacao explicita para uma unica emissao real
 **Objetivo**: validar o scheduler e o gate vermelho com estado isolado, registrar
 a evidencia e promover o mesmo candidato de `develop` para `main`.
 
@@ -21,6 +21,32 @@ a evidencia e promover o mesmo candidato de `develop` para `main`.
 **Plano**: `docs/planning/TASK-028-scheduled-prompt-e2e-main.md`.
 
 ## Concluidas em 2026-10-08
+
+### Task 029 - Regras multiplas de prompt por projeto/agente
+
+**Prioridade**: Critica
+**Status**: implementacao e gates locais concluidos na branch
+`codex/task-029-profile-prompt-rules`; E2E real e promocao permanecem na Task
+028.
+**Objetivo**: permitir varias regras persistentes de prompt por worker e uma
+desativacao de automacao limitada ao projeto corrente do AI-worker.
+
+- [x] Persistir todos os campos e estados de varias regras em `control.json`.
+- [x] Adicionar/remover regras pela bandeja sem perder outros perfis.
+- [x] Oferecer gatilho por atraso ou pelo vermelho canonico do protocolo.
+- [x] Configurar regra one-shot ou repetitiva, com intervalo e limite.
+- [x] Exigir hook posterior da mesma sessao antes de cada repeticao.
+- [x] Parar a regra em falha ou incerteza, sem retry automatico.
+- [x] Permitir que um AI-worker desabilite somente a automacao do worker
+      derivado do projeto corrente.
+- [x] Impedir mutacao CLI arbitraria de outro perfil; manter consulta
+      sanitizada e edicao humana pela bandeja.
+- [x] Migrar uma configuracao legada visivel quando o usuario salvar o perfil.
+- [x] Atualizar documentacao humana, protocolo de agentes, seguranca e rollback.
+- [x] Aprovar 312 testes, cobertura de 86%, matriz Python 3.10/3.11/3.12,
+      Ruff, mypy, compileall, shell syntax, build e smoke da bandeja.
+
+**Plano**: `docs/planning/TASK-029-profile-prompt-rules.md`.
 
 ### Task 028 - Perfis de automacao e gate de inatividade vermelha
 

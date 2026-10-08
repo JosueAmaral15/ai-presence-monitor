@@ -279,6 +279,18 @@ schtasks.exe /Delete /TN "AI Presence Reply Observer" /F
 Depois, reinstale um wheel 0.4.3 conhecido. Nao remova o `.env` nem o SQLite:
 nao houve migracao de esquema e as chaves novas preservam defaults compativeis.
 
+## Task 029 - Regras persistentes de prompt
+
+Encerre a bandeja por **Exit** antes do rollback para impedir novos despachos.
+Faca backup do `control.json`: uma versao anterior ignora `prompt_rules`, mas
+pode remover essas chaves se o mesmo perfil for salvo por uma interface antiga.
+Nao repita manualmente uma regra em `dispatching`, `dispatch_started`,
+`input_emitted` ou `failed_or_uncertain` sem verificar a sessao exata.
+
+O recurso nao altera SQLite nem `.env`. Para suspender sem remover configuracao,
+desmarque **Enable task automation** em cada perfil antes de encerrar. Depois do
+rollback, as regras ficam inertes porque o runtime anterior nao as processa.
+
 ## Task 027 - Prompt temporizado one-shot
 
 Antes do rollback, abra as preferencias, desmarque **Send one prompt after a

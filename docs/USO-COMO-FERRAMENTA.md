@@ -147,13 +147,16 @@ As autorizacoes sao independentes:
 | `remote-input` | permite destino em computador cliente |
 | `activity-sync` | permite sincronizacao depois de emissao sincrona confirmada |
 
-Exemplos:
+Os perfis explicitos sao somente leitura pela CLI. O usuario os altera na
+bandeja; isso impede que um agente selecione por argumento o projeto de outro
+agente. Os comandos sem `--profile` continuam administrando os defaults
+globais:
 
 ```bash
-ai-presence control enable native-input --profile WORKER_ID
-ai-presence control enable task-automation --profile WORKER_ID
-ai-presence control disable gui-fallback --profile WORKER_ID
-ai-presence control target --profile WORKER_ID --thread SESSAO_EXATA
+ai-presence control enable native-input
+ai-presence control enable task-automation
+ai-presence control disable gui-fallback
+ai-presence control target --thread SESSAO_EXATA
 ```
 
 Habilitar `task-automation` e uma autorizacao persistente, nao um timer. O
@@ -164,13 +167,27 @@ A bandeja salva todos os checkboxes e campos em um perfil completo por
 mantem configuracoes independentes. O item global serve como default para um
 perfil ainda inexistente.
 
-A bandeja oferece separadamente um prompt temporizado one-shot. O usuario
-seleciona o perfil e uma sessao desse worker, habilita o checkbox e define
-minutos e texto. Os defaults sao 210 minutos e `continue`; a tentativa e
-desarmada antes do envio e nunca se repete automaticamente. Um segundo checkbox
-pode exigir tambem inatividade vermelha: 30 minutos pelo relogio de sinal do
-Protocolo 1 ou 15 minutos pelo relogio de atividade do Protocolo 2. O atraso
-configurado continua sendo o prazo minimo.
+A bandeja oferece varias regras persistentes de prompt. Cada regra possui
+checkbox, sessao exata, gatilho, atraso, texto e configuracao one-shot ou
+repetitiva. O botao `+` adiciona uma regra e o botao `-` remove a linha. O
+gatilho pode contar desde a ativacao ou desde o vermelho canonico, seguido pelo
+atraso configurado. Repeticao exige intervalo e limite de ocorrencias, com
+default seguro de tres envios e limite absoluto de 100. Depois de cada envio, a
+regra aguarda um hook posterior da mesma sessao antes de contar o proximo
+intervalo. Falha ou resultado incerto desabilita a regra.
+
+O agente pode suspender a autorizacao do perfil derivado de seu projeto atual:
+
+```bash
+ai-presence disable-current-automation
+```
+
+O comando nao aceita `--worker`, `--project`, `--scope`, `--computer` ou
+`--ai`. Em escopos que incluem sessao, exige `CODEX_THREAD_ID` ou
+`CODEX_SESSION_ID`. Ele preserva as regras e seus campos, mas o scheduler nao
+despacha enquanto `task-automation` estiver desligado. Essa limitacao evita
+alteracao acidental entre projetos; processos maliciosos sob o mesmo usuario do
+sistema operacional continuam fora desse limite logico.
 
 Para usar a bandeja:
 
