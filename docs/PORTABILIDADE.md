@@ -12,12 +12,12 @@ por padrao e exige opt-in experimental explicito.
 
 ## Instalacao Recomendada
 
-Para a release privada Linux 0.9.0, extraia o bundle e valide seu conteudo:
+Para a release privada Linux 0.10.0, extraia o bundle e valide seu conteudo:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
 ```
 
 Os comandos ficam em:
@@ -340,7 +340,8 @@ mesmo SQLite e o mesmo escopo de worker do monitor.
 O gate completo de uma release limpa gera e valida o bundle:
 
 ```bash
-./scripts/release-gate.sh "$PWD/dist/release-0.9.0"
+version="$(python3 -c 'from pathlib import Path; from scripts.release_lib import project_version; print(project_version(Path.cwd()))')"
+./scripts/release-gate.sh "$PWD/dist/release-$version"
 ```
 
 Quando as versoes estiverem instaladas na maquina:

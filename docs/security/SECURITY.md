@@ -26,9 +26,9 @@ does not vendor optional PySide6, system packages or Codex CLI. A clean bundle
 and isolated smoke do not replace the authorized live upgrade, rollback and
 service-state gate.
 
-The private 0.9.0 release uses a canonical archive plus an external SHA-256
-sidecar because GitHub renames `.env.example` when uploaded individually. The
-published archive was downloaded again and passed its sidecar, all internal
+Private Linux releases use a canonical archive plus an external SHA-256
+sidecar because GitHub renames `.env.example` when uploaded individually. Each
+published archive must be downloaded again and pass its sidecar, all internal
 checksums and the full isolated verifier. Supplementary individual assets are
 not a substitute for that canonical path.
 

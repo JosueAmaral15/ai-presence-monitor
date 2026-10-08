@@ -150,7 +150,7 @@
   preflight de automacao.
 
 - O projeto deve gerar wheel instalavel para CPython 3.10, 3.11 e 3.12 e
-  rejeitar Python fora desse intervalo na release 0.9.0.
+  rejeitar Python fora desse intervalo em cada release Linux suportada.
 - A release Linux privada deve fornecer wheel, sdist, instalador, modelo de
   configuracao, verificador offline, manifesto e checksums SHA-256 vinculados
   a um commit limpo.

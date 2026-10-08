@@ -77,13 +77,13 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/SUPPORT.md](docs/SUPPORT.md)
 - [docs/RELEASING.md](docs/RELEASING.md)
 
-Na release privada Linux 0.9.0, valide o bundle extraido e use o instalador
+Na release privada Linux 0.10.0, valide o bundle extraido e use o instalador
 incluido:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
 ai-presence --version
 ```
 

@@ -137,6 +137,20 @@ automatically.
   loaded installed 0.10.0 code; the existing XDG entry remains responsible for
   later graphical logins. No transaction or input was retried automatically.
 
+## Publication Preflight Correction
+
+The operational gate above validated the executable candidate from `d54842b`.
+Before publication, review found that current installation and support guides
+still named 0.9.0 as the distributed release. Publishing that tag would leave
+0.10.0 package metadata and source documentation inconsistent.
+
+The current guides must identify 0.10.0 and the bundled upgrade bootstrap, then
+the clean bundle, hashes and exact source commit must be regenerated. Because
+the root README is package metadata, this changes the wheel bytes even though
+runtime code is unchanged. The rebuilt exact wheel therefore needs a final
+bounded installed-runtime validation before promotion and publication. No old
+artifact or hash may be reused.
+
 ## Phase 4 - Tag and Private Prerelease
 
 After the operational gate and a version-specific private CI exception are

@@ -40,7 +40,7 @@ account billing is an external non-pass, not test evidence.
 
 A private Linux release may bypass that external gate only through a new,
 version-specific documented user decision after all local and real integration
-gates pass. An exception for 0.8.0 does not automatically cover 0.9.0.
+gates pass. An exception for one release never covers a later release.
 
 ## Operational Gate
 

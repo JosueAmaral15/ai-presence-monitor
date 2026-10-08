@@ -105,13 +105,13 @@ input requires an installed Codex CLI that provides `codex queue`.
 
 ## Installation
 
-AI Presence Monitor 0.9.0 is distributed as a private, checksummed Linux
+AI Presence Monitor 0.10.0 is distributed as a private, checksummed Linux
 release bundle. Verify the extracted bundle before installation:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
 ai-presence --version
 ```
 

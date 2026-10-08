@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.9.0 is a private beta Linux product. It is suitable for
+AI Presence Monitor 0.10.0 is a private beta Linux product. It is suitable for
 the owner's controlled local use across multiple projects and Linux computers
 after the release gates in the current plan pass. It is not a hosted service,
 public SaaS, public package-index distribution or multi-tenant security
@@ -36,7 +36,7 @@ audio behavior is best effort until validated there.
 - Windows runtime is preserved but disabled and unsupported for this release.
 - Wayland GUI mouse/keyboard fallback is unsupported. Native `codex queue`
   remains the preferred transport when available.
-- Python 3.9 and Python 3.13 or newer are outside the 0.9.0 support contract.
+- Python 3.9 and Python 3.13 or newer are outside the 0.10.0 support contract.
 - System-wide root installation, shared multi-user databases and containers
   are not validated deployment targets.
 - Public Internet endpoints, inbound web servers and automatic package

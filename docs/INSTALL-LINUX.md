@@ -2,9 +2,10 @@
 
 ## Supported Installation
 
-AI Presence Monitor 0.9.0 is distributed as a private Linux release bundle.
-The bundle contains a wheel, source archive, configuration template, installer,
-offline verifier, release manifest and `SHA256SUMS`.
+AI Presence Monitor 0.10.0 is distributed as a private Linux release bundle.
+The bundle contains a wheel, source archive, configuration template, fresh
+installer, transactional upgrade bootstrap, offline verifier, release manifest
+and `SHA256SUMS`.
 
 Requirements:
 
@@ -42,7 +43,7 @@ Run the bundled installer:
 
 ```bash
 ./install-linux.sh \
-  --wheel ./ai_presence_monitor-0.9.0-py3-none-any.whl
+  --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
 ```
 
 Default locations:
@@ -71,6 +72,9 @@ The installer:
 
 It refuses an existing runtime. Existing installations must use the
 transactional updater rather than bypassing its backup and rollback contract.
+For an upgrade whose release notes require candidate-side updater behavior,
+use the verified bundle's `upgrade-linux.sh` as documented in
+[TRANSACTIONAL-UPGRADE.md](TRANSACTIONAL-UPGRADE.md).
 
 ## Configure and Validate
 
