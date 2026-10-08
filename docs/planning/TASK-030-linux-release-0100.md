@@ -20,7 +20,7 @@ offline.
 - No `.env`, database, control state, logs or local backup manifest may enter
   the release bundle.
 
-## Current Preflight
+## Initial Preflight
 
 - `main`, `develop`, `origin/main` and `origin/develop` identify commit
   `6b2bbb7` before release-planning changes.
@@ -100,6 +100,42 @@ After explicit authorization immediately before the transaction:
 
 An uncertain transaction is a stop condition and must not be retried
 automatically.
+
+## Phase 3 Evidence
+
+- On 2026-10-08, the user explicitly approved both the version-specific private
+  CI exception and the real upgrade, database-restoring rollback and final
+  upgrade transaction.
+- The exception is limited to private Linux release 0.10.0. The hosted Quality
+  failures executed zero steps and remain an external non-pass rather than test
+  evidence; the local and real gates below replace that evidence only for this
+  private release.
+- Pre-transaction state was 0.9.0 with schema 1 current and integral, five Codex
+  hooks, `codex queue`, tray autostart and the main monitor healthy. The reply
+  observer was already failed and was not restarted or consumed.
+- The first candidate-bootstrap upgrade completed in
+  `upgrade-0.9.0-to-0.10.0-20261008-190256-bc0a5ef5/manifest.json`. Its private
+  mode-0600 manifest records only the main monitor as previously active and the
+  exact target and rollback wheel hashes listed above.
+- Post-upgrade checks confirmed 0.10.0, healthy current schema, all intrinsic
+  doctor checks, five hooks, `codex queue`, tray autostart and restored main
+  monitor service. The known reply-observer error remained unchanged.
+- The rollback dry-run returned `would_rollback`; the authorized rollback then
+  returned `manually_rolled_back`, restored 0.9.0 and its database snapshot,
+  and left schema, controls, hooks and original service state healthy. The main
+  monitor resumed normal writes after restoration, so later database file
+  hashes are not expected to remain byte-identical to the stored snapshot.
+- The final candidate-bootstrap upgrade completed in
+  `upgrade-0.9.0-to-0.10.0-20261008-190405-ce260738/manifest.json` and left the
+  installed runtime on 0.10.0.
+- Control SHA-256 remained
+  `7a1b91a82d02de2266d1887e35b13e99207f9adea140d76fbc5c8cb973a80c39`;
+  hook SHA-256 remained
+  `f95963bf0416a93dbf93c1da771553758aadd7c0068b15e31eb67fe3942e703b`.
+- The tray process was cleanly restarted after final upgrade under the
+  collectable current-session unit `ai-presence-tray-session.service`, so it
+  loaded installed 0.10.0 code; the existing XDG entry remains responsible for
+  later graphical logins. No transaction or input was retried automatically.
 
 ## Phase 4 - Tag and Private Prerelease
 

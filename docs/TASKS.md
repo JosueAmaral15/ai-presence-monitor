@@ -5,8 +5,8 @@
 ### Task 030 - Release privada Linux 0.10.0
 
 **Prioridade**: Critica
-**Status**: candidata local limpa e dry-run aprovados; aguardando excecao
-privada de CI e autorizacao da transacao operacional
+**Status**: candidata e gate operacional aprovados; aguardando autorizacao de
+promocao, tag e publicacao privada
 **Objetivo**: produzir, validar, instalar e publicar a release privada Linux
 0.10.0 com rollback verificavel a partir da versao instalada 0.9.0.
 
@@ -14,12 +14,12 @@ privada de CI e autorizacao da transacao operacional
 - [x] Confirmar monitor, hooks, fila nativa e banco operacional saudaveis.
 - [x] Manter o reply observer falho fora do escopo, sem reinicio automatico.
 - [x] Confirmar que o CI Quality falhou com zero steps executados.
-- [ ] Aprovar excecao privada especifica para o CI hospedado da versao 0.10.0.
+- [x] Aprovar excecao privada especifica para o CI hospedado da versao 0.10.0.
 - [x] Gerar bundle limpo, checksums e manifesto vinculados ao commit exato.
 - [x] Verificar wheel, sdist, instalacao isolada e isolamento entre projetos.
 - [x] Preservar e verificar o wheel autentico 0.9.0 para rollback.
 - [x] Executar dry-run do upgrade transacional.
-- [ ] Autorizar e validar upgrade real, rollback com banco e upgrade final.
+- [x] Autorizar e validar upgrade real, rollback com banco e upgrade final.
 - [ ] Criar e enviar a tag anotada `v0.10.0`.
 - [ ] Publicar prerelease privada com arquivo canonico e sidecar SHA-256.
 - [ ] Baixar e verificar novamente as duas camadas de checksum.
