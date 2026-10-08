@@ -1,12 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-10-08
+## Concluidas em 2026-10-08
 
 ### Task 028 - E2E do scheduler 0.10.0 e promocao para main
 
 **Prioridade**: Critica
-**Status**: E2E real aprovado; pronta para promocao fast-forward do mesmo
-candidato validado para `main`
+**Status**: E2E real aprovado e candidato promovido por fast-forward para
+`origin/develop` e `origin/main` no commit `e55658f`
 **Objetivo**: validar o scheduler e o gate vermelho com estado isolado, registrar
 a evidencia e promover o mesmo candidato de `develop` para `main`.
 
@@ -17,18 +17,15 @@ a evidencia e promover o mesmo candidato de `develop` para `main`.
       atraso adicional.
 - [x] Confirmar que o usuario nao digitou o marcador e observar hook posterior.
 - [x] Registrar resultado; nenhum codigo mudou depois dos gates completos.
-- [ ] Promover por fast-forward e enviar `main`.
+- [x] Promover por fast-forward e enviar `main`.
 
 **Plano**: `docs/planning/TASK-028-scheduled-prompt-e2e-main.md`.
-
-## Concluidas em 2026-10-08
 
 ### Task 029 - Regras multiplas de prompt por projeto/agente
 
 **Prioridade**: Critica
-**Status**: implementacao e gates locais concluidos na branch
-`codex/task-029-profile-prompt-rules`; E2E real e promocao permanecem na Task
-028.
+**Status**: implementacao, gates locais, E2E real e promocao para `main`
+concluidos
 **Objetivo**: permitir varias regras persistentes de prompt por worker e uma
 desativacao de automacao limitada ao projeto corrente do AI-worker.
 
@@ -52,9 +49,8 @@ desativacao de automacao limitada ao projeto corrente do AI-worker.
 ### Task 028 - Perfis de automacao e gate de inatividade vermelha
 
 **Prioridade**: Alta
-**Status**: implementacao e gates locais concluidos na branch
-`codex/task-028-profiled-red-gated-prompts`; candidata a `develop`. Promocao
-para `main` requer E2E real autorizado do scheduler 0.10.0.
+**Status**: implementacao, gates e E2E integrados ao candidato 0.10.0 promovido
+para `main`
 **Objetivo**: isolar todos os controles da bandeja por worker/projeto e permitir
 que o prompt temporizado aguarde tambem a inatividade vermelha do protocolo.
 
