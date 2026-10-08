@@ -53,3 +53,27 @@ release or installed-runtime upgrade is included. The live test covers the
 new one-shot rule path; bounded repetition remains covered by deterministic
 tests because a second real prompt would add risk without proving a different
 transport.
+
+## Result - 2026-10-08
+
+The authorized isolated E2E passed against exact session
+`019f5691-c118-7370-a205-94cfde0a93d7` with marker
+`[AI-PRESENCE-PROMPT-RULE-E2E:5cc95eb9-6d10-4325-bc3b-151c28b31b9c]`.
+The human did not type the marker; it arrived as user input through the queued
+prompt.
+
+Recorded scheduler states were:
+
+- immediately before red: `waiting_for_event`;
+- at the Protocol 2 red threshold: `waiting`, due at the additional one-minute
+  delay;
+- at that due time: `dispatch_started`;
+- after dispatch: rule disabled, occurrence count `1`;
+- second evaluation: `disabled`, with no second transport.
+
+The temporary `control.json` and SQLite database were removed automatically.
+The operational database then recorded a later exact-session
+`observation:codex:PreToolUse` hook for worker
+`notebook-josue:codex:project=ai-presence-monitor-c5b81815`; the observation
+was 1.419 seconds old when checked. No GUI, remote endpoint, Discord, alarm,
+fallback, retry or activity synchronization participated in the transport.

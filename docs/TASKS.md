@@ -5,18 +5,18 @@
 ### Task 028 - E2E do scheduler 0.10.0 e promocao para main
 
 **Prioridade**: Critica
-**Status**: candidata `5e40c9c` em `origin/develop`; aguardando autorizacao
-explicita imediatamente anterior a uma unica emissao real da nova regra
+**Status**: E2E real aprovado; pronta para promocao fast-forward do mesmo
+candidato validado para `main`
 **Objetivo**: validar o scheduler e o gate vermelho com estado isolado, registrar
 a evidencia e promover o mesmo candidato de `develop` para `main`.
 
 - [x] Confirmar sessao atual, hooks e disponibilidade de `codex queue`.
 - [x] Confirmar que o observer Discord falho e independente deste fluxo.
 - [x] Definir banco e `control.json` temporarios, sem alterar estado operacional.
-- [ ] Emitir um unico marcador exclusivo por uma regra com gatilho vermelho e
+- [x] Emitir um unico marcador exclusivo por uma regra com gatilho vermelho e
       atraso adicional.
-- [ ] Confirmar que o usuario nao digitou o marcador e observar hook posterior.
-- [ ] Registrar resultado, repetir gates somente se houver alteracao de codigo.
+- [x] Confirmar que o usuario nao digitou o marcador e observar hook posterior.
+- [x] Registrar resultado; nenhum codigo mudou depois dos gates completos.
 - [ ] Promover por fast-forward e enviar `main`.
 
 **Plano**: `docs/planning/TASK-028-scheduled-prompt-e2e-main.md`.
