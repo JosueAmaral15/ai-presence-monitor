@@ -158,6 +158,11 @@ ai-presence control target --thread SESSAO_EXATA
 Habilitar `task-automation` e uma autorizacao persistente, nao um timer. O
 sistema nao envia `continue` sozinho em intervalos fixos.
 
+A bandeja oferece separadamente um prompt temporizado one-shot. O usuario
+seleciona uma sessao exata, habilita o checkbox e define minutos e texto. Os
+defaults sao 210 minutos e `continue`; a tentativa e desarmada antes do envio e
+nunca se repete automaticamente.
+
 Para usar a bandeja:
 
 ```bash

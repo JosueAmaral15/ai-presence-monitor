@@ -5,6 +5,7 @@ import unittest
 import urllib.error
 from unittest.mock import patch
 
+from ai_presence_monitor import __version__
 from ai_presence_monitor.discord_questions import (
     DiscordQuestionClient,
     DiscordQuestionError,
@@ -51,7 +52,9 @@ class DiscordQuestionClientTests(unittest.TestCase):
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["allowed_mentions"], {"parse": []})
         self.assertIn("@everyone escolha B", payload["content"])
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.9.0")
+        self.assertEqual(
+            request.headers["User-agent"], f"ai-presence-monitor/{__version__}"
+        )
 
     def test_fetch_messages_uses_bot_authorization_and_orders_snowflakes(self) -> None:
         with patch(

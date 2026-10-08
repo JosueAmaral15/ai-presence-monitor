@@ -546,9 +546,12 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
         if not getattr(args, "dry_run", False):
             store.save(settings)
 
+    settings_payload = dict(settings.__dict__)
+    scheduled_text = settings_payload.pop("scheduled_prompt_text")
+    settings_payload["scheduled_prompt_text_configured"] = bool(scheduled_text)
     payload = {
         "control_path": str(store.path),
-        **settings.__dict__,
+        **settings_payload,
     }
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))

@@ -8,6 +8,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
+from ai_presence_monitor import __version__
 from scripts.build_release import build_release
 from scripts.release_lib import (
     ReleaseError,
@@ -22,7 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 class ReleaseToolingTests(unittest.TestCase):
     def test_package_and_runtime_versions_are_synchronized(self) -> None:
-        self.assertEqual(project_version(PROJECT_ROOT), "0.9.0")
+        self.assertEqual(project_version(PROJECT_ROOT), __version__)
 
     def test_wheel_metadata_reads_expected_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

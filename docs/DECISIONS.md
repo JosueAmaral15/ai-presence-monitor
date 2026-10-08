@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-10-08 - Prompt temporizado e one-shot, nao heartbeat periodico
+
+**Decisao**: permitir que o usuario programe pela bandeja uma unica mensagem
+nativa para uma sessao Codex exata. O checkbox e a autorizacao explicita dessa
+tentativa futura; os defaults sao 210 minutos e `continue`.
+
+O scheduler e separado de `task-automation`, usa somente destino local nativo e
+desarma o registro antes de iniciar o transporte. Nao existe retry automatico,
+fallback GUI/remoto, sincronizacao direta de presenca ou repeticao periodica.
+
+**Motivo**: o usuario precisa deixar uma instrucao futura sem manter um turno
+ou ocupar mouse e teclado. Congelar sessao e vencimento evita enviar para a
+tarefa errada; claim-before-dispatch evita duplicacao depois de queda ou
+resultado incerto.
+
+**Alternativas consideradas**:
+
+- timer periodico: rejeitado porque pode simular atividade e repetir comandos;
+- usar o monitor principal: rejeitado para nao misturar observacao e input;
+- inferir a sessao no vencimento: rejeitado porque o alvo pode mudar;
+- retry apos falha: rejeitado porque o transporte pode ter sido aceito.
+
+**Consequencia**: a bandeja precisa estar executando. Se ela iniciar depois do
+vencimento, processa a tentativa armada uma vez. Um hook posterior continua
+sendo a unica evidencia de atividade da sessao.
+
 ## 2026-09-24 - Version 0.9.0 is a private Linux product bundle
 
 **Decision**: distribute version 0.9.0 as a checksummed private Linux bundle

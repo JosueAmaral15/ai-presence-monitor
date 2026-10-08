@@ -459,6 +459,24 @@ existir pergunta pendente recebera orientacao. O canal deve permanecer dedicado
 ao fluxo de perguntas. Falha do webhook pode impedir um aviso; por seguranca,
 o sistema nao repete uma entrega cujo resultado externo seja incerto.
 
+## Task 027 - Prompt temporizado one-shot
+
+- [x] Desabilitado por default e habilitado somente por checkbox humano.
+- [x] Sessao, vencimento e identificador sao congelados ao armar.
+- [x] Destino e somente local nativo; nao existe fallback GUI ou remoto.
+- [x] O estado e desarmado e salvo antes do transporte.
+- [x] Falha, incerteza e estados preliminares nunca causam retry automatico.
+- [x] Timer e transporte nao alteram relogios de presenca.
+- [x] `control show` e doctor nao imprimem o texto programado.
+- [x] Arquivo antigo recebe defaults aditivos sem migracao destrutiva.
+
+### Risco residual
+
+O prompt fica no `control.json` privado e aparece temporariamente nos
+argumentos locais de `codex queue`; nao use segredos. Se a bandeja estiver
+fechada ou o computador suspenso, a tentativa vencida ocorre na proxima
+execucao. `dispatch_started` nao confirma processamento e nao autoriza retry.
+
 ## Task 016 - Bandeja e entrada nativa
 
 - [x] `codex queue` recebe lista de argumentos e nunca usa shell.

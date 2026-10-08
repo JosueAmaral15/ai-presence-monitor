@@ -146,6 +146,31 @@ Os campos de destino sao:
 
 O valor do token nao e exibido nem salvo pela bandeja.
 
+## Prompt Temporizado One-shot
+
+Nas preferencias:
+
+1. selecione a sessao exata em **Codex session**;
+2. marque **Send one prompt after a delay**;
+3. informe **Delay**, em minutos; o default e `210 min`;
+4. informe **Prompt**; o default e `continue`;
+5. pressione **Save**.
+
+A interface mostra o vencimento local. Salvar novamente sem mudar habilitacao,
+minutos, texto ou sessao preserva o vencimento original. Alterar qualquer um
+desses campos rearma a contagem; desmarcar cancela a tentativa pendente.
+
+O recurso usa somente `codex queue` local. No vencimento, o estado e desarmado
+antes de criar o processo destacado. Assim, encerramento da bandeja, falha ou
+resultado incerto nao repetem a mensagem. `dispatch_started` nao prova que o
+Codex processou o texto; aguarde um hook posterior da mesma sessao.
+
+A bandeja precisa estar em execucao. Se o computador suspender ou a bandeja
+estiver fechada no vencimento, uma tentativa ainda armada sera processada uma
+vez na proxima verificacao apos retomada/inicializacao. Nao use o campo para
+senhas, tokens ou segredos, pois o texto e armazenado no arquivo privado de
+controle e enviado como argumento local do Codex CLI.
+
 ## Controle Equivalente pela CLI
 
 Consultar o estado:
@@ -287,10 +312,11 @@ No Windows, normalmente fica sob:
 ```
 
 O arquivo e gravado por substituicao atomica e recebe modo `600` em sistemas
-POSIX. Ele contem flags, sessao, endpoint e **nome** da variavel de token, mas
-nunca o token. Depois que ele existe, seus valores substituem os defaults do
-`.env`. Para voltar aos defaults, encerre a bandeja e remova somente
-`control.json`.
+POSIX. Ele contem flags, sessao, endpoint, **nome** da variavel de token e, se
+configurado, o prompt temporizado. Nunca contem o valor do token. O comando
+`control show` informa apenas que existe texto configurado, sem imprimi-lo.
+Depois que o arquivo existe, seus valores substituem os defaults do `.env`.
+Para voltar aos defaults, encerre a bandeja e remova somente `control.json`.
 
 Defina `PRESENCE_CONTROL_PATH` apenas para substituir esse local. Um caminho
 relativo explicito e resolvido a partir do diretorio do `.env`.

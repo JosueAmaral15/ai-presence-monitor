@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased - v0.10.0
+
+- Added a disabled-by-default tray checkbox for one scheduled prompt to an
+  exact Codex session.
+- Added configurable delay and text fields with defaults of 210 minutes and
+  `continue`.
+- Persisted the exact session, due time and bounded status in `control.json`
+  while keeping the prompt out of `control show` and doctor output.
+- Added claim-before-dispatch semantics: each schedule is disarmed before one
+  detached local `codex queue` attempt and is never retried automatically.
+- Preserved existing `control.json` files through additive defaults without a
+  control-format or SQLite-schema migration.
+
 ## 2026-09-24 - v0.9.0
 
 - Defined a private Linux product contract for CPython 3.10, 3.11 and 3.12,

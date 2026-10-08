@@ -415,6 +415,14 @@ A permissao `task_automation_enabled` e um gate, nao um scheduler. A decisao de
 executar `continue` continua pertencendo ao AI-worker e as pre-condicoes
 normativas da tarefa.
 
+`scheduled_prompt.py` implementa um scheduler diferente e explicitamente
+humano: uma unica mensagem, sessao local exata e vencimento absoluto. A bandeja
+consulta o vencimento com `QTimer`, mas o nucleo e independente de Qt. Antes de
+chamar `codex queue`, ele grava o agendamento como desabilitado e
+`dispatching`; conclusao, falha ou incerteza apenas atualizam o estado e nunca
+rearmam a tentativa. Um UUID impede que a conclusao de uma tentativa antiga
+sobrescreva um novo agendamento criado concorrentemente.
+
 ## Source Layout
 
 O pacote instalavel fica em `src/ai_presence_monitor`. Testes usam

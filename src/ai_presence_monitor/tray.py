@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
+from datetime import datetime
 from typing import Any
 
 from .codex_input import (
@@ -13,6 +15,10 @@ from .codex_input import (
 from .config import AppConfig, load_config
 from .control import ControlError, ControlSettings, ControlStore
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
+from .scheduled_prompt import (
+    configure_scheduled_prompt,
+    process_due_scheduled_prompt,
+)
 from .store import PresenceStore
 
 
@@ -47,7 +53,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         experimental_windows_enabled=config.experimental_windows_enabled,
     )
     try:
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import Qt, QTimer
         from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap
         from PySide6.QtWidgets import (
             QApplication,
@@ -61,6 +67,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             QMenu,
             QMessageBox,
             QPlainTextEdit,
+            QSpinBox,
             QSystemTrayIcon,
             QVBoxLayout,
         )
@@ -124,6 +131,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     class PreferencesDialog(QDialog):
         def __init__(self, settings: ControlSettings):
             super().__init__()
+            self._original = settings
             self.setWindowTitle("AI Presence Monitor")
             self.setMinimumWidth(480)
             layout = QVBoxLayout(self)
@@ -151,7 +159,9 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 layout.addWidget(checkbox)
 
             form = QFormLayout()
-            self.thread_field = session_combo(settings.codex_thread_id)
+            self.thread_field = session_combo(
+                settings.scheduled_prompt_thread_id or settings.codex_thread_id
+            )
             form.addRow("Codex session", self.thread_field)
             self.endpoint = QLineEdit(settings.codex_remote or "")
             self.endpoint.setPlaceholderText("wss://client.example/app-server")
@@ -160,6 +170,34 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.auth_env.setPlaceholderText("CODEX_REMOTE_AUTH_TOKEN")
             form.addRow("Token variable", self.auth_env)
             layout.addLayout(form)
+
+            scheduled_title = QLabel("Scheduled one-shot prompt")
+            scheduled_title.setStyleSheet("font-size: 14px; font-weight: 600;")
+            layout.addWidget(scheduled_title)
+            self.scheduled_prompt = QCheckBox("Send one prompt after a delay")
+            self.scheduled_prompt.setChecked(settings.scheduled_prompt_enabled)
+            layout.addWidget(self.scheduled_prompt)
+            scheduled_form = QFormLayout()
+            self.scheduled_delay = QSpinBox()
+            self.scheduled_delay.setRange(1, 10_080)
+            self.scheduled_delay.setSuffix(" min")
+            self.scheduled_delay.setValue(settings.scheduled_prompt_delay_minutes)
+            scheduled_form.addRow("Delay", self.scheduled_delay)
+            self.scheduled_text = QLineEdit(settings.scheduled_prompt_text)
+            self.scheduled_text.setMaxLength(4_000)
+            self.scheduled_text.setPlaceholderText("continue")
+            scheduled_form.addRow("Prompt", self.scheduled_text)
+            layout.addLayout(scheduled_form)
+            self.scheduled_status = QLabel(_scheduled_status(settings))
+            self.scheduled_status.setWordWrap(True)
+            layout.addWidget(self.scheduled_status)
+
+            def update_scheduled_fields(enabled: bool) -> None:
+                self.scheduled_delay.setEnabled(enabled)
+                self.scheduled_text.setEnabled(enabled)
+
+            self.scheduled_prompt.toggled.connect(update_scheduled_fields)
+            update_scheduled_fields(self.scheduled_prompt.isChecked())
 
             note = QLabel(
                 "Token values stay in the operating-system environment and are "
@@ -176,7 +214,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             layout.addWidget(buttons)
 
         def result_settings(self) -> ControlSettings:
-            return ControlSettings(
+            settings = replace(
+                self._original,
                 task_automation_enabled=self.automation.isChecked(),
                 native_input_enabled=self.native.isChecked(),
                 gui_fallback_enabled=self.gui.isChecked(),
@@ -185,6 +224,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 codex_thread_id=selected_session(self.thread_field),
                 codex_remote=self.endpoint.text().strip() or None,
                 remote_auth_token_env=self.auth_env.text().strip() or None,
+            )
+            return configure_scheduled_prompt(
+                settings,
+                enabled=self.scheduled_prompt.isChecked(),
+                delay_minutes=self.scheduled_delay.value(),
+                text=self.scheduled_text.text(),
+                thread_id=selected_session(self.thread_field),
             )
 
     class MessageDialog(QDialog):
@@ -237,6 +283,24 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         painter.end()
         return QIcon(pixmap)
 
+    def _scheduled_status(settings: ControlSettings) -> str:
+        if settings.scheduled_prompt_enabled and settings.scheduled_prompt_due_at:
+            due = datetime.fromtimestamp(
+                settings.scheduled_prompt_due_at
+            ).astimezone()
+            return f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; one attempt only."
+        labels = {
+            "dispatching": "Dispatch was claimed; automatic retry is disabled.",
+            "dispatch_started": (
+                "Dispatch process started; await later session evidence."
+            ),
+            "input_emitted": "Input was emitted; await later session evidence.",
+            "failed_or_uncertain": (
+                "Last attempt failed or was uncertain; automatic retry is disabled."
+            ),
+        }
+        return labels.get(settings.scheduled_prompt_last_state, "No prompt is armed.")
+
     tray = QSystemTrayIcon(icon(), app)
     tray.setToolTip("AI Presence Monitor")
     menu = QMenu()
@@ -280,6 +344,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             automation_action.blockSignals(True)
             automation_action.setChecked(settings.task_automation_enabled)
             automation_action.blockSignals(False)
+            check_scheduled_prompt()
         except (ControlError, OSError) as exc:
             show_error("Unable to save preferences", exc)
 
@@ -308,11 +373,53 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             show_preferences()
 
+    last_schedule_notice: list[str | None] = [None]
+
+    def check_scheduled_prompt() -> None:
+        try:
+            result = process_due_scheduled_prompt(store=control_store)
+        except (ControlError, OSError) as exc:
+            notice_key = f"error:{type(exc).__name__}:{exc}"
+            if last_schedule_notice[0] != notice_key:
+                last_schedule_notice[0] = notice_key
+                tray.showMessage(
+                    "Scheduled prompt unavailable",
+                    str(exc),
+                    QSystemTrayIcon.MessageIcon.Critical,
+                    5000,
+                )
+            return
+        if result.state in {"disabled", "waiting"}:
+            last_schedule_notice[0] = None
+            return
+        if last_schedule_notice[0] == result.state:
+            return
+        last_schedule_notice[0] = result.state
+        if result.state == "failed_or_uncertain":
+            tray.showMessage(
+                "Scheduled prompt not confirmed",
+                "The one-shot attempt failed or was uncertain and will not retry.",
+                QSystemTrayIcon.MessageIcon.Warning,
+                5000,
+            )
+            return
+        tray.showMessage(
+            "Scheduled prompt dispatched",
+            "The one-shot transport started. Await later session evidence.",
+            QSystemTrayIcon.MessageIcon.Information,
+            4000,
+        )
+
     automation_action.toggled.connect(toggle_automation)
     respond_action.triggered.connect(respond)
     exit_action.triggered.connect(app.quit)
     tray.activated.connect(activated)
+    schedule_timer = QTimer(app)
+    schedule_timer.setInterval(1000)
+    schedule_timer.timeout.connect(check_scheduled_prompt)
+    schedule_timer.start()
     tray.show()
+    QTimer.singleShot(0, check_scheduled_prompt)
     return app.exec()
 
 

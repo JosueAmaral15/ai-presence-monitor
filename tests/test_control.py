@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -22,6 +23,9 @@ class ControlStoreTests(unittest.TestCase):
 
             self.assertFalse(settings.task_automation_enabled)
             self.assertTrue(settings.native_input_enabled)
+            self.assertFalse(settings.scheduled_prompt_enabled)
+            self.assertEqual(settings.scheduled_prompt_delay_minutes, 210)
+            self.assertEqual(settings.scheduled_prompt_text, "continue")
             self.assertFalse(store.path.exists())
 
     def test_save_is_atomic_restricted_and_round_trips(self) -> None:
@@ -37,6 +41,13 @@ class ControlStoreTests(unittest.TestCase):
                 codex_thread_id="thread-1",
                 codex_remote="wss://client.example/app-server",
                 remote_auth_token_env="CODEX_REMOTE_TOKEN",
+                scheduled_prompt_enabled=True,
+                scheduled_prompt_delay_minutes=210,
+                scheduled_prompt_text="continue",
+                scheduled_prompt_thread_id="thread-1",
+                scheduled_prompt_due_at=13_600.0,
+                scheduled_prompt_id="schedule-1",
+                scheduled_prompt_last_state="armed",
             )
 
             store.save(settings)
@@ -47,6 +58,29 @@ class ControlStoreTests(unittest.TestCase):
             payload = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(payload["version"], 1)
             self.assertNotIn("token", payload)
+
+    def test_legacy_control_file_receives_scheduled_prompt_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "control.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "settings": {
+                            "task_automation_enabled": True,
+                            "native_input_enabled": True,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            settings = ControlStore(path, ControlSettings()).load()
+
+            self.assertTrue(settings.task_automation_enabled)
+            self.assertFalse(settings.scheduled_prompt_enabled)
+            self.assertEqual(settings.scheduled_prompt_delay_minutes, 210)
+            self.assertEqual(settings.scheduled_prompt_text, "continue")
 
     def test_controls_and_target_are_immutable_updates(self) -> None:
         settings = ControlSettings()
@@ -80,6 +114,35 @@ class ControlStoreTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ControlError, "booleano"):
                 store.load()
+
+            path.write_text(
+                json.dumps(
+                    {
+                        "settings": {
+                            "scheduled_prompt_enabled": True,
+                            "scheduled_prompt_thread_id": "thread",
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ControlError, "vencimento"):
+                store.load()
+
+            with self.assertRaisesRegex(ControlError, "entrada nativa"):
+                store.save(
+                    ControlSettings(
+                        native_input_enabled=False,
+                        scheduled_prompt_enabled=True,
+                        scheduled_prompt_thread_id="thread",
+                        scheduled_prompt_due_at=100.0,
+                        scheduled_prompt_id="schedule",
+                        scheduled_prompt_last_state="armed",
+                    )
+                )
+
+            with self.assertRaisesRegex(ControlError, "texto"):
+                store.save(replace(ControlSettings(), scheduled_prompt_text=" "))
 
     def test_write_failure_is_reported_as_control_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

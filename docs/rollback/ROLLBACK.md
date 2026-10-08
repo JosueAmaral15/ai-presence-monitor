@@ -279,6 +279,18 @@ schtasks.exe /Delete /TN "AI Presence Reply Observer" /F
 Depois, reinstale um wheel 0.4.3 conhecido. Nao remova o `.env` nem o SQLite:
 nao houve migracao de esquema e as chaves novas preservam defaults compativeis.
 
+## Task 027 - Prompt temporizado one-shot
+
+Antes do rollback, abra as preferencias, desmarque **Send one prompt after a
+delay**, salve e encerre a bandeja. Isso cancela um agendamento ainda nao
+reivindicado. Um estado `dispatching`, `dispatch_started`, `input_emitted` ou
+`failed_or_uncertain` nao deve ser repetido manualmente sem verificar a sessao.
+
+O recurso nao altera SQLite nem `.env`. As chaves novas sao aditivas em
+`control.json`; releases antigas as ignoram. Reinstale o wheel anterior pelo
+procedimento transacional e reinicie a bandeja separadamente. Nao remova o
+arquivo inteiro se deseja preservar as demais permissoes e alvos.
+
 ## Task 016 - Bandeja e entrada nativa
 
 Desabilite primeiro todas as autorizacoes:

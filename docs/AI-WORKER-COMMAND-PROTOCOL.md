@@ -275,6 +275,12 @@ Na ausencia de `PRESENCE_CODEX_THREAD_ID`, o comando real pode inferir a sessao
 do hook mais recente do mesmo worker. Nunca escolha outra sessao para contornar
 uma falha. Consulte [SYSTEM-TRAY-NATIVE-INPUT.md](SYSTEM-TRAY-NATIVE-INPUT.md).
 
+A bandeja possui um agendamento humano one-shot separado, com default de 210
+minutos e `continue`. Um AI-worker pode consultar o estado sanitizado por
+`control show`, mas nao deve armar, postergar ou repetir esse agendamento em
+nome do usuario. O vencimento nao e heartbeat nem evidencia de trabalho; apenas
+um hook posterior registra atividade normal da sessao.
+
 No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para
 `xdotool`.

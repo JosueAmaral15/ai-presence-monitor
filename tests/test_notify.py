@@ -6,6 +6,7 @@ import urllib.error
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from ai_presence_monitor import __version__
 from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.notify import NotificationError, Notifier
 
@@ -40,7 +41,9 @@ class NotifierTransportTests(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data.decode("utf-8")), {"message": "teste"})
         self.assertEqual(request.headers["Content-type"], "application/json")
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.9.0")
+        self.assertEqual(
+            request.headers["User-agent"], f"ai-presence-monitor/{__version__}"
+        )
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 15)
 
     def test_post_json_wraps_network_error(self) -> None:

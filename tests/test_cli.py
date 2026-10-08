@@ -11,6 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from ai_presence_monitor import __version__
 from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
@@ -231,7 +232,7 @@ class CliBehaviorTests(unittest.TestCase):
             build_parser().parse_args(["--version"])
 
         self.assertEqual(exit_context.exception.code, 0)
-        self.assertEqual(output.getvalue().strip(), "ai-presence 0.9.0")
+        self.assertEqual(output.getvalue().strip(), f"ai-presence {__version__}")
 
     def test_identity_respects_explicit_worker_and_rejects_protocol(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -562,6 +563,40 @@ class CliBehaviorTests(unittest.TestCase):
             with redirect_stderr(StringIO()) as error:
                 self.assertEqual(_send_input(input_args, config), 2)
             self.assertIn("nao pode ficar vazia", error.getvalue())
+
+    def test_control_show_does_not_print_scheduled_prompt_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(make_config(root), control_path=root / "control.json")
+            ControlStore.from_config(config).save(
+                ControlSettings(
+                    native_input_enabled=True,
+                    scheduled_prompt_enabled=True,
+                    scheduled_prompt_text="private scheduled prompt",
+                    scheduled_prompt_thread_id="thread-1",
+                    scheduled_prompt_due_at=20_000.0,
+                    scheduled_prompt_id="schedule-1",
+                    scheduled_prompt_last_state="armed",
+                )
+            )
+            args = argparse.Namespace(
+                action="show",
+                control_name=None,
+                clear_thread=False,
+                clear_remote=False,
+                thread=None,
+                remote=None,
+                remote_auth_token_env=None,
+                json=True,
+                dry_run=False,
+            )
+
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_control(args, config), 0)
+
+            payload = output.getvalue()
+            self.assertNotIn("private scheduled prompt", payload)
+            self.assertIn('"scheduled_prompt_text_configured": true', payload)
 
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)

@@ -1,5 +1,26 @@
 # Tasks - AI Presence Monitor
 
+## Concluidas em 2026-10-08
+
+### Task 027 - Prompt temporizado one-shot por sessao
+
+**Prioridade**: Alta
+**Status**: concluida na branch `codex/task-027-scheduled-prompt`; versao
+0.10.0 preparada, ainda nao publicada nem implantada
+**Objetivo**: permitir que o usuario programe pela bandeja um unico prompt
+nativo para uma sessao Codex exata, com atraso e texto configuraveis.
+
+- [x] Expor checkbox, atraso em minutos e texto na janela de preferencias.
+- [x] Usar `210` minutos e `continue` como defaults.
+- [x] Congelar a sessao selecionada e o vencimento ao habilitar.
+- [x] Desarmar antes do transporte para impedir repeticao automatica.
+- [x] Preservar compatibilidade com `control.json` existente.
+- [x] Nao atualizar presenca antes de um hook posterior da sessao.
+- [x] Documentar seguranca, operacao, limites e rollback.
+- [x] Aprovar testes focados, suite, cobertura, Ruff e mypy.
+
+**Plano**: `docs/planning/TASK-027-scheduled-session-prompt.md`.
+
 ## Concluidas em 2026-09-24
 
 ### Task 026 - Release profissional Linux 0.9.0

@@ -177,7 +177,9 @@ def _control_check(config: AppConfig) -> HealthCheck:
         f"native_input={str(controls.native_input_enabled).lower()} "
         f"gui_fallback={str(controls.gui_fallback_enabled).lower()} "
         f"remote_input={str(controls.remote_input_enabled).lower()} "
-        f"activity_sync={str(controls.sync_activity_enabled).lower()}"
+        f"activity_sync={str(controls.sync_activity_enabled).lower()} "
+        f"scheduled_prompt={str(controls.scheduled_prompt_enabled).lower()} "
+        f"scheduled_state={controls.scheduled_prompt_last_state}"
     )
     return HealthCheck("controls", "ok", summary)
 

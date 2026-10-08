@@ -222,6 +222,16 @@
 - O projeto deve usar layout `src/` e produzir wheel independente do checkout.
 - Uma autorizacao persistente deve bloquear ou liberar a automacao, sem criar
   um temporizador de presenca artificial.
+- O agendamento solicitado explicitamente pelo usuario deve ser one-shot,
+  desabilitado por padrao e separado da autorizacao persistente do AI-worker.
+- O prompt temporizado deve usar uma sessao nativa exata, atraso padrao de 210
+  minutos e texto padrao `continue`.
+- A sessao e o vencimento devem ser congelados ao habilitar; salvar preferencias
+  inalteradas nao pode postergar o vencimento.
+- O agendamento deve ser desarmado antes do transporte. Falha,
+  `dispatch_started`, `input_emitted` ou incerteza nao podem causar retry.
+- O timer nao deve atualizar os relogios de presenca; somente um hook posterior
+  registra atividade normal da sessao.
 
 ## Bandeja e Controle de Entrada
 
@@ -230,6 +240,8 @@
 - A bandeja deve oferecer habilitar automacao, responder mensagem e sair.
 - Preferencias devem separar entrada nativa, fallback GUI, destino remoto e
   sincronizacao de atividade.
+- Preferencias devem oferecer checkbox do prompt temporizado, minutos e texto,
+  reutilizando o seletor de sessao exata.
 - O compositor deve enviar para este computador ou para um endpoint Codex
   remoto autenticado.
 - A dependencia da bandeja deve ser opcional para preservar instalacoes CLI.

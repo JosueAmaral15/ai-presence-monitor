@@ -26,7 +26,8 @@ The project also provides:
 - direct Codex session input through `codex queue`, without taking over the
   user's mouse or keyboard;
 - an optional system tray for automation permissions and local/remote input;
-- scheduled `continue` input with native-first transport and guarded GUI fallback;
+- one-shot scheduled session prompts through native Codex input;
+- immediate `continue` input with native-first transport and guarded GUI fallback;
 - one-shot red alerts with a bounded local alarm;
 - stable Linux operational adapters, with preserved Windows adapters behind an
   explicit experimental opt-in.
@@ -591,9 +592,9 @@ keeps its independent restart policy.
 
 ## Integrated Codex Continue Command
 
-The package can schedule the default `continue` message for an exact Codex
-session. Native input uses `codex queue` and does not take over the mouse,
-keyboard, or clipboard:
+The package can send the default `continue` message to an exact Codex session.
+Native input uses `codex queue` and does not take over the mouse, keyboard, or
+clipboard:
 
 ```bash
 ai-presence control enable task-automation
@@ -638,6 +639,13 @@ originating message without additional correlation.
 Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
 transport failure, and inactive workers do not count as activity. Enabling task
 automation grants permission; it does not start a periodic timer.
+
+The optional system tray also provides a separate one-shot scheduler. Select
+an exact session, enable **Send one prompt after a delay**, choose the delay in
+minutes and enter the prompt. Its defaults are 210 minutes and `continue`.
+The schedule is persisted across tray restarts, disarmed before transport and
+never retried automatically. The tray must be running when the due time is
+evaluated; an overdue armed prompt is processed when the tray starts again.
 
 See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) and the
 [system tray guide](docs/SYSTEM-TRAY-NATIVE-INPUT.md) for controls, background

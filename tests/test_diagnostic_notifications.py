@@ -10,6 +10,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+from ai_presence_monitor import __version__
 from ai_presence_monitor.cli import main as cli_main
 from ai_presence_monitor.diagnostic_notifications import (
     DiagnosticDiscordClient,
@@ -158,7 +159,9 @@ class DiagnosticDiscordClientTests(unittest.TestCase):
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data), {"message": "test"})
         self.assertEqual(request.headers["Content-type"], "application/json")
-        self.assertEqual(request.headers["User-agent"], "ai-presence-monitor/0.9.0")
+        self.assertEqual(
+            request.headers["User-agent"], f"ai-presence-monitor/{__version__}"
+        )
         self.assertEqual(urlopen.call_args.kwargs["timeout"], 7)
         self.assertEqual(response.read_size, 1024)
 

@@ -316,8 +316,17 @@ No Protocolo 1, `last_signal_at` nao e alterado; o heartbeat publico continua
 obrigatorio. Agendamento, `dry-run`, falha GUI e worker inativo nao contam como
 atividade.
 
+A bandeja oferece tambem um agendamento one-shot separado. Selecione a sessao
+Codex exata, marque **Send one prompt after a delay** e ajuste os campos de
+minutos e texto. Os defaults sao 210 minutos e `continue`. O agendamento e
+desarmado antes de uma unica tentativa nativa e nunca se repete
+automaticamente. A bandeja precisa permanecer em execucao ou ser iniciada
+depois do vencimento para processar a tentativa pendente.
+
 Consulte [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) para configuracao,
-execucao em segundo plano, sincronizacao e rollback.
+execucao em segundo plano, sincronizacao e rollback, e
+[docs/SYSTEM-TRAY-NATIVE-INPUT.md](docs/SYSTEM-TRAY-NATIVE-INPUT.md) para o
+agendamento pela interface.
 
 ## Protocolo 1: exemplo
 

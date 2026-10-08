@@ -10,6 +10,20 @@ from typing import Any
 from .config import AppConfig
 
 CONTROL_VERSION = 1
+DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES = 210
+DEFAULT_SCHEDULED_PROMPT_TEXT = "continue"
+MAX_SCHEDULED_PROMPT_DELAY_MINUTES = 10_080
+MAX_SCHEDULED_PROMPT_TEXT_LENGTH = 4_000
+SCHEDULED_PROMPT_STATES = frozenset(
+    {
+        "disabled",
+        "armed",
+        "dispatching",
+        "dispatch_started",
+        "input_emitted",
+        "failed_or_uncertain",
+    }
+)
 CONTROL_NAMES = (
     "task-automation",
     "native-input",
@@ -33,6 +47,14 @@ class ControlSettings:
     codex_thread_id: str | None = None
     codex_remote: str | None = None
     remote_auth_token_env: str | None = None
+    scheduled_prompt_enabled: bool = False
+    scheduled_prompt_delay_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
+    scheduled_prompt_text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
+    scheduled_prompt_thread_id: str | None = None
+    scheduled_prompt_due_at: float | None = None
+    scheduled_prompt_id: str | None = None
+    scheduled_prompt_last_state: str = "disabled"
+    scheduled_prompt_last_attempt_at: float | None = None
 
     @classmethod
     def from_config(cls, config: AppConfig) -> ControlSettings:
@@ -104,7 +126,7 @@ class ControlStore:
         values = payload.get("settings", payload)
         if not isinstance(values, dict):
             raise ControlError(f"Controle invalido em {self.path}: settings ausente.")
-        return ControlSettings(
+        settings = ControlSettings(
             task_automation_enabled=_bool_value(
                 values,
                 "task_automation_enabled",
@@ -145,9 +167,56 @@ class ControlStore:
                 "remote_auth_token_env",
                 self.defaults.remote_auth_token_env,
             ),
+            scheduled_prompt_enabled=_bool_value(
+                values,
+                "scheduled_prompt_enabled",
+                self.defaults.scheduled_prompt_enabled,
+            ),
+            scheduled_prompt_delay_minutes=_int_value(
+                values,
+                "scheduled_prompt_delay_minutes",
+                self.defaults.scheduled_prompt_delay_minutes,
+                minimum=1,
+                maximum=MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+            ),
+            scheduled_prompt_text=_required_string(
+                values,
+                "scheduled_prompt_text",
+                self.defaults.scheduled_prompt_text,
+                maximum_length=MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
+            ),
+            scheduled_prompt_thread_id=_optional_string(
+                values,
+                "scheduled_prompt_thread_id",
+                self.defaults.scheduled_prompt_thread_id,
+            ),
+            scheduled_prompt_due_at=_optional_number(
+                values,
+                "scheduled_prompt_due_at",
+                self.defaults.scheduled_prompt_due_at,
+            ),
+            scheduled_prompt_id=_optional_string(
+                values,
+                "scheduled_prompt_id",
+                self.defaults.scheduled_prompt_id,
+            ),
+            scheduled_prompt_last_state=_choice_value(
+                values,
+                "scheduled_prompt_last_state",
+                self.defaults.scheduled_prompt_last_state,
+                choices=SCHEDULED_PROMPT_STATES,
+            ),
+            scheduled_prompt_last_attempt_at=_optional_number(
+                values,
+                "scheduled_prompt_last_attempt_at",
+                self.defaults.scheduled_prompt_last_attempt_at,
+            ),
         )
+        _validate_scheduled_prompt(settings)
+        return settings
 
     def save(self, settings: ControlSettings) -> None:
+        _validate_scheduled_prompt(settings)
         parent_existed = self.path.parent.exists()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not parent_existed:
@@ -210,6 +279,130 @@ def _optional_string(
     if not isinstance(value, str):
         raise ControlError(f"Controle {key!r} precisa ser texto ou null.")
     return _clean_optional(value)
+
+
+def _required_string(
+    values: dict[str, Any],
+    key: str,
+    default: str,
+    *,
+    maximum_length: int,
+) -> str:
+    value = values.get(key, default)
+    if not isinstance(value, str):
+        raise ControlError(f"Controle {key!r} precisa ser texto.")
+    clean = value.strip()
+    if not clean:
+        raise ControlError(f"Controle {key!r} nao pode ficar vazio.")
+    if any(character in clean for character in ("\r", "\n", "\x00")):
+        raise ControlError(f"Controle {key!r} precisa ter uma unica linha.")
+    if len(clean) > maximum_length:
+        raise ControlError(
+            f"Controle {key!r} excede o limite de {maximum_length} caracteres."
+        )
+    return clean
+
+
+def _int_value(
+    values: dict[str, Any],
+    key: str,
+    default: int,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int:
+    value = values.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ControlError(f"Controle {key!r} precisa ser inteiro.")
+    if not minimum <= value <= maximum:
+        raise ControlError(
+            f"Controle {key!r} precisa estar entre {minimum} e {maximum}."
+        )
+    return value
+
+
+def _optional_number(
+    values: dict[str, Any],
+    key: str,
+    default: float | None,
+) -> float | None:
+    value = values.get(key, default)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ControlError(f"Controle {key!r} precisa ser numero ou null.")
+    number = float(value)
+    if number < 0:
+        raise ControlError(f"Controle {key!r} nao pode ser negativo.")
+    return number
+
+
+def _choice_value(
+    values: dict[str, Any],
+    key: str,
+    default: str,
+    *,
+    choices: frozenset[str],
+) -> str:
+    value = values.get(key, default)
+    if not isinstance(value, str) or value not in choices:
+        raise ControlError(
+            f"Controle {key!r} precisa ser um destes valores: "
+            f"{', '.join(sorted(choices))}."
+        )
+    return value
+
+
+def _validate_scheduled_prompt(settings: ControlSettings) -> None:
+    if (
+        isinstance(settings.scheduled_prompt_delay_minutes, bool)
+        or not isinstance(settings.scheduled_prompt_delay_minutes, int)
+        or not 1
+        <= settings.scheduled_prompt_delay_minutes
+        <= MAX_SCHEDULED_PROMPT_DELAY_MINUTES
+    ):
+        raise ControlError(
+            "O atraso do prompt temporizado precisa estar entre 1 e "
+            f"{MAX_SCHEDULED_PROMPT_DELAY_MINUTES} minutos."
+        )
+    text = settings.scheduled_prompt_text
+    if not isinstance(text, str) or not text.strip():
+        raise ControlError("O texto do prompt temporizado nao pode ficar vazio.")
+    if any(character in text for character in ("\r", "\n", "\x00")):
+        raise ControlError("O texto do prompt temporizado precisa ter uma linha.")
+    if len(text.strip()) > MAX_SCHEDULED_PROMPT_TEXT_LENGTH:
+        raise ControlError(
+            "O texto do prompt temporizado excede o limite de "
+            f"{MAX_SCHEDULED_PROMPT_TEXT_LENGTH} caracteres."
+        )
+    if settings.scheduled_prompt_last_state not in SCHEDULED_PROMPT_STATES:
+        raise ControlError("O estado do prompt temporizado e invalido.")
+    for label, value in (
+        ("vencimento", settings.scheduled_prompt_due_at),
+        ("ultima tentativa", settings.scheduled_prompt_last_attempt_at),
+    ):
+        if value is not None and (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or value < 0
+        ):
+            raise ControlError(f"O campo {label} do prompt temporizado e invalido.")
+    if not settings.scheduled_prompt_enabled:
+        return
+    if not settings.native_input_enabled:
+        raise ControlError(
+            "Prompt temporizado habilitado exige entrada nativa habilitada."
+        )
+    if not settings.scheduled_prompt_thread_id:
+        raise ControlError("Prompt temporizado exige uma sessao Codex exata.")
+    if settings.scheduled_prompt_due_at is None:
+        raise ControlError("Prompt temporizado habilitado exige vencimento.")
+    if not settings.scheduled_prompt_id:
+        raise ControlError("Prompt temporizado habilitado exige identificador.")
+    if settings.scheduled_prompt_last_state != "armed":
+        raise ControlError(
+            "Prompt temporizado habilitado precisa estar no estado 'armed'."
+        )
 
 
 def _chmod(path: Path, mode: int) -> None:
