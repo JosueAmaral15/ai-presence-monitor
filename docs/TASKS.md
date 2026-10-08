@@ -1,5 +1,25 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento em 2026-10-08
+
+### Task 028 - E2E do scheduler 0.10.0 e promocao para main
+
+**Prioridade**: Critica
+**Status**: preflight concluido; aguardando autorizacao explicita para uma unica
+emissao real na sessao Codex atual
+**Objetivo**: validar o scheduler e o gate vermelho com estado isolado, registrar
+a evidencia e promover o mesmo candidato de `develop` para `main`.
+
+- [x] Confirmar sessao atual, hooks e disponibilidade de `codex queue`.
+- [x] Confirmar que o observer Discord falho e independente deste fluxo.
+- [x] Definir banco e `control.json` temporarios, sem alterar estado operacional.
+- [ ] Emitir um unico marcador exclusivo pelo scheduler com gate vermelho.
+- [ ] Confirmar que o usuario nao digitou o marcador e observar hook posterior.
+- [ ] Registrar resultado, repetir gates somente se houver alteracao de codigo.
+- [ ] Promover por fast-forward e enviar `main`.
+
+**Plano**: `docs/planning/TASK-028-scheduled-prompt-e2e-main.md`.
+
 ## Concluidas em 2026-10-08
 
 ### Task 028 - Perfis de automacao e gate de inatividade vermelha
