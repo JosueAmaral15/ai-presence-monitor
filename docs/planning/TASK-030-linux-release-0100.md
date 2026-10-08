@@ -32,7 +32,7 @@ offline.
 - Reply observer: failed and out of scope.
 - The GitHub Quality run for `6b2bbb7` failed all Linux jobs with zero steps;
   it supplies no hosted test evidence.
-- The exact source candidate passed 312 tests on Python 3.10, 3.11 and 3.12,
+- The feature candidate passed 312 tests on Python 3.10, 3.11 and 3.12,
   86% aggregate coverage, Ruff, mypy, compileall, shell syntax, package build,
   tray smoke and a real isolated prompt-rule E2E.
 
@@ -53,6 +53,33 @@ offline.
 3. Preserve service, hook, control and database state before the transaction.
 4. Run the 0.10.0 updater dry-run with the authentic 0.9.0 wheel as rollback
    package.
+
+## Phase 1 and 2 Evidence
+
+- Exact artifact source: `ced1f142f2c85ac98fd16b39b4b0e123c8cf0974`;
+  the release manifest records `source_dirty=false`.
+- The first bundle smoke exposed that the isolated `doctor` still observed the
+  host's failed reply-observer unit. Commit `ced1f14` made release verification
+  require the intrinsic runtime, platform, environment, database and control
+  checks while treating hooks, services, Codex and tray state as host-dependent.
+- The complete gate then passed 314 tests, 86% aggregate coverage, Ruff, mypy,
+  compileall, shell syntax, package build and Python 3.10, 3.11 and 3.12.
+- Offline installation, schema, command, updater help and two-project isolation
+  smokes passed from the built wheel.
+- Candidate wheel SHA-256:
+  `b5d41261a80da920c0f9f2df30b4d7f4de45cb1fd259cd3684da54228bbbf5a2`.
+- Candidate sdist SHA-256:
+  `afb713151bc7d2c22d965a2d1a4ce98e8a4dc04d0c9d5de368737ed4aa072a8b`.
+- Canonical archive SHA-256:
+  `7e6189ebe11b8f4c4a7ece72537e3c728a0c529c40ad27e5b7c9da1e8bbe9e99`;
+  its listing includes the complete bundle and `.env.example`.
+- The authentic private-release 0.9.0 wheel was downloaded and matched its
+  published SHA-256:
+  `0399782b78b7ab69175230d6116b94f1f1a10ba21594795711aded49e114bd53`.
+- The installed 0.9.0 command returned `status=would_upgrade`,
+  `from_version=0.9.0`, `to_version=0.10.0` and no manifest during dry-run.
+- The dry-run did not change the installed runtime or restart the failed reply
+  observer.
 
 ## Phase 3 - Authorized Operational Gate
 
