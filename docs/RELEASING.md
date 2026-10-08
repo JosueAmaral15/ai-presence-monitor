@@ -15,7 +15,8 @@ such a bundle records `source_dirty=true` and the normal verifier rejects it.
 From a clean candidate commit:
 
 ```bash
-./scripts/release-gate.sh "$PWD/dist/release-0.9.0"
+version="$(python3 -c 'from pathlib import Path; from scripts.release_lib import project_version; print(project_version(Path.cwd()))')"
+./scripts/release-gate.sh "$PWD/dist/release-$version"
 ```
 
 This executes:
@@ -70,8 +71,9 @@ git switch main
 git merge --ff-only develop
 git push origin main
 
-git tag -a v0.9.0 -m "AI Presence Monitor 0.9.0"
-git push origin v0.9.0
+version="$(python3 -c 'from pathlib import Path; from scripts.release_lib import project_version; print(project_version(Path.cwd()))')"
+git tag -a "v$version" -m "AI Presence Monitor $version"
+git push origin "v$version"
 ```
 
 Create a canonical archive containing the complete verified bundle directory
