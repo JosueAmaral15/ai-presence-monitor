@@ -41,12 +41,14 @@ class FakeRuntime:
         version: str = "0.8.0",
         active_services: tuple[str, ...] = MANAGED_SERVICES,
         fail_doctor_version: str | None = None,
+        host_doctor_error: bool = False,
         fail_stop_unit: str | None = None,
         fail_start_unit_once: str | None = None,
     ) -> None:
         self.version = version
         self.active_services = set(active_services)
         self.fail_doctor_version = fail_doctor_version
+        self.host_doctor_error = host_doctor_error
         self.fail_stop_unit = fail_stop_unit
         self.fail_start_unit_once = fail_start_unit_once
         self.commands: list[tuple[str, ...]] = []
@@ -81,9 +83,30 @@ class FakeRuntime:
         if command[1:3] == ["-m", "ai_presence_monitor"] and command[-1] == "init":
             return self._completed(command)
         if command[1:3] == ["-m", "ai_presence_monitor"] and "doctor" in command:
-            if self.version == self.fail_doctor_version:
-                return self._completed(command, 1, '{"status":"error"}\n')
-            return self._completed(command, stdout='{"status":"ok"}\n')
+            checks = [
+                {
+                    "name": name,
+                    "status": (
+                        "error"
+                        if self.version == self.fail_doctor_version and name == "database"
+                        else "ok"
+                    ),
+                }
+                for name in ("runtime", "platform", "environment", "database", "controls")
+            ]
+            if self.host_doctor_error:
+                checks.append(
+                    {
+                        "name": "service:ai-presence-reply-observer.service",
+                        "status": "error",
+                    }
+                )
+            status = "error" if any(check["status"] == "error" for check in checks) else "ok"
+            return self._completed(
+                command,
+                2 if status == "error" else 0,
+                json.dumps({"version": self.version, "status": status, "checks": checks}),
+            )
         raise AssertionError(f"Unexpected command: {command}")
 
     @staticmethod
@@ -154,6 +177,28 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertEqual(manifest["to_version"], "0.9.0")
             self.assertEqual(result.manifest_path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(result.manifest_path.parent.stat().st_mode & 0o777, 0o700)
+
+    def test_preexisting_host_service_error_does_not_fail_postflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = make_config(root)
+            PresenceStore(config.db_path)
+            target = make_wheel(root, "0.9.0")
+            rollback = make_wheel(root, "0.8.0")
+            runtime = FakeRuntime(host_doctor_error=True)
+
+            result = upgrade_from_wheel(
+                config=config,
+                target_wheel=target,
+                rollback_wheel=rollback,
+                authorized=True,
+                backup_root=root / "backups",
+                python_executable="/test/python",
+                runner=runtime,
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(runtime.version, "0.9.0")
 
     def test_backup_filesystem_failure_is_reported_without_package_install(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

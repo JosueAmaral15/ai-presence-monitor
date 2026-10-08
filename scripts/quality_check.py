@@ -57,6 +57,7 @@ def main() -> int:
             "bash",
             "-n",
             "scripts/install-linux.sh",
+            "scripts/upgrade-linux.sh",
             "scripts/install-user-command.sh",
             "scripts/quality-check.sh",
             "scripts/release-gate.sh",

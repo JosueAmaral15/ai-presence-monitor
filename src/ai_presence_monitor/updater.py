@@ -25,6 +25,13 @@ MANAGED_SERVICES = (
     "ai-presence-reply-observer.service",
 )
 PACKAGE_NAME = "ai-presence-monitor"
+POSTFLIGHT_CORE_CHECKS = {
+    "runtime",
+    "platform",
+    "environment",
+    "database",
+    "controls",
+}
 _VERSION = re.compile(r"^[0-9]+(?:\.[0-9]+){1,3}(?:[A-Za-z0-9_.+-]*)?$")
 
 
@@ -574,27 +581,55 @@ def _verify_runtime(
     runner: Runner,
 ) -> None:
     _verify_installed_version(python, expected_version, runner)
-    result = _run_checked(
-        [
-            python,
-            "-m",
-            "ai_presence_monitor",
-            "--env-file",
-            str(env_file),
-            "doctor",
-            "--json",
-        ],
-        runner,
-        failure="postflight_doctor_failed",
-        cwd=Path("/tmp"),
-        env=_clean_environment(),
-    )
+    command = [
+        python,
+        "-m",
+        "ai_presence_monitor",
+        "--env-file",
+        str(env_file),
+        "doctor",
+        "--json",
+    ]
     try:
-        status = json.loads(result.stdout).get("status")
-    except (AttributeError, json.JSONDecodeError) as exc:
+        result = runner(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=120.0,
+            check=False,
+            cwd=Path("/tmp"),
+            env=_clean_environment(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise UpgradeError("postflight_doctor_failed") from exc
+    if result.returncode not in {0, 2}:
+        raise UpgradeError("postflight_doctor_failed")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
         raise UpgradeError("Postflight doctor returned invalid JSON.") from exc
-    if status == "error":
-        raise UpgradeError("Postflight doctor reported an error.")
+    _validate_postflight_doctor(payload, expected_version)
+
+
+def _validate_postflight_doctor(payload: object, expected_version: str) -> None:
+    if not isinstance(payload, dict) or payload.get("version") != expected_version:
+        raise UpgradeError("Postflight doctor reported the wrong version.")
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        raise UpgradeError("Postflight doctor omitted its checks.")
+    statuses = {
+        check.get("name"): check.get("status")
+        for check in checks
+        if isinstance(check, dict)
+        and isinstance(check.get("name"), str)
+        and isinstance(check.get("status"), str)
+    }
+    missing = POSTFLIGHT_CORE_CHECKS - statuses.keys()
+    if missing:
+        raise UpgradeError(f"Postflight doctor omitted checks: {sorted(missing)}.")
+    failed = sorted(name for name in POSTFLIGHT_CORE_CHECKS if statuses[name] != "ok")
+    if failed:
+        raise UpgradeError(f"Postflight doctor failed checks: {failed}.")
 
 
 def _verify_installed_version(

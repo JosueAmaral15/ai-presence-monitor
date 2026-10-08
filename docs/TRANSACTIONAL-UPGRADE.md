@@ -21,7 +21,10 @@ Prepare two trusted wheel files:
 
 The command rejects a rollback wheel whose version differs from the installed
 runtime. Both files must contain package metadata for `ai-presence-monitor`.
-Run the installed command, not a source-checkout interpreter.
+Normally, run the installed command rather than a source-checkout interpreter.
+When release notes require candidate-side updater behavior, use the verified
+bundle's `upgrade-linux.sh`; it imports the updater directly from `--package`
+but still mutates only the dedicated installed runtime.
 
 ## Preflight
 
@@ -42,6 +45,15 @@ integrity/schema and current service state. It creates no backup and installs
 nothing. A nonzero exit must be investigated; do not add authorization merely
 to bypass a failed preflight.
 
+For a release that requires the candidate-side updater, run the bundle
+bootstrap. It defaults to dry-run:
+
+```bash
+./upgrade-linux.sh \
+  --package /absolute/path/ai_presence_monitor-NEW-py3-none-any.whl \
+  --rollback-package /absolute/path/ai_presence_monitor-OLD-py3-none-any.whl
+```
+
 ## Authorized Upgrade
 
 After reviewing the dry-run and confirming the wheel sources:
@@ -54,6 +66,15 @@ ai-presence upgrade \
   --json
 ```
 
+With the bundle bootstrap, the equivalent authorized command is:
+
+```bash
+./upgrade-linux.sh \
+  --package /absolute/path/ai_presence_monitor-NEW-py3-none-any.whl \
+  --rollback-package /absolute/path/ai_presence_monitor-OLD-py3-none-any.whl \
+  --authorize-once
+```
+
 The command performs these phases:
 
 1. creates a private backup directory under
@@ -63,7 +84,9 @@ The command performs these phases:
 3. writes SHA-256 values and original active-service state to `manifest.json`;
 4. stops only the managed services that were active;
 5. installs the target wheel using `pip --no-index --no-deps`;
-6. runs database initialization and a sanitized postflight `doctor`;
+6. runs database initialization and a sanitized postflight `doctor`; intrinsic
+   runtime, platform, environment, database and control checks must pass, while
+   host-dependent hooks, services, Codex and tray state are verified separately;
 7. restarts the services that were active before the transaction;
 8. records `completed` only after all phases succeed.
 

@@ -37,6 +37,7 @@ REQUIRED_WHEEL_MODULES = {
 STATIC_ASSETS = {
     ".env.example",
     "install-linux.sh",
+    "upgrade-linux.sh",
     "verify_release.py",
     "release_lib.py",
     "release-manifest.json",
@@ -150,6 +151,7 @@ def _installed_smoke(wheel: Path, version: str) -> None:
         _validate_installed_doctor(doctor, version)
         _run([str(command), "upgrade", "--help"], env=environment)
         _run([str(command), "rollback-upgrade", "--help"], env=environment)
+        _run(["bash", str(wheel.parent / "upgrade-linux.sh"), "--help"], env=environment)
         _verify_project_isolation(command, root, database, environment)
 
 

@@ -31,6 +31,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ASSETS = (
     PROJECT_ROOT / ".env.example",
     PROJECT_ROOT / "scripts" / "install-linux.sh",
+    PROJECT_ROOT / "scripts" / "upgrade-linux.sh",
     PROJECT_ROOT / "scripts" / "verify_release.py",
     PROJECT_ROOT / "scripts" / "release_lib.py",
 )

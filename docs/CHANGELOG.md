@@ -32,6 +32,11 @@
   Protocol 2 red threshold have been reached.
 - Made continuation, Discord question/reply delivery, manual answer retry and
   diagnostic recovery resolve the matching worker profile.
+- Added a bundled Linux upgrade bootstrap that runs the updater from the exact
+  target wheel while mutating only the dedicated installed runtime.
+- Made release and transactional postflight checks require intrinsic package
+  health without treating pre-existing host service, hook, Codex or tray state
+  as a package failure.
 
 ## 2026-09-24 - v0.9.0
 

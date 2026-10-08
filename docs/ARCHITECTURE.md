@@ -490,9 +490,12 @@ services were active. Partial service stops are reversed before installation;
 partial postflight starts are stopped before package/database rollback.
 
 The postflight initializes additive migrations, verifies the installed version
-and requires `doctor` not to report an error. Manual rollback validates the
-managed manifest and all checksums, snapshots the current upgraded database,
-then requires explicit acknowledgement before restoring the older snapshot.
+and requires every intrinsic `doctor` check to be healthy. Host-dependent
+service, hook, Codex and tray observations do not mask package health; original
+active services are tracked and restored by the transaction itself. Manual
+rollback validates the managed manifest and all checksums, snapshots the current
+upgraded database, then requires explicit acknowledgement before restoring the
+older snapshot.
 The tray is a desktop process rather than a managed service and remains outside
 this transaction.
 
