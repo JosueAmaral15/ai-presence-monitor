@@ -8,7 +8,7 @@ hosted Linux CI evidence for the public prerelease line.
 
 ## Confirmed State
 
-- Installed runtime 0.10.0 and schema 1 are healthy.
+- Installed runtime 0.10.1 and schema 1 are healthy.
 - The main monitor and tray are active.
 - The reply observer is enabled but failed after SQLite lock, Discord timeout,
   DNS failure and the systemd start limit.
@@ -52,7 +52,7 @@ hosted Linux CI evidence for the public prerelease line.
 4. Run the complete quality gate and Python 3.10/3.11/3.12 matrix.
 5. Build and verify a clean patch wheel.
 
-## Phase 1 and Partial Phase 2 Evidence
+## Phase 1 and Phase 2 Evidence
 
 - Candidate version: 0.10.1.
 - Every `PresenceStore` connection now configures a 30-second SQLite busy
@@ -69,6 +69,25 @@ hosted Linux CI evidence for the public prerelease line.
 - The complete quality gate passed 321 tests, 86% coverage, Ruff, mypy,
   compileall, shell syntax, package build and diff checks.
 - The same 321 tests passed on Python 3.10, 3.11 and 3.12.
+- The clean release gate verified source commit
+  `3725479aa57b961206386c351d8affb5ad156cb9` and the 0.10.1 wheel with
+  SHA-256 `07c224591c1a34ab9f26ff925687f27c04346c5cf5242f478ffc2d2ba12f12c8`.
+
+## Authorized Upgrade Evidence
+
+- The transactional updater completed the 0.10.0 to 0.10.1 upgrade and kept
+  the matching 0.10.0 rollback wheel in its private backup.
+- The private manifest is mode `0600`, reports `completed`, and records the
+  expected target and rollback hashes.
+- The installed CLI reports 0.10.1; schema 1 remains current with SQLite
+  integrity `ok`.
+- The main monitor and the recreated tray session are active.
+- A post-upgrade isolated poll read 13 Discord messages and accepted, guided
+  and dispatched zero messages. It used a temporary database and did not
+  consume an operational question.
+- Strict doctor reports only the intentionally unrestarted reply observer as
+  failed. Its reset and first live start remain a separate operational
+  authorization boundary.
 
 ## Phase 3 - Authorized Live Recovery
 
@@ -86,7 +105,8 @@ The repository cannot repair an account-level billing lock. The owner must
 clear that lock in GitHub billing or obtain GitHub Support assistance. After
 GitHub accepts jobs again, dispatch one Quality run and require all supported
 Linux matrix jobs to execute steps and pass. Windows remains experimental and
-non-blocking.
+non-blocking. The owner cannot clear the lock in the current session, so this
+external gate is explicitly deferred rather than represented as passing.
 
 ## Completion
 

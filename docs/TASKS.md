@@ -5,8 +5,8 @@
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: resiliencia implementada e validada localmente; preparando wheel
-limpo, recuperacao real e desbloqueio da conta GitHub
+**Status**: runtime 0.10.1 instalado e validado; recuperacao real do observer
+e CI hospedada ainda pendentes
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
 evidencia hospedada da matriz Linux.
@@ -18,10 +18,11 @@ evidencia hospedada da matriz Linux.
 - [x] Adicionar espera SQLite explicita e backoff somente para polling seguro.
 - [x] Cobrir lock, rede transitoria, erro permanente e reset do backoff.
 - [x] Passar quality gate e matriz Python suportada.
-- [ ] Gerar e validar wheel de correcao.
-- [ ] Autorizar e aplicar upgrade local antes do reinicio do observer.
+- [x] Gerar e validar wheel de correcao.
+- [x] Autorizar e aplicar upgrade local antes do reinicio do observer.
 - [ ] Confirmar observer ativo, polling estavel e doctor sem erro.
-- [ ] Desbloquear a conta GitHub e obter um run hospedado Linux aprovado.
+- [ ] Desbloquear a conta GitHub quando o proprietario puder e obter um run
+      hospedado Linux aprovado.
 
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
 
