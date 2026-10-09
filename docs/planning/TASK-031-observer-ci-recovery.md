@@ -124,6 +124,13 @@ Linux matrix jobs to execute steps and pass. Windows remains experimental and
 non-blocking. The owner cannot clear the lock in the current session, so this
 external gate is explicitly deferred rather than represented as passing.
 
+The `develop` promotion triggered hosted run
+[`37913742672`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/37913742672)
+for commit `a21aa85be2a3e4065950bbef29a2cd734de8b81f`. All three Linux jobs
+finished with zero executed steps. Each check annotation states that the job
+was not started because the account is locked due to a billing issue. This run
+is evidence of the external block, not a passing CI gate.
+
 ## Completion
 
 Record the source commit, package hash, transaction manifest, service evidence,
