@@ -79,6 +79,39 @@ answer was accepted or dispatched. Promotion remains blocked until version
 0.10.2 classifies connection-level read failures as transient, passes every
 substitute gate, is installed transactionally and sustains live polling.
 
+## Substitute Gate Evidence
+
+- Correction source commit: `54aee46136a9a96eb4efb44fad7093d07a1eb008`.
+- The complete quality gate passed 321 tests, 86% aggregate coverage, Ruff,
+  mypy, compileall, shell syntax and package build.
+- The same 321 tests passed on Python 3.10, 3.11 and 3.12.
+- The clean bundle and offline verifier identify version 0.10.2, the exact
+  source commit above and `source_dirty=false`.
+- Candidate wheel SHA-256:
+  `7a340fb8c45c91202bdbb0e7d5bcda3067f643f77adfd4509dcafa155dadbbf7`.
+- Candidate sdist SHA-256:
+  `00356dc2b83071a3e8ba70b9714d044fed412cabb240e6d42a1536d6855c821a`.
+- The transactional dry-run reported `would_upgrade` from 0.10.1 to 0.10.2.
+- A real isolated poll read 13 Discord messages and accepted, guided and
+  dispatched zero messages using a temporary database.
+- The authorized transaction completed in private manifest
+  `upgrade-0.10.1-to-0.10.2-20261009-142523-11c558e5/manifest.json`. Its mode is
+  `0600`, target hash matches the wheel above and rollback hash matches the
+  validated 0.10.1 wheel.
+- The installed runtime reports 0.10.2. Schema 1 is current and integral, and
+  the operational database contains zero pending questions.
+- The observer completed 14 consecutive real polls over more than one minute,
+  remained on one PID and reported `NRestarts=0`. No message was accepted,
+  guided or dispatched.
+- One strict-doctor invocation observed a transient `codex queue` probe
+  timeout after the long local gate. The direct probe then completed in 0.11
+  seconds, and the immediate strict-doctor rerun reported every check `ok`.
+- Hosted run
+  [`37913841059`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/37913841059)
+  is the latest Quality run for `develop` before promotion. Its three Linux
+  jobs each executed zero steps and each annotation reports the account-level
+  billing lock.
+
 ## Residual Risk
 
 Local tests cannot prove GitHub runner image behavior, hosted permissions,

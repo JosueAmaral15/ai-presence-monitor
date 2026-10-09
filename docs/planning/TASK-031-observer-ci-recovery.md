@@ -128,6 +128,14 @@ Discord DNS and the public API gateway were reachable after the failure, and
 no answer dispatch occurred. Version 0.10.2 must close this classification gap
 and repeat the transactional and live recovery gates before promotion.
 
+Version 0.10.2 added retryable classification for connection-level failures,
+including `RemoteDisconnected` and direct connection resets. The complete gate
+passed 321 tests with 86% aggregate coverage and the Python 3.10-3.12 matrix.
+The authorized 0.10.1 to 0.10.2 transaction completed with its private
+rollback manifest, and the observer then completed 14 consecutive real polls
+over more than one minute on one PID with `NRestarts=0`. Strict doctor returned
+every check `ok`; the database remained integral with zero pending questions.
+
 ## Phase 4 - Hosted CI
 
 The repository cannot repair an account-level billing lock. The owner must
