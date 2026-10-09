@@ -115,6 +115,19 @@ hosted Linux CI evidence for the public prerelease line.
 - No uncertain answer dispatch occurred, so no replay or manual recovery was
   attempted.
 
+## Subsequent Connection-close Failure
+
+During the Task 032 pre-promotion gate, strict doctor found the observer failed
+again. The journal showed `http.client.RemoteDisconnected` while fetching the
+Discord message page, followed by four systemd restarts and start-limit
+exhaustion. Version 0.10.1 did not classify that connection-level exception as
+retryable.
+
+The database remained current and integral with zero pending questions.
+Discord DNS and the public API gateway were reachable after the failure, and
+no answer dispatch occurred. Version 0.10.2 must close this classification gap
+and repeat the transactional and live recovery gates before promotion.
+
 ## Phase 4 - Hosted CI
 
 The repository cannot repair an account-level billing lock. The owner must

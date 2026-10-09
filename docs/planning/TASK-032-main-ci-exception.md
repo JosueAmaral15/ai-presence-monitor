@@ -22,7 +22,7 @@ though `develop` contains the exact source already running on this Linux host.
 
 ## Scope
 
-- Applies only to promoting version 0.10.1 from the current `develop` history.
+- Applies only to promoting version 0.10.2 from the current `develop` history.
 - Linux remains the only supported production platform.
 - Windows code remains preserved, disabled and unsupported.
 - Hosted CI remains pending and must not be described as passing.
@@ -39,7 +39,7 @@ Promotion requires all of the following on the exact candidate commit:
    Ruff, mypy, compileall, shell syntax and package build.
 3. Release gate with Python 3.10, 3.11 and 3.12, clean bundle construction and
    offline verification.
-4. Installed runtime 0.10.1 with current, integral SQLite schema.
+4. Installed runtime 0.10.2 with current, integral SQLite schema.
 5. Strict doctor success for controls, hooks, Codex queue, main monitor, reply
    observer and tray autostart.
 6. Reply observer active with no restart loop and no pending correlated answer.
@@ -64,6 +64,20 @@ Promotion requires all of the following on the exact candidate commit:
 
 Existing evidence is context only. The substitute gates must be rerun after
 this exception plan is committed and before promotion.
+
+## Pre-promotion Failure and Required Correction
+
+The first substitute gate stopped the promotion because strict doctor found
+the reply observer failed again. Discord had closed an HTTP connection without
+a response. Python raised `http.client.RemoteDisconnected`, which escaped the
+0.10.1 retryable network classification. Four systemd restarts then exhausted
+the unit start limit.
+
+The operational database remained integral with zero pending questions, and
+Discord DNS and the public API gateway were reachable during diagnosis. No
+answer was accepted or dispatched. Promotion remains blocked until version
+0.10.2 classifies connection-level read failures as transient, passes every
+substitute gate, is installed transactionally and sustains live polling.
 
 ## Residual Risk
 

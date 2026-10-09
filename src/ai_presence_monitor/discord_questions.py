@@ -274,6 +274,12 @@ class DiscordQuestionClient:
                 f"Falha de rede em {label}: timed out.",
                 retryable=True,
             ) from exc
+        except ConnectionError as exc:
+            detail = str(exc) or type(exc).__name__
+            raise DiscordQuestionError(
+                f"Falha de rede em {label}: {detail}.",
+                retryable=True,
+            ) from exc
 
         if not body:
             return None

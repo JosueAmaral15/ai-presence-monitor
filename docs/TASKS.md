@@ -6,14 +6,14 @@
 
 **Prioridade**: Critica
 **Status**: excecao autorizada; gates substitutos em execucao
-**Objetivo**: promover a correcao 0.10.1 de `develop` para `main` sem tratar a
+**Objetivo**: promover a correcao 0.10.2 de `develop` para `main` sem tratar a
 CI hospedada bloqueada por cobranca como aprovada, usando evidencia local e
 operacional reproduzivel para esta promocao somente.
 
 - [ ] Registrar escopo, risco e obrigacao de revalidacao da excecao.
 - [ ] Passar quality gate completo no candidato exato.
 - [ ] Passar release gate, matriz Python e verificacao offline no candidato.
-- [ ] Confirmar runtime 0.10.1, banco, monitor, observer e bandeja saudaveis.
+- [ ] Confirmar runtime 0.10.2, banco, monitor, observer e bandeja saudaveis.
 - [ ] Confirmar novamente que a falha hospedada executa zero etapas por billing.
 - [ ] Promover por fast-forward para `develop` e `main` sem tag ou release.
 - [ ] Enviar as duas branches e verificar os commits remotos.
@@ -23,8 +23,8 @@ operacional reproduzivel para esta promocao somente.
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: runtime 0.10.1 e observer recuperados; CI hospedada pendente por
-bloqueio externo da conta GitHub
+**Status**: 0.10.1 revelou desconexao nao classificada; preparando correcao
+0.10.2 antes da promocao
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
 evidencia hospedada da matriz Linux.
@@ -39,6 +39,8 @@ evidencia hospedada da matriz Linux.
 - [x] Gerar e validar wheel de correcao.
 - [x] Autorizar e aplicar upgrade local antes do reinicio do observer.
 - [x] Confirmar observer ativo, polling estavel e doctor sem erro.
+- [ ] Classificar desconexao remota/reset de conexao como falha transitoria.
+- [ ] Instalar 0.10.2 e repetir recuperacao sustentada do observer.
 - [ ] Desbloquear a conta GitHub quando o proprietario puder e obter um run
       hospedado Linux aprovado.
 

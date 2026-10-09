@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased - v0.10.1
+## Unreleased - v0.10.2
+
+- Classified connection-level Discord read failures, including remote closes
+  and connection resets, as transient so the observer keeps bounded backoff
+  instead of exhausting the systemd restart limit.
+
+## 2026-10-09 - v0.10.1
 
 - Added a bounded SQLite busy timeout to tolerate normal writer contention.
 - Kept the Discord reply observer alive across retryable read-only network

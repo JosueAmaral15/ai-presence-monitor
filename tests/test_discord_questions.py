@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import unittest
 import urllib.error
@@ -159,6 +160,8 @@ class DiscordQuestionClientTests(unittest.TestCase):
             (urllib.error.HTTPError("url", 503, "down", None, None), True),
             (urllib.error.HTTPError("url", 401, "unauthorized", None, None), False),
             (TimeoutError("timed out"), True),
+            (http.client.RemoteDisconnected("connection closed"), True),
+            (ConnectionResetError("connection reset"), True),
         )
 
         for error, expected in cases:
