@@ -99,6 +99,22 @@ hosted Linux CI evidence for the public prerelease line.
    sanitized doctor output.
 5. Stop on any uncertain answer dispatch; do not replay it.
 
+## Live Recovery Evidence
+
+- Immediately before restart, the operational database contained zero pending
+  questions: two were delivery-confirmed and three were expired.
+- After explicit one-invocation authorization, the failed state was reset and
+  the observer was started exactly once at `2026-10-09 06:46:00 -03`.
+- Nine consecutive polls completed over approximately 45 seconds with zero
+  accepted answers, deliveries, guidance messages or failures.
+- The observer remained on one PID with `NRestarts=0` and
+  `ActiveState=active`.
+- Post-recovery strict doctor reports every check `ok`; schema 1 remains
+  current with SQLite integrity `ok` and the operational database still has
+  zero pending questions.
+- No uncertain answer dispatch occurred, so no replay or manual recovery was
+  attempted.
+
 ## Phase 4 - Hosted CI
 
 The repository cannot repair an account-level billing lock. The owner must
