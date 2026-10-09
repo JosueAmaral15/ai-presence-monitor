@@ -38,7 +38,7 @@
 - [Plano dos perfis e gate vermelho](planning/TASK-028-profiled-red-gated-prompts.md)
 - [Plano do E2E do scheduler 0.10.0](planning/TASK-028-scheduled-prompt-e2e-main.md)
 - [Plano das regras persistentes de prompt](planning/TASK-029-profile-prompt-rules.md)
-- [Plano da release privada Linux 0.10.0](planning/TASK-030-linux-release-0100.md)
+- [Plano da prerelease publica Linux 0.10.0](planning/TASK-030-linux-release-0100.md)
 - [Plano de hardening e E2E Discord-Codex](planning/TASK-013-operational-hardening-and-e2e.md)
 - [Plano da bandeja e entrada nativa](planning/TASK-016-system-tray-native-input.md)
 - [Plano do despacho nativo na propria sessao](planning/TASK-017-native-self-queue.md)

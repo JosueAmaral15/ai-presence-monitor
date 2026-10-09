@@ -2,11 +2,11 @@
 
 ## Product Status
 
-AI Presence Monitor 0.10.0 is a private beta Linux product. It is suitable for
-the owner's controlled local use across multiple projects and Linux computers
-after the release gates in the current plan pass. It is not a hosted service,
-public SaaS, public package-index distribution or multi-tenant security
-boundary.
+AI Presence Monitor 0.10.0 is a public Linux prerelease. It is suitable for
+controlled local evaluation across multiple projects and Linux computers after
+the documented installation and verification gates pass. It is not a hosted
+service, public SaaS, package-index distribution, stable release or multi-tenant
+security boundary.
 
 ## Supported Platform
 
@@ -50,7 +50,7 @@ audio behavior is best effort until validated there.
 - Schema migrations are additive unless a future release explicitly documents
   otherwise.
 - Supported upgrade is sequential from the immediately previous validated
-  private release with its exact rollback wheel.
+  release with its exact rollback wheel.
 - The transactional updater preserves both wheels, a database snapshot,
   service state and checksums before mutation.
 - Manual database rollback may discard newer events and requires explicit
@@ -60,8 +60,8 @@ audio behavior is best effort until validated there.
 
 ## Release Support
 
-The current release and its immediate rollback release are retained for the
-owner's private operation. A release is supported only when:
+The current release and its immediate rollback release are retained for
+controlled operation. A release is supported only when:
 
 1. the source commit is clean and identified in the release manifest;
 2. source quality and supported Python matrix pass;

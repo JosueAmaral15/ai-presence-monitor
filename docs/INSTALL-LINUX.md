@@ -2,10 +2,10 @@
 
 ## Supported Installation
 
-AI Presence Monitor 0.10.0 is distributed as a private Linux release bundle.
-The bundle contains a wheel, source archive, configuration template, fresh
-installer, transactional upgrade bootstrap, offline verifier, release manifest
-and `SHA256SUMS`.
+AI Presence Monitor 0.10.0 is distributed as a public Linux prerelease bundle.
+The canonical archive contains a wheel, source archive, configuration template,
+fresh installer, transactional upgrade bootstrap, offline verifier, release
+manifest and `SHA256SUMS`.
 
 Requirements:
 

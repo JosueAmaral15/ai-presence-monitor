@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - v0.10.0
+## 2026-10-09 - v0.10.0
 
 - Replaced the single tray scheduler editor with up to 20 persistent prompt
   rules per worker profile, each with its own session, trigger, delay and text.
@@ -37,6 +37,8 @@
 - Made release and transactional postflight checks require intrinsic package
   health without treating pre-existing host service, hook, Codex or tray state
   as a package failure.
+- Published the public Linux prerelease with a canonical checksummed archive,
+  corrected portable sidecar and successful post-download verification.
 
 ## 2026-09-24 - v0.9.0
 

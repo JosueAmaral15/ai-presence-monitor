@@ -1,4 +1,4 @@
-# Private Linux Release Process
+# Linux Release Process
 
 ## Candidate Requirements
 
@@ -38,9 +38,11 @@ The `Quality` workflow defines Ubuntu jobs for Python 3.10, 3.11 and 3.12.
 Windows is manual, experimental and non-blocking. A zero-step failure caused by
 account billing is an external non-pass, not test evidence.
 
-A private Linux release may bypass that external gate only through a new,
+A Linux prerelease may bypass that external gate only through a new,
 version-specific documented user decision after all local and real integration
-gates pass. An exception for one release never covers a later release.
+gates pass. The release notes must disclose the missing hosted evidence. A
+stable public release cannot use this exception, and an exception for one
+prerelease never covers a later release.
 
 ## Operational Gate
 
@@ -81,6 +83,8 @@ and publish a separate SHA-256 sidecar for that archive. This preserves the
 required `.env.example` filename; GitHub renames a leading-dot file when it is
 uploaded individually. Users must verify the sidecar, extract the archive, then
 run both `sha256sum -c SHA256SUMS` and `python3 verify_release.py .` inside it.
+The sidecar must contain only the archive basename, never a build-machine path,
+and must pass from a fresh directory containing only the downloaded pair.
 
 Individual bundle files may be attached as supplementary assets, but they are
 not the canonical downloadable set. Do not attach a real `.env`, SQLite

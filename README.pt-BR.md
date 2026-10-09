@@ -77,8 +77,8 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/SUPPORT.md](docs/SUPPORT.md)
 - [docs/RELEASING.md](docs/RELEASING.md)
 
-Na release privada Linux 0.10.0, valide o bundle extraido e use o instalador
-incluido:
+Na prerelease publica Linux 0.10.0, valide o sidecar do arquivo canonico, o
+bundle extraido e use o instalador incluido:
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -91,7 +91,7 @@ O instalador cria um ambiente virtual dedicado por usuario, preserva uma
 configuracao privada existente e nao habilita silenciosamente servicos, hooks,
 bandeja ou permissoes de automacao. Consulte [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md).
 
-Para uma futura atualizacao privada no Linux, valide primeiro os dois wheels
+Para uma futura atualizacao no Linux, valide primeiro os dois wheels
 locais sem alterar a instalacao:
 
 ```bash

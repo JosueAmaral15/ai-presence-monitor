@@ -1,8 +1,8 @@
-# Task 030 - Private Linux Release 0.10.0
+# Task 030 - Public Linux Prerelease 0.10.0
 
 ## Objective
 
-Produce a reproducible private Linux 0.10.0 release from the exact validated
+Produce a reproducible Linux 0.10.0 prerelease from the exact validated
 source, prove transactional upgrade and rollback from the installed authentic
 0.9.0 runtime, then publish a canonical archive whose contents can be verified
 offline.
@@ -106,10 +106,11 @@ automatically.
 - On 2026-10-08, the user explicitly approved both the version-specific private
   CI exception and the real upgrade, database-restoring rollback and final
   upgrade transaction.
-- The exception is limited to private Linux release 0.10.0. The hosted Quality
-  failures executed zero steps and remain an external non-pass rather than test
-  evidence; the local and real gates below replace that evidence only for this
-  private release.
+- The exception was initially limited to a private Linux 0.10.0 release. The
+  hosted Quality failures executed zero steps and remain an external non-pass
+  rather than test evidence. On 2026-10-09, the user separately authorized a
+  public prerelease with that limitation disclosed; the local and real gates
+  below replace hosted evidence only for this prerelease.
 - Pre-transaction state was 0.9.0 with schema 1 current and integral, five Codex
   hooks, `codex queue`, tray autostart and the main monitor healthy. The reply
   observer was already failed and was not restarted or consumed.
@@ -173,14 +174,14 @@ known failed reply observer remained untouched. The current-session tray was
 restarted successfully from the installed 0.10.0 runtime. No transaction was
 retried automatically.
 
-## Phase 4 - Tag and Private Prerelease
+## Phase 4 - Tag and Public Prerelease
 
-After the operational gate and a version-specific private CI exception are
-both recorded, request explicit publication authorization. Then:
+After the operational gate and a version-specific CI exception are both
+recorded, request explicit publication authorization. Then:
 
 1. promote any release-record commit by fast-forward to `develop` and `main`;
 2. create and push annotated tag `v0.10.0` on the exact release commit;
-3. create a private GitHub prerelease;
+3. create the authorized GitHub prerelease with its support limits disclosed;
 4. upload the canonical archive, sidecar and approved supplementary assets;
 5. download the canonical files into a fresh directory;
 6. verify the sidecar, `SHA256SUMS`, offline verifier, tag, manifest and source
@@ -188,7 +189,28 @@ both recorded, request explicit publication authorization. Then:
 
 ## Completion Evidence
 
-Record exact commit IDs, hashes, artifact sizes, transaction manifests,
-service-state comparisons, health summaries, tag and release URL in this plan
-and `docs/TASKS.md`. Do not call 0.10.0 released until every required item is
-complete.
+On 2026-10-09, repository preflight showed that the GitHub repository was
+public. Publication stopped before release creation, and the user explicitly
+authorized a public prerelease. The release notes disclose Linux-only support,
+disabled/unsupported Windows operation, the hosted CI non-pass and the local
+and operational evidence that replaced it for this prerelease only.
+
+- `develop` and `main` were fast-forwarded to exact artifact source commit
+  `447f3091cf676d347a628207a36cb3eae1d75094` before tagging.
+- Annotated tag `v0.10.0` resolves to that same source commit.
+- Public prerelease:
+  `https://github.com/JosueAmaral15/ai-presence-monitor/releases/tag/v0.10.0`.
+- Canonical archive: 345657 bytes, SHA-256
+  `106d0aaf853381826d63416b61712cdd406c4602eb9088d79da3eb23fc4a3144`.
+- The first downloaded sidecar exposed a build-local `dist/` path. It was
+  corrected to the archive basename, replaced once, and downloaded again.
+- Portable sidecar: 106 bytes, SHA-256
+  `5feefeb6720c8dc5694477617956e20d50af2043e4c2dd57e87cee5ab9a9cbf6`.
+- The fresh download passed the outer sidecar, every internal `SHA256SUMS`
+  entry and `python3 verify_release.py .`; its clean manifest identifies
+  version 0.10.0 and source commit `447f3091cf676d347a628207a36cb3eae1d75094`.
+- The tag target, hosted asset digest and size, downloaded bytes and bundle
+  manifest all agree.
+
+Task 030 is complete. Hosted CI must be restored before a stable public
+release; the explicit exception applies only to this prerelease.

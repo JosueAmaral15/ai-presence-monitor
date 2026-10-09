@@ -12,7 +12,7 @@ por padrao e exige opt-in experimental explicito.
 
 ## Instalacao Recomendada
 
-Para a release privada Linux 0.10.0, extraia o bundle e valide seu conteudo:
+Para a prerelease publica Linux 0.10.0, extraia o bundle e valide seu conteudo:
 
 ```bash
 sha256sum -c SHA256SUMS

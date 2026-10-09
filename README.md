@@ -105,8 +105,9 @@ input requires an installed Codex CLI that provides `codex queue`.
 
 ## Installation
 
-AI Presence Monitor 0.10.0 is distributed as a private, checksummed Linux
-release bundle. Verify the extracted bundle before installation:
+AI Presence Monitor 0.10.0 is distributed as a public, checksummed Linux
+prerelease bundle. Verify the archive sidecar and extracted bundle before
+installation:
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -146,7 +147,7 @@ the runtime, configuration permissions, schema/integrity, controls, Codex
 hooks and queue support, Linux user services, and tray autostart. Warnings are
 informational by default; `--strict` returns a nonzero status for warnings.
 
-For a future private Linux package upgrade, preserve the currently installed
+For a future Linux package upgrade, preserve the currently installed
 wheel and validate the transaction first:
 
 ```bash
