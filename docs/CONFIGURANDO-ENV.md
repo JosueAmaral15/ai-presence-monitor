@@ -179,6 +179,7 @@ DISCORD_BOT_TOKEN=token-do-bot
 DISCORD_QUESTION_CHANNEL_ID=id-numerico-do-canal
 DISCORD_ALLOWED_USER_IDS=id-numerico-do-usuario
 PRESENCE_QUESTION_POLL_INTERVAL_SECONDS=5
+PRESENCE_QUESTION_RETRY_MAX_SECONDS=300
 PRESENCE_QUESTION_TIMEOUT_SECONDS=1800
 PRESENCE_QUESTION_ANSWER_TRANSPORT=native
 PRESENCE_QUESTION_ANSWER_DESTINATION=local
@@ -195,6 +196,10 @@ O bot deve ter `View Channel`, `Read Message History` e **Message Content
 Intent**. Crie o bot somente no Discord Developer Portal oficial. O passo a
 passo, os testes em duas fases e o rollback estao em
 `docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md`.
+
+`PRESENCE_QUESTION_RETRY_MAX_SECONDS` limita o backoff exponencial quando uma
+leitura falha antes de processar mensagens. O observer nao repete orientacao,
+entrega ao Codex nem input incerto.
 
 `native` usa `codex queue`, exige `PRESENCE_NATIVE_INPUT_ENABLED=true` e vincula
 a pergunta a uma sessao antes de publica-la. A ordem de resolucao e:

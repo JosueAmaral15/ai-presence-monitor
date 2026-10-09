@@ -175,6 +175,7 @@ class AppConfig:
     discord_question_channel_id: str | None = None
     discord_allowed_user_ids: tuple[str, ...] = ()
     question_poll_interval_seconds: int = 5
+    question_retry_max_seconds: int = 300
     question_timeout_seconds: int = 1800
     question_answer_transport: str = "native"
     question_answer_destination: str = "local"
@@ -269,6 +270,10 @@ def load_config(env_file: str | Path | None = None, override_env: bool = False) 
         question_poll_interval_seconds=_env_int(
             "PRESENCE_QUESTION_POLL_INTERVAL_SECONDS",
             5,
+        ),
+        question_retry_max_seconds=_env_int(
+            "PRESENCE_QUESTION_RETRY_MAX_SECONDS",
+            300,
         ),
         question_timeout_seconds=_env_int(
             "PRESENCE_QUESTION_TIMEOUT_SECONDS",

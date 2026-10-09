@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - v0.10.1
+
+- Added a bounded SQLite busy timeout to tolerate normal writer contention.
+- Kept the Discord reply observer alive across retryable read-only network
+  failures with capped exponential backoff and reset after successful polling.
+- Kept configuration errors and permanent HTTP failures fail-closed.
+- Preserved the no-retry contract for Discord guidance, Codex answer delivery
+  and any uncertain input state.
+
 ## 2026-10-09 - v0.10.0
 
 - Replaced the single tray scheduler editor with up to 20 persistent prompt

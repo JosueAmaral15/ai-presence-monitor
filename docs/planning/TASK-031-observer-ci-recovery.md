@@ -1,0 +1,97 @@
+# Task 031 - Discord Observer and Hosted CI Recovery
+
+## Objective
+
+Recover the Discord reply observer from SQLite contention and transient network
+failures without replaying uncertain answer delivery, then restore genuine
+hosted Linux CI evidence for the public prerelease line.
+
+## Confirmed State
+
+- Installed runtime 0.10.0 and schema 1 are healthy.
+- The main monitor and tray are active.
+- The reply observer is enabled but failed after SQLite lock, Discord timeout,
+  DNS failure and the systemd start limit.
+- The database contains no pending remote question; existing rows are expired
+  or delivery-confirmed.
+- Discord DNS and the public API gateway are currently reachable.
+- The latest GitHub Actions Linux jobs contain zero steps. Their check-run
+  annotations state that the account is locked because of a billing issue.
+- The workflow defines supported Ubuntu/Python jobs correctly; changing it
+  cannot unlock the account.
+
+## Safety Boundaries
+
+- Do not print or commit `.env`, Discord credentials, prompts or answers.
+- Do not restart the reply observer until the implementation, tests and
+  installed-runtime gate are ready.
+- Retry only a failed read poll before message processing starts.
+- Never retry Discord guidance, Codex input or an uncertain dispatch.
+- Configuration errors and non-transient HTTP failures remain fail-closed.
+- A service restart is not proof of recovery; require sustained successful
+  polls and a clean service check.
+- Do not describe local checks as hosted CI. Account recovery needs a new run
+  whose Linux jobs execute real steps.
+
+## Phase 1 - Resilience Implementation
+
+1. Configure every `PresenceStore` connection with a bounded SQLite busy
+   timeout.
+2. Preserve transient/permanent classification from the Discord HTTP client.
+3. Return a dedicated temporary-failure result only for safe pre-processing
+   failures.
+4. In continuous observer mode, apply bounded exponential backoff and reset it
+   after a successful poll.
+5. Keep one-shot mode observable through a nonzero temporary-failure status.
+
+## Phase 2 - Verification
+
+1. Test SQLite busy timeout and initialization contention.
+2. Test retryable network/HTTP classes and permanent HTTP rejection.
+3. Test observer backoff, cap, reset and one-shot behavior without real sleep.
+4. Run the complete quality gate and Python 3.10/3.11/3.12 matrix.
+5. Build and verify a clean patch wheel.
+
+## Phase 1 and Partial Phase 2 Evidence
+
+- Candidate version: 0.10.1.
+- Every `PresenceStore` connection now configures a 30-second SQLite busy
+  timeout.
+- Discord timeouts, URL failures, HTTP 408/429 and HTTP 5xx are retryable only
+  while fetching messages. HTTP 4xx configuration/authorization failures stay
+  permanent.
+- Continuous mode backs off exponentially to the configured ceiling and resets
+  after success. One-shot mode returns temporary-failure status 75 without
+  retry.
+- A real isolated poll read 13 messages from the configured Discord channel and
+  accepted, guided and dispatched zero messages; the operational database was
+  not used.
+- The complete quality gate passed 321 tests, 86% coverage, Ruff, mypy,
+  compileall, shell syntax, package build and diff checks.
+- The same 321 tests passed on Python 3.10, 3.11 and 3.12.
+
+## Phase 3 - Authorized Live Recovery
+
+1. Inspect pending-question counts again.
+2. Apply the exact patch wheel through the transactional updater after explicit
+   authorization at that boundary.
+3. Reset the failed systemd state and start the observer exactly once.
+4. Observe multiple successful polls, service state, database health and
+   sanitized doctor output.
+5. Stop on any uncertain answer dispatch; do not replay it.
+
+## Phase 4 - Hosted CI
+
+The repository cannot repair an account-level billing lock. The owner must
+clear that lock in GitHub billing or obtain GitHub Support assistance. After
+GitHub accepts jobs again, dispatch one Quality run and require all supported
+Linux matrix jobs to execute steps and pass. Windows remains experimental and
+non-blocking.
+
+## Completion
+
+Record the source commit, package hash, transaction manifest, service evidence,
+CI run URL and exact remaining limitations. Promote to `develop` only after the
+software gates pass, and to `main` only after live observer recovery and hosted
+Linux CI both pass or a new explicitly scoped release decision documents any
+external blocker.

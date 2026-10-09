@@ -149,8 +149,27 @@ class DiscordQuestionClientTests(unittest.TestCase):
             "ai_presence_monitor.discord_questions.urllib.request.urlopen",
             side_effect=urllib.error.URLError("offline"),
         ):
-            with self.assertRaisesRegex(DiscordQuestionError, "offline"):
+            with self.assertRaisesRegex(DiscordQuestionError, "offline") as caught:
                 self.client.fetch_messages()
+            self.assertTrue(caught.exception.retryable)
+
+    def test_only_temporary_http_and_timeout_errors_are_retryable(self) -> None:
+        cases = (
+            (urllib.error.HTTPError("url", 429, "rate", None, None), True),
+            (urllib.error.HTTPError("url", 503, "down", None, None), True),
+            (urllib.error.HTTPError("url", 401, "unauthorized", None, None), False),
+            (TimeoutError("timed out"), True),
+        )
+
+        for error, expected in cases:
+            with self.subTest(error=error):
+                with patch(
+                    "ai_presence_monitor.discord_questions.urllib.request.urlopen",
+                    side_effect=error,
+                ):
+                    with self.assertRaises(DiscordQuestionError) as caught:
+                        self.client.fetch_messages()
+                self.assertEqual(caught.exception.retryable, expected)
 
 
 if __name__ == "__main__":

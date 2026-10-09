@@ -48,6 +48,12 @@ codex queue       X11/Win32       answered no SQLite
 O observer usa polling da API REST. Nao abre porta local e nao expoe servidor
 HTTP na Internet.
 
+Falhas de leitura causadas por timeout, DNS, HTTP 408/429 ou HTTP 5xx usam
+backoff exponencial limitado por `PRESENCE_QUESTION_RETRY_MAX_SECONDS`. Esse
+retry ocorre somente quando o polling falhou antes de devolver mensagens.
+Erros de configuracao, HTTP permanente, orientacao por webhook e entrega ao
+Codex nao entram nesse retry.
+
 ## Pre-requisitos
 
 - bot e webhook do Discord;
@@ -358,6 +364,11 @@ No Linux, a unidade do observer espera 30 segundos entre falhas e permite no
 maximo tres inicios com falha em cinco minutos. Isso evita um ciclo agressivo
 quando token, canal, permissoes ou rede estao incorretos. O monitor principal
 nao usa esse limite.
+
+Falhas transitorias de polling nao encerram mais o processo: o proprio observer
+espera 5, 10, 20 segundos e assim por diante, ate o teto configurado, e volta
+ao intervalo normal depois de uma leitura bem-sucedida. A unidade systemd ainda
+protege erros permanentes e falhas inesperadas.
 
 Para `403`, confirme no canal dedicado as permissoes `View Channel` e
 `Read Message History`. Teste uma leitura antes de reativar:

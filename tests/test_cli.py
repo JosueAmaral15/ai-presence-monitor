@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sqlite3
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -15,6 +16,7 @@ from ai_presence_monitor import __version__
 from ai_presence_monitor.alarm import AlarmControlError
 from ai_presence_monitor.background_service import BackgroundServiceResult
 from ai_presence_monitor.cli import (
+    REPLY_OBSERVER_TEMPORARY_FAILURE,
     _ask_user,
     _command_allowed_while_runtime_disabled,
     _continue_task,
@@ -462,6 +464,63 @@ class CliBehaviorTests(unittest.TestCase):
 
             with redirect_stdout(StringIO()):
                 self.assertEqual(_observe_replies_once(config, dry_run=True), 0)
+
+    def test_reply_observer_classifies_initial_database_lock_as_temporary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_config(Path(tmp))
+
+            with patch(
+                "ai_presence_monitor.cli.PresenceStore",
+                side_effect=sqlite3.OperationalError("database is locked"),
+            ), redirect_stderr(StringIO()) as error:
+                result = _observe_replies_once(config)
+
+            self.assertEqual(result, REPLY_OBSERVER_TEMPORARY_FAILURE)
+            self.assertIn("SQLite ocupado", error.getvalue())
+
+    def test_reply_observer_backs_off_caps_and_resets_after_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = replace(
+                make_config(Path(tmp)),
+                question_poll_interval_seconds=5,
+                question_retry_max_seconds=6,
+            )
+            args = argparse.Namespace(once=False, interval=None, dry_run=False)
+            results = [
+                REPLY_OBSERVER_TEMPORARY_FAILURE,
+                REPLY_OBSERVER_TEMPORARY_FAILURE,
+                0,
+                REPLY_OBSERVER_TEMPORARY_FAILURE,
+                2,
+            ]
+
+            with patch(
+                "ai_presence_monitor.cli._observe_replies_once",
+                side_effect=results,
+            ), patch("ai_presence_monitor.cli.time.sleep") as sleep, redirect_stderr(
+                StringIO()
+            ):
+                result = _run_reply_observer(args, config)
+
+            self.assertEqual(result, 2)
+            self.assertEqual(
+                [call.args[0] for call in sleep.call_args_list],
+                [5, 6, 5, 5],
+            )
+
+    def test_reply_observer_once_returns_temporary_failure_without_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_config(Path(tmp))
+            args = argparse.Namespace(once=True, interval=None, dry_run=False)
+
+            with patch(
+                "ai_presence_monitor.cli._observe_replies_once",
+                return_value=REPLY_OBSERVER_TEMPORARY_FAILURE,
+            ), patch("ai_presence_monitor.cli.time.sleep") as sleep:
+                result = _run_reply_observer(args, config)
+
+            self.assertEqual(result, REPLY_OBSERVER_TEMPORARY_FAILURE)
+            sleep.assert_not_called()
 
     def test_continue_cli_dry_run_does_not_use_gui_or_database(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

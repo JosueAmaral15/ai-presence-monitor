@@ -13,7 +13,9 @@ DISCORD_API_BASE = "https://discord.com/api/v10"
 
 
 class DiscordQuestionError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, retryable: bool = False):
+        super().__init__(message)
+        self.retryable = retryable
 
 
 ReplyGuidanceReason = Literal[
@@ -259,10 +261,19 @@ class DiscordQuestionClient:
                 body = response.read()
         except urllib.error.HTTPError as exc:
             raise DiscordQuestionError(
-                f"Falha HTTP em {label}: status {exc.code}."
+                f"Falha HTTP em {label}: status {exc.code}.",
+                retryable=exc.code in {408, 429} or 500 <= exc.code <= 599,
             ) from exc
         except urllib.error.URLError as exc:
-            raise DiscordQuestionError(f"Falha de rede em {label}: {exc.reason}.") from exc
+            raise DiscordQuestionError(
+                f"Falha de rede em {label}: {exc.reason}.",
+                retryable=True,
+            ) from exc
+        except TimeoutError as exc:
+            raise DiscordQuestionError(
+                f"Falha de rede em {label}: timed out.",
+                retryable=True,
+            ) from exc
 
         if not body:
             return None

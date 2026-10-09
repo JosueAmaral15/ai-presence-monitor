@@ -1,5 +1,23 @@
 # Security Checklist
 
+## Task 031 - Reply observer resilience
+
+- [x] SQLite contention waits for a bounded busy timeout instead of spinning.
+- [x] Automatic retry is limited to read polling that failed before messages
+      were returned for processing.
+- [x] Backoff is exponential, capped and reset after a successful poll.
+- [x] Configuration errors and permanent HTTP failures remain fail-closed.
+- [x] Discord guidance, Codex delivery and uncertain input are never replayed
+      by the observer loop.
+- [x] Logs contain bounded status descriptions and no token, webhook, prompt or
+      answer content.
+
+### Residual risk
+
+A process interruption can still occur after external input starts. Existing
+question states intentionally suppress automatic replay in that case. Extended
+SQLite locks or permanent Discord rejection still need operator diagnosis.
+
 ## Task 026 - Private Linux release bundle
 
 - [x] Release construction refuses a dirty worktree by default and records the

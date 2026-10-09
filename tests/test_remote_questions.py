@@ -22,6 +22,7 @@ from ai_presence_monitor.gui_answer import GuiDispatchError, WindowTarget
 from ai_presence_monitor.remote_questions import (
     CURSOR_KEY_PREFIX,
     RemoteQuestionError,
+    ReplyObserverTransientError,
     ask_remote_question,
     observe_discord_replies_once,
     retry_answer_dispatch,
@@ -232,6 +233,21 @@ class RemoteQuestionFlowTests(unittest.TestCase):
             self.assertEqual(len(questions), 1)
             self.assertEqual(questions[0].status, "publish_failed")
             self.assertEqual(questions[0].last_error, "offline")
+
+    def test_retryable_fetch_failure_is_preserved_for_observer_loop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = FakeDiscordClient()
+            error = DiscordQuestionError("offline", retryable=True)
+
+            with patch.object(client, "fetch_messages", side_effect=error):
+                with self.assertRaisesRegex(ReplyObserverTransientError, "offline"):
+                    observe_discord_replies_once(
+                        config=remote_config(root, gui=False),
+                        store=PresenceStore(root / "presence.db"),
+                        client=client,  # type: ignore[arg-type]
+                        now=1000,
+                    )
 
     def test_native_question_persists_exact_session_and_dispatches_without_gui(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

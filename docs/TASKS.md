@@ -1,5 +1,30 @@
 # Tasks - AI Presence Monitor
 
+## Em andamento em 2026-10-09
+
+### Task 031 - Recuperacao do observer Discord e CI hospedada
+
+**Prioridade**: Critica
+**Status**: resiliencia implementada e validada localmente; preparando wheel
+limpo, recuperacao real e desbloqueio da conta GitHub
+**Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
+derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
+evidencia hospedada da matriz Linux.
+
+- [x] Confirmar banco integro, Discord acessivel e ausencia de perguntas
+      pendentes antes de qualquer reinicio.
+- [x] Confirmar causas historicas: lock SQLite, timeout/DNS e StartLimitBurst.
+- [x] Confirmar que a CI atual cria jobs sem steps e informa billing lock.
+- [x] Adicionar espera SQLite explicita e backoff somente para polling seguro.
+- [x] Cobrir lock, rede transitoria, erro permanente e reset do backoff.
+- [x] Passar quality gate e matriz Python suportada.
+- [ ] Gerar e validar wheel de correcao.
+- [ ] Autorizar e aplicar upgrade local antes do reinicio do observer.
+- [ ] Confirmar observer ativo, polling estavel e doctor sem erro.
+- [ ] Desbloquear a conta GitHub e obter um run hospedado Linux aprovado.
+
+**Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
+
 ## Concluidas em 2026-10-09
 
 ### Task 030 - Prerelease publica Linux 0.10.0

@@ -33,6 +33,10 @@ class RemoteQuestionError(RuntimeError):
     pass
 
 
+class ReplyObserverTransientError(RemoteQuestionError):
+    """A safe read poll failed before any message could be processed."""
+
+
 @dataclass(frozen=True)
 class ReplyObserverResult:
     fetched: int
@@ -299,7 +303,8 @@ def observe_discord_replies_once(
     try:
         messages = transport.fetch_messages(after=cursor)
     except DiscordQuestionError as exc:
-        raise RemoteQuestionError(str(exc)) from exc
+        error_type = ReplyObserverTransientError if exc.retryable else RemoteQuestionError
+        raise error_type(str(exc)) from exc
 
     accepted = 0
     dispatched = 0

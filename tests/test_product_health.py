@@ -16,7 +16,12 @@ from ai_presence_monitor.codex_hook_installer import (
     render_hooks,
 )
 from ai_presence_monitor.product_health import collect_doctor_report
-from ai_presence_monitor.store import SCHEMA_VERSION, PresenceStore, inspect_schema
+from ai_presence_monitor.store import (
+    SCHEMA_VERSION,
+    SQLITE_BUSY_TIMEOUT_MS,
+    PresenceStore,
+    inspect_schema,
+)
 
 
 class SchemaVersionTests(unittest.TestCase):
@@ -57,6 +62,15 @@ class SchemaVersionTests(unittest.TestCase):
             with sqlite3.connect(db_path) as conn:
                 current = conn.execute("PRAGMA user_version").fetchone()[0]
             self.assertEqual(current, future_version)
+
+    def test_presence_store_configures_bounded_busy_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = PresenceStore(Path(tmp) / "presence.db")
+
+            with store.connect() as conn:
+                timeout = int(conn.execute("PRAGMA busy_timeout").fetchone()[0])
+
+            self.assertEqual(timeout, SQLITE_BUSY_TIMEOUT_MS)
 
 
 class ProductHealthTests(unittest.TestCase):

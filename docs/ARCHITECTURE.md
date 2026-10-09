@@ -351,6 +351,10 @@ GUI anteriores a esta estrategia preservam a confirmacao por worker.
 
 O polling possui unidade systemd ou tarefa agendada separada. Assim, falha de
 Discord ou da GUI nao interrompe o monitor de atrasos nem o hook passivo.
+Uma falha transitoria de leitura anterior ao processamento usa backoff
+exponencial limitado dentro do processo; uma leitura bem-sucedida restaura o
+intervalo normal. O `PresenceStore` aplica espera SQLite limitada para absorver
+contencao curta entre os processos locais.
 Mensagens humanas de usuarios permitidos passam por classificacao antes da
 aceitacao. Se ainda houver pergunta pendente, ausencia de referencia,
 referencia sem correspondencia ou conteudo vazio gera uma unica tentativa de
@@ -360,8 +364,10 @@ allowlist nao recebem feedback.
 
 No Linux, a unidade do observer usa `Restart=on-failure`, espera 30 segundos e
 aceita no maximo tres inicios com falha em cinco minutos. O monitor principal
-continua com `Restart=always` e espera de cinco segundos. No Windows, o Task
-Scheduler ja limita a tres reinicializacoes em falha.
+continua com `Restart=always` e espera de cinco segundos. Erro de configuracao,
+HTTP permanente ou falha inesperada ainda termina o observer e aciona essa
+protecao. No Windows, o Task Scheduler ja limita a tres reinicializacoes em
+falha.
 
 ## Continue Integrado
 

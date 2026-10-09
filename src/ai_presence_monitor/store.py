@@ -19,6 +19,8 @@ CODEX_SESSION_PATTERN = re.compile(
 )
 
 SCHEMA_VERSION = 1
+SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
+SQLITE_BUSY_TIMEOUT_MS = int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
 REQUIRED_TABLES = frozenset(
     {
         "workers",
@@ -164,7 +166,11 @@ class PresenceStore:
         self._init_db()
 
     def connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(
+            self.db_path,
+            timeout=SQLITE_BUSY_TIMEOUT_SECONDS,
+        )
+        conn.execute(f"PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}")
         conn.row_factory = sqlite3.Row
         return conn
 

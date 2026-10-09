@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import sqlite3
 import sys
 import time
 from dataclasses import replace
@@ -65,6 +66,7 @@ from .protocols import (
 from .recovery_coordinator import recover_diagnostic_incident
 from .remote_questions import (
     RemoteQuestionError,
+    ReplyObserverTransientError,
     ask_remote_question,
     observe_discord_replies_once,
     retry_answer_dispatch,
@@ -88,6 +90,8 @@ DEFAULT_EVENT_MESSAGES = {
     "touch": "atividade interna registrada",
     "finish": "tarefa concluida",
 }
+
+REPLY_OBSERVER_TEMPORARY_FAILURE = 75
 
 DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
     {
@@ -339,11 +343,25 @@ def _observe_replies_once(config: AppConfig, dry_run: bool = False) -> int:
         print("[dry-run:respostas] rede, banco e GUI nao foram acessados.")
         return 0
     try:
+        store = PresenceStore(config.db_path)
+    except sqlite3.OperationalError as exc:
+        if "locked" in str(exc).lower() or "busy" in str(exc).lower():
+            print(
+                "Falha transitoria no observer de respostas: banco SQLite ocupado.",
+                file=sys.stderr,
+            )
+            return REPLY_OBSERVER_TEMPORARY_FAILURE
+        print(f"Falha no observer de respostas: {exc}", file=sys.stderr)
+        return 2
+    try:
         result = observe_discord_replies_once(
             config=config,
-            store=PresenceStore(config.db_path),
+            store=store,
             control_store=ControlStore.from_config(config),
         )
+    except ReplyObserverTransientError as exc:
+        print(f"Falha transitoria no observer de respostas: {exc}", file=sys.stderr)
+        return REPLY_OBSERVER_TEMPORARY_FAILURE
     except RemoteQuestionError as exc:
         print(f"Falha no observer de respostas: {exc}", file=sys.stderr)
         return 2
@@ -359,10 +377,32 @@ def _run_reply_observer(args: argparse.Namespace, config: AppConfig) -> int:
     interval = args.interval or config.question_poll_interval_seconds
     if interval <= 0:
         raise ValueError("O intervalo do observer precisa ser maior que zero.")
+    retry_max = config.question_retry_max_seconds
+    if retry_max <= 0:
+        raise ValueError("O teto de retry do observer precisa ser maior que zero.")
+    transient_failures = 0
     while True:
         result = _observe_replies_once(config, dry_run=args.dry_run)
+        if (
+            result == REPLY_OBSERVER_TEMPORARY_FAILURE
+            and not args.once
+            and not args.dry_run
+        ):
+            delay = min(
+                retry_max,
+                interval * (2 ** min(transient_failures, 20)),
+            )
+            transient_failures += 1
+            print(
+                "observer: polling transitorio falhou; "
+                f"nova tentativa segura em {delay}s.",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            continue
         if result != 0 or args.once or args.dry_run:
             return result
+        transient_failures = 0
         time.sleep(interval)
 
 
