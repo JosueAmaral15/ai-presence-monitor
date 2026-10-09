@@ -158,6 +158,21 @@ modules are byte-identical to the operationally validated `d54842b` wheel; only
 release documentation and package metadata differ. The final hashes are the
 ones recorded in Phase 1 and 2 Evidence above.
 
+On 2026-10-09, the user authorized one final rollback and upgrade with the
+rebuilt exact wheel. The stored transaction was rolled back to authentic 0.9.0,
+including its database snapshot, and then upgraded exactly once with the
+candidate-side bootstrap. The final transaction completed in
+`upgrade-0.9.0-to-0.10.0-20261009-053347-9abee693/manifest.json`; its private
+mode-0600 manifest records target SHA-256
+`acef4d3a47b84b8692c935b0d30d9bef85a535adc897b981c690e7ab07debde6`
+and rollback SHA-256
+`0399782b78b7ab69175230d6116b94f1f1a10ba21594795711aded49e114bd53`.
+The installed runtime is 0.10.0, schema 1 is current and integral, the main
+monitor is active, and controls and hooks retain their recorded hashes. The
+known failed reply observer remained untouched. The current-session tray was
+restarted successfully from the installed 0.10.0 runtime. No transaction was
+retried automatically.
+
 ## Phase 4 - Tag and Private Prerelease
 
 After the operational gate and a version-specific private CI exception are

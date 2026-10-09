@@ -1,12 +1,12 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento em 2026-10-08
+## Em andamento em 2026-10-09
 
 ### Task 030 - Release privada Linux 0.10.0
 
 **Prioridade**: Critica
-**Status**: candidata final reconstruida e validada localmente; aguardando
-autorizacao da revalidacao instalada, promocao, tag e publicacao privada
+**Status**: wheel final exato revalidado no runtime instalado; promocao, tag e
+publicacao privada autorizadas e em andamento
 **Objetivo**: produzir, validar, instalar e publicar a release privada Linux
 0.10.0 com rollback verificavel a partir da versao instalada 0.9.0.
 
@@ -21,7 +21,7 @@ autorizacao da revalidacao instalada, promocao, tag e publicacao privada
 - [x] Executar dry-run do upgrade transacional.
 - [x] Autorizar e validar upgrade real, rollback com banco e upgrade final.
 - [x] Reconstruir e validar artefatos apos sincronizar documentacao 0.10.0.
-- [ ] Revalidar o wheel final exato no runtime instalado.
+- [x] Revalidar o wheel final exato no runtime instalado.
 - [ ] Criar e enviar a tag anotada `v0.10.0`.
 - [ ] Publicar prerelease privada com arquivo canonico e sidecar SHA-256.
 - [ ] Baixar e verificar novamente as duas camadas de checksum.
