@@ -122,7 +122,7 @@ branch protection or ruleset requiring that check.
 
 ## Promotion Result
 
-The authorized promotion completed on 2026-10-09 without a tag or release:
+The authorized promotion completed on 2026-10-11 without a tag or release:
 
 - task branch `codex/task-032-main-ci-exception` was published at
   `3201a773e722734099b3d05515c569e8ff3083ca`;
@@ -132,6 +132,10 @@ The authorized promotion completed on 2026-10-09 without a tag or release:
   `db7e8f7661f26bf66941370d75ab76042ab5f956` to the same candidate;
 - Git accepted both pushes and a subsequent remote fetch confirmed the
   expected ancestry;
+- post-promotion Quality run
+  [`38146996990`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38146996990)
+  targets the first closure-record commit. Its three Linux jobs again executed
+  zero steps, and each job reports the same account-level billing lock;
 - the final release gate for the clean candidate passed 321 tests with 86%
   aggregate coverage, passed the same 321 tests on Python 3.10, 3.11 and
   3.12, and verified a clean 0.10.2 bundle;
