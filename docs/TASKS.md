@@ -5,7 +5,8 @@
 ### Task 032 - Promocao de main com excecao local de CI
 
 **Prioridade**: Critica
-**Status**: gates locais e operacionais aprovados; preparando promocao
+**Status**: concluida; versao 0.10.2 promovida por fast-forward para
+`origin/develop` e `origin/main` pela excecao local documentada
 **Objetivo**: promover a correcao 0.10.2 de `develop` para `main` sem tratar a
 CI hospedada bloqueada por cobranca como aprovada, usando evidencia local e
 operacional reproduzivel para esta promocao somente.
@@ -15,8 +16,8 @@ operacional reproduzivel para esta promocao somente.
 - [x] Passar release gate, matriz Python e verificacao offline no candidato.
 - [x] Confirmar runtime 0.10.2, banco, monitor, observer e bandeja saudaveis.
 - [x] Confirmar novamente que a falha hospedada executa zero etapas por billing.
-- [ ] Promover por fast-forward para `develop` e `main` sem tag ou release.
-- [ ] Enviar as duas branches e verificar os commits remotos.
+- [x] Promover por fast-forward para `develop` e `main` sem tag ou release.
+- [x] Enviar as duas branches e verificar os commits remotos.
 
 **Plano**: `docs/planning/TASK-032-main-ci-exception.md`.
 

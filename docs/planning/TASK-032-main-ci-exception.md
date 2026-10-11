@@ -120,6 +120,29 @@ therefore continue to display a failed Quality check. This is accepted only
 because the hosted jobs never started and the repository currently has no
 branch protection or ruleset requiring that check.
 
+## Promotion Result
+
+The authorized promotion completed on 2026-10-09 without a tag or release:
+
+- task branch `codex/task-032-main-ci-exception` was published at
+  `3201a773e722734099b3d05515c569e8ff3083ca`;
+- `develop` advanced by fast-forward from
+  `76d86dbbf2bd06e1edcc85d947d82ea926157666` to the same candidate;
+- `main` advanced by fast-forward from
+  `db7e8f7661f26bf66941370d75ab76042ab5f956` to the same candidate;
+- Git accepted both pushes and a subsequent remote fetch confirmed the
+  expected ancestry;
+- the final release gate for the clean candidate passed 321 tests with 86%
+  aggregate coverage, passed the same 321 tests on Python 3.10, 3.11 and
+  3.12, and verified a clean 0.10.2 bundle;
+- the installed runtime remained at 0.10.2, strict doctor returned only `ok`
+  checks, and the reply observer remained active with `NRestarts=0` and no
+  pending question.
+
+The documentation-only closure record is promoted through the same
+fast-forward path after `git diff --check` and the local quality gate. Hosted
+Quality remains an external non-pass until GitHub actually starts its jobs.
+
 ## Follow-up
 
 When the account lock is cleared:
