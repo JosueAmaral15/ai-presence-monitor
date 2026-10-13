@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-10-13 - Private Linux 0.10.3 may use a version-specific local CI exception
+
+**Decision**: permit the private Linux 0.10.3 candidate to advance from
+`develop` to `main` after the owner authorized the operational next step, the
+complete local and release gates passed, the transactional installation
+completed and the exact-session prompt-rule rearm E2E succeeded.
+
+**Reason**: hosted Quality run
+[`38460625672`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38460625672)
+created Python 3.10, 3.11 and 3.12 Linux jobs, but every job ran zero steps and
+GitHub annotated the account-level billing lock. It supplies no test evidence.
+The exact source passed 325 tests with 86% coverage and the full supported
+Python matrix, its clean bundle was verified, runtime 0.10.3 passed strict
+doctor, and one isolated one-shot E2E proved the corrected 210-to-270-minute
+rearm path in the intended Codex session.
+
+**Limit**: this exception applies only to private Linux version 0.10.3. Hosted
+CI remains failed, not passed. The exception does not authorize a tag, GitHub
+release, public artifact, Windows support or a future version, and does not
+remove the obligation to obtain a real hosted Linux run when billing is
+unblocked.
+
 ## 2026-10-13 - Rearmamento explicito de regras de prompt
 
 **Decisao**: usar 270 minutos como novo atraso padrao e persistir o instante de

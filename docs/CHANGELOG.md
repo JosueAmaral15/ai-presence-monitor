@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - v0.10.3
+## 2026-10-13 - v0.10.3
 
 - Changed the default prompt-rule delay from 210 to 270 minutes.
 - Made re-enabling a rule or changing any configurable field start a clean
@@ -9,6 +9,8 @@
   cancel its initial due time when valid activity resumes before dispatch.
 - Persisted an additive arm timestamp while remaining compatible with existing
   version-1 control files.
+- Installed the candidate transactionally and validated one isolated
+  exact-session rearm E2E with a unique marker and no retry or fallback.
 
 ## 2026-10-11 - v0.10.2
 

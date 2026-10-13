@@ -66,3 +66,39 @@ The task branch and `develop` were pushed after the gate passed. Promotion to
 `main` remains intentionally pending until runtime 0.10.3 is installed and an
 isolated operational E2E confirms the rearmed countdown without sending an
 unintended prompt to another session.
+
+## Operational Result - 2026-10-13
+
+The transactional dry-run reported `would_upgrade` from 0.10.2 to 0.10.3. The
+single authorized transaction then completed, retained a private rollback
+manifest and restored both managed services. The installed command reports
+0.10.3, schema 1 remains current and integral, strict doctor reports every
+check `ok`, and the tray was restarted as one process on the new runtime.
+
+The authorized E2E used temporary control and SQLite files, the exact current
+Codex session and marker
+`[AI-PRESENCE-PROMPT-REARM-E2E:b18bda42-bee8-4cc0-8252-6dcb1687fc29] continue`.
+It did not modify the operational `books` rule.
+
+The isolated scheduler established these states:
+
+- re-enabling the 210-minute rule armed it at `3000` and set due time `15600`;
+- editing the delay to 270 minutes rearmed at `4000` and moved due time to
+  `20200`, rather than retaining the old red episode or prior deadline;
+- the poll at `20199` remained `waiting`;
+- the due poll returned `dispatch_started` exactly once;
+- the one-shot rule was disabled with occurrence count `1`;
+- the next poll returned `disabled` and emitted no second input.
+
+The exact marker then appeared as user input without being typed by the human.
+The operational database recorded `observation:codex:UserPromptSubmit` for the
+same session at `1791922444.6423137` and subsequent same-session hooks. No GUI,
+remote endpoint, Discord, alarm, fallback, retry or activity synchronization
+participated in the dispatch.
+
+The hosted Quality run
+[`38460625672`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38460625672)
+created all three required Linux jobs but ran zero steps. GitHub annotated each
+job with the unchanged account-level billing lock. This is external non-pass
+evidence, not successful CI; the version-specific private Linux exception is
+recorded in `docs/DECISIONS.md`.

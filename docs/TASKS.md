@@ -2,35 +2,11 @@
 
 ## Em andamento
 
-### Task 034 - Rearmamento de regras de prompt
-
-**Prioridade**: Alta
-**Status**: implementacao e gates promovidos para `develop`; aguardando
-validacao operacional antes de `main`
-**Objetivo**: garantir que reabilitar ou editar uma regra inicie nova contagem,
-sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
-270 minutos como atraso padrao.
-
-- [x] Preservar alteracoes locais do novo default de 270 minutos.
-- [x] Investigar o estado persistido da regra que gerou a notificacao.
-- [x] Persistir o instante de armamento com compatibilidade aditiva.
-- [x] Reiniciar contagem e estado ao reabilitar ou alterar qualquer campo.
-- [x] Preservar o vencimento quando nenhuma configuracao mudou.
-- [x] Nao reaproveitar vermelho anterior ao novo armamento.
-- [x] Cancelar vencimento inicial se atividade valida retornar antes do envio.
-- [x] Passar quality gate completo e matriz Python suportada.
-- [x] Registrar commit da implementacao depois dos gates locais.
-- [x] Gerar e verificar bundle 0.10.3 a partir de uma arvore limpa.
-- [x] Enviar o branch e promover o codigo validado para `develop`.
-- [ ] Instalar a 0.10.3 e executar E2E operacional isolado antes de `main`.
-
-**Plano**: `docs/planning/TASK-034-prompt-rule-rearm.md`.
-
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: runtime 0.10.2 e observer recuperados; CI hospedada pendente por
-bloqueio externo da conta GitHub
+**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.3; CI
+hospedada pendente por bloqueio externo da conta GitHub
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
 evidencia hospedada da matriz Linux.
@@ -51,6 +27,32 @@ evidencia hospedada da matriz Linux.
       hospedado Linux aprovado.
 
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
+
+## Concluidas em 2026-10-13
+
+### Task 034 - Rearmamento de regras de prompt
+
+**Prioridade**: Alta
+**Status**: concluida; runtime 0.10.3 instalado e E2E isolado aprovado na
+sessao exata antes da promocao para `main`
+**Objetivo**: garantir que reabilitar ou editar uma regra inicie nova contagem,
+sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
+270 minutos como atraso padrao.
+
+- [x] Preservar alteracoes locais do novo default de 270 minutos.
+- [x] Investigar o estado persistido da regra que gerou a notificacao.
+- [x] Persistir o instante de armamento com compatibilidade aditiva.
+- [x] Reiniciar contagem e estado ao reabilitar ou alterar qualquer campo.
+- [x] Preservar o vencimento quando nenhuma configuracao mudou.
+- [x] Nao reaproveitar vermelho anterior ao novo armamento.
+- [x] Cancelar vencimento inicial se atividade valida retornar antes do envio.
+- [x] Passar quality gate completo e matriz Python suportada.
+- [x] Registrar commit da implementacao depois dos gates locais.
+- [x] Gerar e verificar bundle 0.10.3 a partir de uma arvore limpa.
+- [x] Enviar o branch e promover o codigo validado para `develop`.
+- [x] Instalar a 0.10.3 e executar E2E operacional isolado antes de `main`.
+
+**Plano**: `docs/planning/TASK-034-prompt-rule-rearm.md`.
 
 ## Concluidas em 2026-10-11
 
