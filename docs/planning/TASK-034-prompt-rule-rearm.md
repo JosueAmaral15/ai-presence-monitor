@@ -54,3 +54,10 @@ compileall, shell syntax, package build and `git diff --check`. The same 325
 tests passed on Python 3.10, 3.11 and 3.12. Focused control, scheduler, tray and
 release-tooling validation passed 42 tests. No test used the operational
 control document or emitted real Codex input.
+
+The clean-tree release gate also passed for version 0.10.3 at commit
+`e86c5ba425f606f64a2699c5dddbb21b554cd9e0`. Its manifest records
+`source_dirty=false` and verifies the wheel, source archive, `.env.example`,
+Linux installer, upgrader and release-verification tooling. Operational
+installation, tray restart, rule re-enablement and exact-session input remain
+outside this code-validation run.

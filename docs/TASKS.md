@@ -5,8 +5,8 @@
 ### Task 034 - Rearmamento de regras de prompt
 
 **Prioridade**: Alta
-**Status**: implementacao e gates locais concluidos; aguardando commit e
-promocao
+**Status**: implementacao, commit e release gate concluidos; aguardando push
+para `develop` e validacao operacional antes de `main`
 **Objetivo**: garantir que reabilitar ou editar uma regra inicie nova contagem,
 sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
 270 minutos como atraso padrao.
@@ -19,7 +19,10 @@ sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
 - [x] Nao reaproveitar vermelho anterior ao novo armamento.
 - [x] Cancelar vencimento inicial se atividade valida retornar antes do envio.
 - [x] Passar quality gate completo e matriz Python suportada.
-- [ ] Registrar commit, push e promocao depois dos gates aplicaveis.
+- [x] Registrar commit da implementacao depois dos gates locais.
+- [x] Gerar e verificar bundle 0.10.3 a partir de uma arvore limpa.
+- [ ] Enviar o branch e promover o codigo validado para `develop`.
+- [ ] Instalar a 0.10.3 e executar E2E operacional isolado antes de `main`.
 
 **Plano**: `docs/planning/TASK-034-prompt-rule-rearm.md`.
 
