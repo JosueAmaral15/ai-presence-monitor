@@ -33,8 +33,8 @@ evidencia hospedada da matriz Linux.
 ### Task 034 - Rearmamento de regras de prompt
 
 **Prioridade**: Alta
-**Status**: concluida; runtime 0.10.3 instalado e E2E isolado aprovado na
-sessao exata antes da promocao para `main`
+**Status**: concluida; runtime 0.10.3 instalado, E2E isolado aprovado e codigo
+promovido por fast-forward para `origin/develop` e `origin/main`
 **Objetivo**: garantir que reabilitar ou editar uma regra inicie nova contagem,
 sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
 270 minutos como atraso padrao.

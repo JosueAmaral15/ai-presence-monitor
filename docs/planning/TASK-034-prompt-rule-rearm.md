@@ -102,3 +102,17 @@ created all three required Linux jobs but ran zero steps. GitHub annotated each
 job with the unchanged account-level billing lock. This is external non-pass
 evidence, not successful CI; the version-specific private Linux exception is
 recorded in `docs/DECISIONS.md`.
+
+## Promotion Result
+
+The task branch, `develop` and `main` were fast-forwarded and remotely verified
+at evidence commit `e59fa693ccc415f5db91ff98f70c6dfe59475f19`. No tag,
+GitHub release or public asset was created. Post-promotion Quality run
+[`38461504848`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38461504848)
+again created the three Linux jobs, ran zero steps and reported the same billing
+lock; it remains external non-pass evidence.
+
+The first tray restart was launched from the terminating transient tray cgroup,
+so that child ended with its parent unit. The tray was then restored as one
+top-level `ai-presence-tray-session.service` transient user unit. Runtime
+0.10.3, the monitor, reply observer and tray were all active after promotion.

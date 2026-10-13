@@ -98,6 +98,27 @@ services. It records the result instead of silently retrying.
 The tray process is not a managed user service. Exit and reopen the tray after
 a successful package upgrade so it loads the new Python code.
 
+When the current tray belongs to a transient user unit, stop that unit first
+and launch the replacement as a new top-level transient unit. Do not use
+`nohup` from a shell that still belongs to the unit being stopped: the child
+inherits the terminating cgroup and can disappear after appearing healthy.
+For the current graphical login, a bounded restart can use:
+
+```bash
+systemctl --user stop ai-presence-tray-session.service
+systemd-run --user \
+  --unit=ai-presence-tray-session \
+  --collect \
+  --property=Type=exec \
+  --property=Restart=on-failure \
+  --property=RestartSec=5s \
+  ai-presence --env-file /absolute/path/to/.env tray
+```
+
+Confirm `ActiveState=active`, `SubState=running` and one tray process. This
+transient unit ends with the graphical user session; the existing desktop
+autostart remains responsible for the next login.
+
 ## Manual Rollback
 
 First inspect the manifest path returned by the successful upgrade:
