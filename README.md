@@ -645,7 +645,7 @@ automation grants permission; it does not start a periodic timer.
 The optional system tray also provides persistent prompt rules. Select a
 project or agent profile and add one or more rules. Each rule stores its exact
 session, enabled state, trigger, delay, prompt, repetition interval and maximum
-send count independently for that worker. Defaults are 210 minutes, `continue`
+send count independently for that worker. Defaults are 270 minutes, `continue`
 and three sends when bounded repetition is enabled. A rule may start after it
 is armed or after canonical red inactivity: 30 minutes in Protocol 1 or 15
 minutes in Protocol 2, followed by the rule's delay. One-shot rules are
@@ -653,6 +653,13 @@ disarmed before transport. Repeating rules pause after every send until a later
 hook from the same exact session is observed; failure or uncertainty disables
 the rule. The tray must be running when conditions are evaluated, but saved
 fields and runtime state survive restarts.
+
+Saving an unchanged rule preserves its current due time. Re-enabling a disabled
+rule or changing any configurable field starts a new cycle, clears previous
+attempt state and counts the delay again. A red-inactivity rule that is already
+red starts that new delay from the rearm time rather than reusing an older red
+event; activity before the first dispatch cancels the pending due time and
+returns the rule to waiting for a new red threshold.
 
 An AI-worker can suspend automation only for the worker derived from its
 current directory and configured scope:

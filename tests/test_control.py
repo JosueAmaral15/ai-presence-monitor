@@ -11,6 +11,7 @@ from unittest.mock import patch
 from test_cli import make_config
 
 from ai_presence_monitor.control import (
+    DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
     ControlError,
     ControlSettings,
     ControlStore,
@@ -29,7 +30,10 @@ class ControlStoreTests(unittest.TestCase):
             self.assertFalse(settings.task_automation_enabled)
             self.assertTrue(settings.native_input_enabled)
             self.assertFalse(settings.scheduled_prompt_enabled)
-            self.assertEqual(settings.scheduled_prompt_delay_minutes, 210)
+            self.assertEqual(
+                settings.scheduled_prompt_delay_minutes,
+                DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
+            )
             self.assertEqual(settings.scheduled_prompt_text, "continue")
             self.assertFalse(store.path.exists())
 
@@ -64,6 +68,7 @@ class ControlStoreTests(unittest.TestCase):
                         repeat_enabled=True,
                         repeat_interval_minutes=10,
                         max_occurrences=4,
+                        armed_at=1_500.0,
                         next_due_at=2_000.0,
                         last_state="armed",
                     ),
@@ -99,8 +104,44 @@ class ControlStoreTests(unittest.TestCase):
 
             self.assertTrue(settings.task_automation_enabled)
             self.assertFalse(settings.scheduled_prompt_enabled)
-            self.assertEqual(settings.scheduled_prompt_delay_minutes, 210)
+            self.assertEqual(
+                settings.scheduled_prompt_delay_minutes,
+                DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
+            )
             self.assertEqual(settings.scheduled_prompt_text, "continue")
+
+    def test_legacy_prompt_rule_without_armed_at_remains_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "control.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "settings": {
+                            "native_input_enabled": True,
+                            "prompt_rules": [
+                                {
+                                    "rule_id": "legacy-rule",
+                                    "enabled": True,
+                                    "thread_id": "session-1",
+                                    "trigger": "after_delay",
+                                    "delay_minutes": 210,
+                                    "text": "continue",
+                                    "next_due_at": 13_600.0,
+                                    "last_state": "armed",
+                                }
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            rule = ControlStore(path, ControlSettings()).load().prompt_rules[0]
+
+            self.assertEqual(rule.rule_id, "legacy-rule")
+            self.assertIsNone(rule.armed_at)
+            self.assertEqual(rule.next_due_at, 13_600.0)
 
     def test_profiles_inherit_global_defaults_and_remain_isolated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

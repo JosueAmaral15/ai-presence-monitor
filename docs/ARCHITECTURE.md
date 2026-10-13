@@ -442,7 +442,12 @@ legada. Cada perfil possui uma colecao limitada de regras com ID estavel,
 gatilho por ativacao ou vermelho, atraso, texto e repeticao limitada. O estado
 de cada regra vive no mesmo `control.json`, portanto reiniciar a bandeja nao
 perde checkboxes, campos, vencimentos ou espera de confirmacao. O scheduler
-processa no maximo um transporte por perfil em cada ciclo, faz claim antes do
+persiste tambem o instante de armamento. Configuracao inalterada preserva o
+prazo; reabilitacao ou mudanca de campo cria um ciclo limpo. No primeiro envio
+com gatilho vermelho, o vencimento usa o maior valor entre o vermelho canonico
+e o armamento atual, evitando reaproveitar um episodio antigo. Nova atividade
+antes do envio remove o vencimento e devolve a regra a espera do vermelho. O
+scheduler processa no maximo um transporte por perfil em cada ciclo, faz claim antes do
 input e desabilita a regra em falha ou incerteza.
 
 Depois de um envio repetitivo, a regra permanece em

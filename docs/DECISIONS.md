@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-10-13 - Rearmamento explicito de regras de prompt
+
+**Decisao**: usar 270 minutos como novo atraso padrao e persistir o instante de
+armamento de cada regra. Salvar sem mudancas preserva o prazo atual; reabilitar
+ou alterar qualquer campo zera estado de tentativa, ocorrencias e vencimento.
+Para o gatilho vermelho, um episodio anterior ao armamento nao antecipa o novo
+prazo, e atividade valida antes do primeiro envio cancela o vencimento pendente.
+
+**Motivo**: uma regra desabilitada por falha ou incerteza precisa poder ser
+reiniciada conscientemente pelo usuario. Reutilizar o instante de um vermelho
+antigo podia provocar envio imediato depois de mudar 210 para 270 minutos, em
+vez de iniciar a nova contagem solicitada.
+
+**Consequencia**: o campo aditivo `armed_at` permanece compativel com documentos
+de controle antigos. Regras antigas sem esse campo mantem o prazo persistido;
+um novo armamento passa a usar a semantica corrigida.
+
 ## 2026-10-08 - Regras persistentes e desativacao limitada ao worker corrente
 
 **Decisao**: substituir o editor unico por ate 20 regras persistentes em cada

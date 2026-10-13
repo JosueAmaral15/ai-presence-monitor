@@ -171,11 +171,18 @@ perfil ainda inexistente.
 A bandeja oferece varias regras persistentes de prompt. Cada regra possui
 checkbox, sessao exata, gatilho, atraso, texto e configuracao one-shot ou
 repetitiva. O botao `+` adiciona uma regra e o botao `-` remove a linha. O
-gatilho pode contar desde a ativacao ou desde o vermelho canonico, seguido pelo
+atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
+inalterada preserva seu vencimento. Reabilitar a regra ou alterar qualquer
+campo cria um novo ciclo, zera ocorrencias e tentativas anteriores e reinicia a
+contagem.
+
+O gatilho pode contar desde a ativacao ou desde o vermelho canonico, seguido pelo
 atraso configurado. Repeticao exige intervalo e limite de ocorrencias, com
 default seguro de tres envios e limite absoluto de 100. Depois de cada envio, a
 regra aguarda um hook posterior da mesma sessao antes de contar o proximo
-intervalo. Falha ou resultado incerto desabilita a regra.
+intervalo. Falha ou resultado incerto desabilita a regra. Se a regra for
+rearmada durante um vermelho existente, o atraso parte do rearmamento; atividade
+valida antes do primeiro envio cancela o vencimento e exige um novo vermelho.
 
 O agente pode suspender a autorizacao do perfil derivado de seu projeto atual:
 

@@ -15,7 +15,11 @@ from .codex_input import (
 from .config import AppConfig, load_config
 from .control import (
     DEFAULT_PROMPT_RULE_OCCURRENCES,
+    DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
+    DEFAULT_SCHEDULED_PROMPT_TEXT,
     MAX_PROMPT_RULES,
+    MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
+    MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
     ControlError,
     ControlSettings,
     ControlStore,
@@ -232,15 +236,21 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             layout.addWidget(self.session, 1, 1, 1, 2)
 
             self.delay = QSpinBox()
-            self.delay.setRange(1, 10_080)
+            self.delay.setRange(1, MAX_SCHEDULED_PROMPT_DELAY_MINUTES)
             self.delay.setSuffix(" min")
-            self.delay.setValue(rule.delay_minutes if rule else 210)
+            self.delay.setValue(
+                rule.delay_minutes
+                if rule
+                else DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
+            )
             layout.addWidget(QLabel("Delay"), 2, 0)
             layout.addWidget(self.delay, 2, 1, 1, 2)
 
-            self.text = QLineEdit(rule.text if rule else "continue")
-            self.text.setMaxLength(4_000)
-            self.text.setPlaceholderText("continue")
+            self.text = QLineEdit(
+                rule.text if rule else DEFAULT_SCHEDULED_PROMPT_TEXT
+            )
+            self.text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
+            self.text.setPlaceholderText(DEFAULT_SCHEDULED_PROMPT_TEXT)
             layout.addWidget(QLabel("Prompt"), 3, 0)
             layout.addWidget(self.text, 3, 1, 1, 2)
 
@@ -249,10 +259,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             layout.addWidget(self.repeat, 4, 0, 1, 3)
 
             self.repeat_interval = QSpinBox()
-            self.repeat_interval.setRange(1, 10_080)
+            self.repeat_interval.setRange(1, MAX_SCHEDULED_PROMPT_DELAY_MINUTES)
             self.repeat_interval.setSuffix(" min")
             self.repeat_interval.setValue(
-                rule.repeat_interval_minutes if rule else 210
+                rule.repeat_interval_minutes
+                if rule
+                else DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
             )
             layout.addWidget(QLabel("Repeat interval"), 5, 0)
             layout.addWidget(self.repeat_interval, 5, 1, 1, 2)

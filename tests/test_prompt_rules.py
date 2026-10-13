@@ -51,6 +51,225 @@ def configured_settings(*rules: object) -> ControlSettings:
 
 
 class PromptRuleTests(unittest.TestCase):
+    def test_reenable_and_configuration_changes_restart_the_cycle(self) -> None:
+        base = configure_prompt_rule(
+            None,
+            enabled=True,
+            thread_id="session-1",
+            trigger="after_delay",
+            delay_minutes=210,
+            text="continue",
+            repeat_enabled=False,
+            repeat_interval_minutes=210,
+            max_occurrences=3,
+            now=1_000.0,
+            rule_id="rule-1",
+        )
+        completed = replace(
+            base,
+            enabled=False,
+            occurrence_count=1,
+            next_due_at=None,
+            last_state="failed_or_uncertain",
+            last_attempt_at=2_000.0,
+            last_dispatch_at=1_500.0,
+        )
+        unchanged = configure_prompt_rule(
+            base,
+            enabled=True,
+            thread_id="session-1",
+            trigger="after_delay",
+            delay_minutes=210,
+            text="continue",
+            repeat_enabled=False,
+            repeat_interval_minutes=210,
+            max_occurrences=3,
+            now=9_000.0,
+        )
+
+        reenabled = configure_prompt_rule(
+            completed,
+            enabled=True,
+            thread_id="session-1",
+            trigger="after_delay",
+            delay_minutes=210,
+            text="continue",
+            repeat_enabled=False,
+            repeat_interval_minutes=210,
+            max_occurrences=3,
+            now=3_000.0,
+        )
+
+        self.assertIs(unchanged, base)
+        self.assertEqual(reenabled.rule_id, "rule-1")
+        self.assertTrue(reenabled.enabled)
+        self.assertEqual(reenabled.armed_at, 3_000.0)
+        self.assertEqual(reenabled.next_due_at, 15_600.0)
+        self.assertEqual(reenabled.occurrence_count, 0)
+        self.assertEqual(reenabled.last_state, "armed")
+        self.assertIsNone(reenabled.last_attempt_at)
+        self.assertIsNone(reenabled.last_dispatch_at)
+        self.assertFalse(reenabled.awaiting_confirmation)
+
+        changes = (
+            {"thread_id": "session-2"},
+            {"trigger": "red_inactivity"},
+            {"delay_minutes": 270},
+            {"text": "proceed"},
+            {"repeat_enabled": True},
+            {"repeat_interval_minutes": 270},
+            {"max_occurrences": 4},
+        )
+        for change in changes:
+            with self.subTest(change=change):
+                configuration = {
+                    "enabled": True,
+                    "thread_id": "session-1",
+                    "trigger": "after_delay",
+                    "delay_minutes": 210,
+                    "text": "continue",
+                    "repeat_enabled": False,
+                    "repeat_interval_minutes": 210,
+                    "max_occurrences": 3,
+                }
+                configuration.update(change)
+                changed = configure_prompt_rule(
+                    replace(
+                        base,
+                        occurrence_count=2,
+                        last_state="dispatch_started",
+                        last_attempt_at=1_500.0,
+                        last_dispatch_at=1_500.0,
+                    ),
+                    **configuration,
+                    now=4_000.0,
+                )
+                self.assertEqual(changed.armed_at, 4_000.0)
+                self.assertEqual(changed.occurrence_count, 0)
+                self.assertIsNone(changed.last_attempt_at)
+                self.assertIsNone(changed.last_dispatch_at)
+                self.assertFalse(changed.awaiting_confirmation)
+
+    def test_red_rule_rearm_does_not_reuse_an_old_red_event(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            with patch("ai_presence_monitor.store.time.time", return_value=1_000.0):
+                presence.record_event(
+                    worker_id="worker-1",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    event_type="start",
+                    task="task",
+                )
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-1",
+                trigger="red_inactivity",
+                delay_minutes=1,
+                text="continue",
+                repeat_enabled=False,
+                repeat_interval_minutes=1,
+                now=3_000.0,
+                rule_id="red-rule",
+            )
+            control.save(configured_settings(rule), "worker-1")
+            client = FakeClient()
+
+            rearmed = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=3_000.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            sent = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=3_060.0,
+                client=client,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(rearmed.state, "waiting")
+            self.assertEqual(rearmed.due_at, 3_060.0)
+            self.assertEqual(sent.state, "dispatch_started")
+            self.assertEqual(client.calls, [("session-1", "continue")])
+
+    def test_red_rule_cancels_initial_due_time_after_new_activity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            with patch("ai_presence_monitor.store.time.time", return_value=1_000.0):
+                presence.record_event(
+                    worker_id="worker-1",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    event_type="start",
+                    task="task",
+                )
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-1",
+                trigger="red_inactivity",
+                delay_minutes=1,
+                text="continue",
+                repeat_enabled=False,
+                repeat_interval_minutes=1,
+                now=1_000.0,
+                rule_id="red-rule",
+            )
+            control.save(configured_settings(rule), "worker-1")
+            client = FakeClient()
+
+            armed = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_900.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            with patch("ai_presence_monitor.store.time.time", return_value=1_920.0):
+                presence.record_event(
+                    worker_id="worker-1",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    event_type="observation:codex:after_agent",
+                    message="codex hook after_agent session=session-1",
+                    task="task",
+                )
+            reset = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_950.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            reset_rule = control.load("worker-1").prompt_rules[0]
+            rearmed = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=2_820.0,
+                client=client,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(armed.state, "waiting")
+            self.assertEqual(armed.due_at, 1_960.0)
+            self.assertEqual(reset.state, "waiting_for_event")
+            self.assertIsNone(reset_rule.next_due_at)
+            self.assertEqual(reset_rule.last_state, "waiting_for_event")
+            self.assertEqual(rearmed.state, "waiting")
+            self.assertEqual(rearmed.due_at, 2_880.0)
+            self.assertEqual(client.calls, [])
+
     def test_one_shot_dispatches_once_and_persists_all_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

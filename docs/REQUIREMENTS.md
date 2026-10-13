@@ -226,7 +226,7 @@
   por padrao e separadas da decisao normativa do AI-worker.
 - Cada regra deve persistir sessao nativa exata, checkbox, gatilho, atraso,
   texto, repeticao, intervalo, limite e estado de execucao.
-- Atraso e texto devem usar defaults de 210 minutos e `continue`.
+- Atraso e texto devem usar defaults de 270 minutos e `continue`.
 - Salvar uma regra inalterada nao pode postergar seu vencimento; alterar ou
   reativar deve rearmar a contagem.
 - Regras one-shot devem ser desarmadas antes do transporte. Falha ou incerteza
@@ -239,6 +239,10 @@
 - No gatilho vermelho, o atraso configurado deve iniciar depois de 30 minutos
   sem `last_signal_at` no Protocolo 1 ou 15 minutos sem `last_activity_at` no
   Protocolo 2.
+- Rearmar durante um episodio vermelho deve contar o atraso desde o novo
+  armamento, sem reaproveitar o instante vermelho anterior.
+- Atividade valida antes do primeiro envio deve cancelar o vencimento vermelho
+  pendente e exigir que o worker alcance o limiar novamente.
 - Worker ausente, idle, protocolo desconhecido ou relogio ausente nao deve
   liberar o envio.
 

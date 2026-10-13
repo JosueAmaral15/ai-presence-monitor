@@ -10,7 +10,7 @@ from typing import Any
 from .config import AppConfig
 
 CONTROL_VERSION = 1
-DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES = 210
+DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES = 270
 DEFAULT_SCHEDULED_PROMPT_TEXT = "continue"
 MAX_SCHEDULED_PROMPT_DELAY_MINUTES = 10_080
 MAX_SCHEDULED_PROMPT_TEXT_LENGTH = 4_000
@@ -67,6 +67,7 @@ class PromptRule:
     repeat_interval_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
     max_occurrences: int = DEFAULT_PROMPT_RULE_OCCURRENCES
     occurrence_count: int = 0
+    armed_at: float | None = None
     next_due_at: float | None = None
     last_state: str = "disabled"
     last_attempt_at: float | None = None
@@ -580,6 +581,7 @@ def _prompt_rules_value(
                     minimum=0,
                     maximum=MAX_PROMPT_RULE_OCCURRENCES,
                 ),
+                armed_at=_optional_number(raw_rule, "armed_at", None),
                 next_due_at=_optional_number(raw_rule, "next_due_at", None),
                 last_state=_choice_value(
                     raw_rule,
@@ -669,6 +671,7 @@ def _validate_prompt_rules(settings: ControlSettings) -> None:
         if rule.last_state not in PROMPT_RULE_STATES:
             raise ControlError("O estado da regra de prompt e invalido.")
         for label, timestamp_value in (
+            ("armamento", rule.armed_at),
             ("vencimento", rule.next_due_at),
             ("ultima tentativa", rule.last_attempt_at),
             ("ultimo envio", rule.last_dispatch_at),

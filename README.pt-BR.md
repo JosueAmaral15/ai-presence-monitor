@@ -325,6 +325,14 @@ transporte. Uma regra repetitiva somente rearma depois de um hook posterior da
 mesma sessao, e falha ou incerteza a desabilita. Checkboxes, campos e estado de
 execucao sobrevivem ao fechamento e reabertura da bandeja.
 
+O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
+sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar
+qualquer campo inicia um novo ciclo, zera tentativas e ocorrencias anteriores e
+conta novamente o atraso. Se uma regra com gatilho vermelho ja estiver em
+inatividade vermelha, o novo atraso parte do rearmamento, sem reutilizar o
+evento antigo. Atividade valida antes do primeiro envio cancela esse vencimento
+e faz a regra aguardar um novo vermelho.
+
 Um agente pode suspender somente a automacao do worker derivado do diretorio e
 escopo correntes com `ai-presence disable-current-automation`. O comando nao
 aceita outro worker ou projeto como argumento; edicao humana dos perfis ocorre

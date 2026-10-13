@@ -2,6 +2,27 @@
 
 ## Em andamento
 
+### Task 034 - Rearmamento de regras de prompt
+
+**Prioridade**: Alta
+**Status**: implementacao e gates locais concluidos; aguardando commit e
+promocao
+**Objetivo**: garantir que reabilitar ou editar uma regra inicie nova contagem,
+sem reutilizar estado de falha ou um episodio vermelho anterior, e consolidar
+270 minutos como atraso padrao.
+
+- [x] Preservar alteracoes locais do novo default de 270 minutos.
+- [x] Investigar o estado persistido da regra que gerou a notificacao.
+- [x] Persistir o instante de armamento com compatibilidade aditiva.
+- [x] Reiniciar contagem e estado ao reabilitar ou alterar qualquer campo.
+- [x] Preservar o vencimento quando nenhuma configuracao mudou.
+- [x] Nao reaproveitar vermelho anterior ao novo armamento.
+- [x] Cancelar vencimento inicial se atividade valida retornar antes do envio.
+- [x] Passar quality gate completo e matriz Python suportada.
+- [ ] Registrar commit, push e promocao depois dos gates aplicaveis.
+
+**Plano**: `docs/planning/TASK-034-prompt-rule-rearm.md`.
+
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica

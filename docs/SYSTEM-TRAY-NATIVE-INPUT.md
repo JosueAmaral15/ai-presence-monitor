@@ -157,7 +157,7 @@ Nas preferencias:
 2. pressione `+` para adicionar uma regra;
 3. marque **Enabled** e escolha uma sessao exata do mesmo worker;
 4. escolha **After arming** ou **After red inactivity**;
-5. informe **Delay** e **Prompt**; os defaults sao `210 min` e `continue`;
+5. informe **Delay** e **Prompt**; os defaults sao `270 min` e `continue`;
 6. se desejar repeticao, marque **Repeat after confirmed session activity**,
    informe o intervalo e a quantidade maxima de envios;
 7. pressione **Save**.
@@ -166,6 +166,11 @@ O botao `-` remove uma regra. Cada linha possui ID estavel e seu proprio estado.
 Salvar sem mudar seus campos preserva o vencimento; alterar configuracao ou
 reativar uma regra rearma a contagem. Desmarcar **Enabled** preserva os campos,
 mas cancela a execucao pendente.
+
+Rearmar zera ocorrencias, tentativa anterior, espera de confirmacao e
+vencimento. Se o worker ja estiver vermelho, o novo atraso comeca no instante
+do rearmamento, sem reutilizar o inicio do episodio antigo. Atividade valida
+antes do primeiro envio cancela esse vencimento e exige um novo vermelho.
 
 No gatilho vermelho, o atraso comeca depois que o worker ativo atinge:
 

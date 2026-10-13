@@ -50,7 +50,7 @@ class FakeClient:
 
 
 class ScheduledPromptTests(unittest.TestCase):
-    def test_defaults_arm_exact_session_for_210_minutes(self) -> None:
+    def test_explicit_delay_arms_exact_session(self) -> None:
         armed = configure_scheduled_prompt(
             ControlSettings(native_input_enabled=True),
             enabled=True,

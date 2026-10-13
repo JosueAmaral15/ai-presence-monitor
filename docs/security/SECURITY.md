@@ -1,5 +1,25 @@
 # Security Checklist
 
+## Task 034 - Prompt-rule rearming
+
+- [x] An unchanged save preserves the active due time and cannot silently
+      postpone an authorized prompt.
+- [x] Re-enabling or editing a rule clears prior attempts, occurrence count,
+      confirmation state and due time before arming a new cycle.
+- [x] A red event older than the new arm time cannot make the rule immediately
+      due.
+- [x] Valid activity before the first red-triggered dispatch cancels that due
+      time and requires a new red threshold.
+- [x] Existing control documents without `armed_at` remain readable.
+- [x] No retry, fallback, presence update or cross-profile mutation was added.
+
+### Residual risk
+
+The scheduler still depends on accurate hooks or heartbeats and on the tray
+remaining active. Re-enabling a rule is an explicit new authorization for that
+rule, but transport start remains preliminary and does not prove that Codex
+processed the prompt.
+
 ## Task 031 - Reply observer resilience
 
 - [x] SQLite contention waits for a bounded busy timeout instead of spinning.

@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased - v0.10.2
+## Unreleased - v0.10.3
+
+- Changed the default prompt-rule delay from 210 to 270 minutes.
+- Made re-enabling a rule or changing any configurable field start a clean
+  cycle while unchanged saves preserve the current due time.
+- Prevented a rearmed red-inactivity rule from reusing an older red event and
+  cancel its initial due time when valid activity resumes before dispatch.
+- Persisted an additive arm timestamp while remaining compatible with existing
+  version-1 control files.
+
+## 2026-10-11 - v0.10.2
 
 - Classified connection-level Discord read failures, including remote closes
   and connection resets, as transient so the observer keeps bounded backoff

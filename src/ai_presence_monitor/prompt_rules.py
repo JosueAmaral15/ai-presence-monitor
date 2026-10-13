@@ -114,6 +114,7 @@ def configure_prompt_rule(
         repeat_enabled=repeat_enabled,
         repeat_interval_minutes=interval,
         max_occurrences=occurrence_limit,
+        armed_at=current_time,
         next_due_at=None if waiting_for_event else current_time + delay * 60,
         last_state="waiting_for_event" if waiting_for_event else "armed",
     )
@@ -167,23 +168,32 @@ def process_prompt_rules(
             )
             settings = _save_rule(store, profile_id, settings, rule)
 
-        if rule.trigger == "red_inactivity" and rule.next_due_at is None:
+        if rule.trigger == "red_inactivity" and rule.occurrence_count == 0:
             event_at = _red_inactivity_event_at(
                 presence_store,
                 worker_id=profile_id,
             )
             if event_at is None or checked_at < event_at:
+                if rule.next_due_at is not None or rule.last_state != "waiting_for_event":
+                    rule = replace(
+                        rule,
+                        next_due_at=None,
+                        last_state="waiting_for_event",
+                    )
+                    settings = _save_rule(store, profile_id, settings, rule)
                 waiting = waiting or PromptRuleRunResult(
                     "waiting_for_event",
                     rule_id=rule.rule_id,
                 )
                 continue
-            rule = replace(
-                rule,
-                next_due_at=event_at + rule.delay_minutes * 60,
-                last_state="armed",
-            )
-            settings = _save_rule(store, profile_id, settings, rule)
+            if rule.next_due_at is None:
+                trigger_at = max(event_at, rule.armed_at or event_at)
+                rule = replace(
+                    rule,
+                    next_due_at=trigger_at + rule.delay_minutes * 60,
+                    last_state="armed",
+                )
+                settings = _save_rule(store, profile_id, settings, rule)
 
         due_at = rule.next_due_at
         if due_at is None or due_at > checked_at:
