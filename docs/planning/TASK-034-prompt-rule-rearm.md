@@ -61,3 +61,8 @@ The clean-tree release gate also passed for version 0.10.3 at commit
 Linux installer, upgrader and release-verification tooling. Operational
 installation, tray restart, rule re-enablement and exact-session input remain
 outside this code-validation run.
+
+The task branch and `develop` were pushed after the gate passed. Promotion to
+`main` remains intentionally pending until runtime 0.10.3 is installed and an
+isolated operational E2E confirms the rearmed countdown without sending an
+unintended prompt to another session.
