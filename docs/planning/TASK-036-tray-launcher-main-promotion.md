@@ -40,3 +40,18 @@ Before promotion, delete only the unmerged task branch if the candidate fails.
 After a fast-forward promotion, revert the offending commit; do not rewrite
 shared history. Runtime installation remains unchanged unless a separately
 authorized transactional upgrade is performed.
+
+## Local evidence
+
+- candidate commit: `1ff2c2136a45fea541a66b1b6d2e40f207a455f2`;
+- quality gate: 331 tests, 86% coverage, Ruff, mypy, shell syntax, package
+  build and diff checks passed;
+- supported matrix: the same 331 tests passed on Python 3.10, 3.11 and 3.12;
+- clean release bundle: version 0.10.4, `source_dirty=false`, isolated install
+  and two-project smoke passed;
+- bundled launcher: mode `0755`, content identical to source, SHA-256
+  `eda7011542e6ed60fcc2b8d5bd53fd89e2faf285513534d1b32cc969c53a853e`;
+- operational smoke: launcher reported the existing single tray instance;
+  tray, monitor and Discord reply observer remained active;
+- installed runtime: 0.10.3 with strict doctor status `ok`; it was not changed
+  because no transactional runtime upgrade is required for source promotion.
