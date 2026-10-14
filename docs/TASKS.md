@@ -2,28 +2,6 @@
 
 ## Em andamento
 
-### Task 036 - Release 0.10.4 e promocao do launcher para main
-
-**Prioridade**: Alta
-**Status**: candidato 0.10.4 aprovado localmente e em `develop`; CI hospedada
-registrada como zero-step por billing, promocao para `main` pendente
-**Objetivo**: transformar o launcher da bandeja em ativo verificado do bundle
-Linux 0.10.4 e promover o mesmo candidato validado de `develop` para `main`.
-
-- [x] Criar branch dedicada a partir do `develop` validado da Task 035.
-- [x] Incluir `start-tray.sh` nos ativos do bundle Linux.
-- [x] Exigir permissao executavel do proprietario e sintaxe Bash valida.
-- [x] Cobrir o verificador com casos positivo, sem permissao e sintaxe invalida.
-- [x] Sincronizar versao 0.10.4 e documentacao operacional.
-- [x] Passar quality gate completo com 331 testes e 86% de cobertura.
-- [x] Passar 331 testes em Python 3.10, 3.11 e 3.12 no release gate.
-- [x] Gerar e verificar bundle limpo vinculado ao commit `1ff2c21`.
-- [x] Registrar run `38525962759` como falha zero-step por billing, nao aprovado.
-- [x] Documentar excecao privada e versionada para esta promocao 0.10.4.
-- [ ] Promover o candidato por fast-forward para `develop` e `main`.
-
-**Plano**: `docs/planning/TASK-036-tray-launcher-main-promotion.md`.
-
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
@@ -51,6 +29,28 @@ evidencia hospedada da matriz Linux.
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
 
 ## Concluidas em 2026-10-14
+
+### Task 036 - Release 0.10.4 e promocao do launcher para main
+
+**Prioridade**: Alta
+**Status**: concluida; candidato 0.10.4 aprovado e promovido por fast-forward
+para `origin/develop` e `origin/main` com excecao local versionada
+**Objetivo**: transformar o launcher da bandeja em ativo verificado do bundle
+Linux 0.10.4 e promover o mesmo candidato validado de `develop` para `main`.
+
+- [x] Criar branch dedicada a partir do `develop` validado da Task 035.
+- [x] Incluir `start-tray.sh` nos ativos do bundle Linux.
+- [x] Exigir permissao executavel do proprietario e sintaxe Bash valida.
+- [x] Cobrir o verificador com casos positivo, sem permissao e sintaxe invalida.
+- [x] Sincronizar versao 0.10.4 e documentacao operacional.
+- [x] Passar quality gate completo com 331 testes e 86% de cobertura.
+- [x] Passar 331 testes em Python 3.10, 3.11 e 3.12 no release gate.
+- [x] Gerar e verificar bundle limpo vinculado ao commit `1ff2c21`.
+- [x] Registrar runs hospedados zero-step por billing como nao aprovados.
+- [x] Documentar excecao privada e versionada para esta promocao 0.10.4.
+- [x] Promover o candidato por fast-forward para `develop` e `main`.
+
+**Plano**: `docs/planning/TASK-036-tray-launcher-main-promotion.md`.
 
 ### Task 035 - Launcher executavel da bandeja
 

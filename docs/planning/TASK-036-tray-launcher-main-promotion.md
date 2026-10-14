@@ -59,3 +59,6 @@ authorized transactional upgrade is performed.
   ran zero steps and were annotated with the account billing lock. This is a
   failed external gate, not passing test evidence. The owner-authorized 0.10.4
   exception is recorded in `docs/DECISIONS.md` and cannot cover another version.
+- promotion: candidate and exception advanced by fast-forward to
+  `origin/develop` and `origin/main` at `3cdf688`; main Quality run
+  `38526092269` reproduced the same zero-step external billing failure.
