@@ -27,7 +27,8 @@ This executes:
 3. a clean wheel and sdist build without package-index access;
 4. release manifest and SHA-256 generation;
 5. offline verification in a fresh virtual environment and temporary home;
-6. two-project identity isolation.
+6. executable mode and Bash syntax verification for `start-tray.sh`;
+7. two-project identity isolation.
 
 The output directory must not already exist. This prevents stale artifacts
 from being mixed into a release bundle.
@@ -94,3 +95,8 @@ layers and the isolated verifier.
 
 Confirm the release tag, main commit and `release-manifest.json` source commit
 agree at publication before declaring the release complete.
+
+Starting with 0.10.4, the complete Linux bundle includes `start-tray.sh`. The
+verifier rejects a launcher that is missing, not owner-executable or invalid
+Bash. PySide6 remains an optional external dependency and is not vendored in
+the base bundle.

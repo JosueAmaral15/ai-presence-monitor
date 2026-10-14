@@ -2,6 +2,26 @@
 
 ## Em andamento
 
+### Task 036 - Release 0.10.4 e promocao do launcher para main
+
+**Prioridade**: Alta
+**Status**: implementado; quality gate local aprovado, release gate pendente
+**Objetivo**: transformar o launcher da bandeja em ativo verificado do bundle
+Linux 0.10.4 e promover o mesmo candidato validado de `develop` para `main`.
+
+- [x] Criar branch dedicada a partir do `develop` validado da Task 035.
+- [x] Incluir `start-tray.sh` nos ativos do bundle Linux.
+- [x] Exigir permissao executavel do proprietario e sintaxe Bash valida.
+- [x] Cobrir o verificador com casos positivo, sem permissao e sintaxe invalida.
+- [x] Sincronizar versao 0.10.4 e documentacao operacional.
+- [x] Passar quality gate completo com 331 testes e 86% de cobertura.
+- [ ] Passar a matriz Python suportada no release gate.
+- [ ] Gerar e verificar bundle limpo vinculado ao commit candidato.
+- [ ] Registrar a limitacao atual da CI hospedada sem trata-la como aprovada.
+- [ ] Promover o candidato por fast-forward para `develop` e `main`.
+
+**Plano**: `docs/planning/TASK-036-tray-launcher-main-promotion.md`.
+
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica

@@ -131,8 +131,9 @@ optional desktop controls are needed:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray
 ```
 
-From a source checkout on Linux Mint, the executable root launcher starts the
-icon in the current graphical session without keeping a terminal open:
+From an extracted 0.10.4-or-newer Linux bundle or a source checkout on Linux
+Mint, the executable root launcher starts the icon in the current graphical
+session without keeping a terminal open:
 
 ```bash
 ./start-tray.sh

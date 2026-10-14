@@ -30,6 +30,7 @@ except ImportError:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ASSETS = (
     PROJECT_ROOT / ".env.example",
+    PROJECT_ROOT / "start-tray.sh",
     PROJECT_ROOT / "scripts" / "install-linux.sh",
     PROJECT_ROOT / "scripts" / "upgrade-linux.sh",
     PROJECT_ROOT / "scripts" / "verify_release.py",

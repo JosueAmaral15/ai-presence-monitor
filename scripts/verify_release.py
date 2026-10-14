@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sqlite3
+import stat
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,7 @@ REQUIRED_WHEEL_MODULES = {
 }
 STATIC_ASSETS = {
     ".env.example",
+    "start-tray.sh",
     "install-linux.sh",
     "upgrade-linux.sh",
     "verify_release.py",
@@ -82,11 +84,23 @@ def verify_release(
     missing_static = STATIC_ASSETS - {path.name for path in bundle.iterdir()}
     if missing_static:
         raise ReleaseError(f"Release bundle is missing assets: {sorted(missing_static)}.")
+    _verify_linux_launcher(bundle / "start-tray.sh")
     if manifest.get("source_dirty") is not False and not allow_dirty:
         raise ReleaseError("Release manifest must come from a clean source commit.")
     if install_smoke:
         _installed_smoke(wheels[0], version)
     return manifest
+
+
+def _verify_linux_launcher(launcher: Path) -> None:
+    if not launcher.is_file():
+        raise ReleaseError("Release bundle is missing the Linux tray launcher.")
+    if not launcher.stat().st_mode & stat.S_IXUSR:
+        raise ReleaseError("Linux tray launcher is not executable by its owner.")
+    _run(
+        ["bash", "-n", str(launcher)],
+        env={"PATH": os.environ.get("PATH", os.defpath)},
+    )
 
 
 def _installed_smoke(wheel: Path, version: str) -> None:

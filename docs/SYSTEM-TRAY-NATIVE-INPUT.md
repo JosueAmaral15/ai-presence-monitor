@@ -78,8 +78,9 @@ O entrypoint dedicado e equivalente:
 ai-presence-tray
 ```
 
-No checkout do projeto, o launcher executavel da raiz inicia a bandeja como
-uma unidade transitoria da sessao grafica e retorna sem prender o terminal:
+No bundle Linux 0.10.4 ou mais recente extraido, ou no checkout do projeto, o
+launcher executavel da raiz inicia a bandeja como uma unidade transitoria da
+sessao grafica e retorna sem prender o terminal:
 
 ```bash
 ./start-tray.sh

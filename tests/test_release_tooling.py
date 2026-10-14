@@ -17,7 +17,7 @@ from scripts.release_lib import (
     sha256,
     wheel_metadata,
 )
-from scripts.verify_release import _validate_installed_doctor
+from scripts.verify_release import _validate_installed_doctor, _verify_linux_launcher
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -94,6 +94,32 @@ class ReleaseToolingTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 2)
             self.assertIn("absolute, dedicated non-root directory", result.stderr)
+
+    def test_release_accepts_executable_tray_launcher_with_valid_syntax(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            launcher = Path(tmp) / "start-tray.sh"
+            launcher.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            launcher.chmod(0o755)
+
+            _verify_linux_launcher(launcher)
+
+    def test_release_rejects_non_executable_tray_launcher(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            launcher = Path(tmp) / "start-tray.sh"
+            launcher.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            launcher.chmod(0o644)
+
+            with self.assertRaisesRegex(ReleaseError, "not executable"):
+                _verify_linux_launcher(launcher)
+
+    def test_release_rejects_tray_launcher_with_invalid_syntax(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            launcher = Path(tmp) / "start-tray.sh"
+            launcher.write_text("#!/usr/bin/env bash\nif then\n", encoding="utf-8")
+            launcher.chmod(0o755)
+
+            with self.assertRaisesRegex(ReleaseError, "bash"):
+                _verify_linux_launcher(launcher)
 
     def test_release_doctor_ignores_host_dependent_errors(self) -> None:
         checks = [

@@ -5,7 +5,8 @@
 AI Presence Monitor 0.10.0 is distributed as a public Linux prerelease bundle.
 The canonical archive contains a wheel, source archive, configuration template,
 fresh installer, transactional upgrade bootstrap, offline verifier, release
-manifest and `SHA256SUMS`.
+manifest and `SHA256SUMS`. Bundles from 0.10.4 also contain the executable
+`start-tray.sh` desktop-session launcher.
 
 Requirements:
 
@@ -30,9 +31,10 @@ python3 verify_release.py .
 ```
 
 The verifier checks every declared artifact, package name/version, required
-Linux and preserved Windows modules, and a fresh offline wheel installation. It
-uses an isolated temporary home, initializes SQLite, runs schema and doctor
-checks, and proves two absolute project paths create distinct workers.
+Linux and preserved Windows modules, the launcher's executable mode and Bash
+syntax, and a fresh offline wheel installation. It uses an isolated temporary
+home, initializes SQLite, runs schema and doctor checks, and proves two
+absolute project paths create distinct workers.
 
 Do not install a bundle that records `source_dirty=true`, fails a checksum or
 does not report the expected release version.
@@ -117,6 +119,10 @@ source, then run:
 ai-presence tray --check
 ai-presence tray
 ```
+
+From an extracted 0.10.4-or-newer bundle, `./start-tray.sh` performs the same
+preflight, avoids duplicate tray processes and starts a transient user unit in
+the current graphical session. It does not enable automation or send input.
 
 The base Linux product has no third-party runtime Python dependency. The tray
 extra is intentionally separate and is not part of the offline base bundle.

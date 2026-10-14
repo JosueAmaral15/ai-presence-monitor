@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2026-10-14 - v0.10.4
 
 - Added the executable root `start-tray.sh` launcher for starting the Linux
   Mint system tray without keeping a terminal open or creating duplicates.
+- Included the launcher in the canonical Linux release bundle and made release
+  verification require its owner-executable mode and valid Bash syntax.
 
 ## 2026-10-13 - v0.10.3
 

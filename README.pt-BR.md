@@ -139,7 +139,8 @@ ai-presence tray --check
 ai-presence tray
 ```
 
-Em um checkout no Linux Mint, inicie o icone sem manter um terminal aberto:
+Em um bundle Linux 0.10.4 ou mais recente extraido, ou em um checkout no Linux
+Mint, inicie o icone sem manter um terminal aberto:
 
 ```bash
 ./start-tray.sh

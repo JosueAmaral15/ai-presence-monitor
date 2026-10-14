@@ -1,5 +1,22 @@
 # Security Checklist
 
+## Task 036 - Linux tray launcher release
+
+- [x] The release manifest and `SHA256SUMS` bind the launcher contents.
+- [x] Verification requires an owner-executable launcher with valid Bash syntax.
+- [x] The launcher accepts fixed executable and environment-file paths without
+      evaluating their contents in a shell.
+- [x] It uses only a per-user transient unit and never invokes `sudo`.
+- [x] It performs tray preflight and duplicate detection before starting.
+- [x] It does not enable automation, send input or mutate the presence database.
+
+### Residual risk
+
+The launcher relies on the integrity of the selected installed `ai-presence`
+binary and environment-file path. Desktop notifications are best-effort, and a
+graphical-session or optional PySide6 failure still requires terminal or journal
+diagnosis. Checksum verification proves bundle integrity, not publisher identity.
+
 ## Task 034 - Prompt-rule rearming
 
 - [x] An unchanged save preserves the active due time and cannot silently
