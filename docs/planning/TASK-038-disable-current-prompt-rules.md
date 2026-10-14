@@ -46,3 +46,16 @@ that remains a human tray action.
 Validated source may advance to `develop`. Installing 0.10.5 or promoting it to
 `main` requires the normal release decision and a separately authorized
 transactional runtime upgrade; this task does not infer either operation.
+
+## Local evidence
+
+- candidate commit: `2b1ee0888d348fdff2583822df283ee147f05e80`;
+- quality gate: 333 tests, 86% coverage, Ruff, mypy, shell syntax, package build
+  and diff checks passed;
+- supported matrix: the same 333 tests passed on Python 3.10, 3.11 and 3.12;
+- clean release: bundle 0.10.5 recorded the exact candidate commit and passed
+  isolated installation, doctor and project-isolation verification;
+- installed isolated E2E: dry-run left the enabled rule unchanged; the real
+  command then disabled it, cleared runtime state, retained rule configuration
+  and task automation, and left a second profile unchanged;
+- operational runtime and `main` remain 0.10.4 pending separate authorization.
