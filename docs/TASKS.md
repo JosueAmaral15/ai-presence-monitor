@@ -5,8 +5,9 @@
 ### Task 038 - Desativacao de prompt rules pelo AI-worker
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.5 aprovado localmente; promocao para `develop`
-pendente
+**Status**: candidato 0.10.5 aprovado e promovido para `develop`; runtime e
+`main` permanecem em 0.10.4 aguardando autorizacao transacional e decisao de
+promocao
 **Objetivo**: permitir que uma IA desabilite todas as regras de prompt somente
 do proprio worker derivado, sem desligar a automacao geral nem afetar perfis de
 outros projetos.
@@ -20,7 +21,9 @@ outros projetos.
 - [x] Passar quality gate com 333 testes e 86% de cobertura.
 - [x] Passar 333 testes em Python 3.10, 3.11 e 3.12 e release gate 0.10.5.
 - [x] Executar E2E instalado e isolado sem alterar controles reais.
-- [ ] Promover a implementacao validada para `develop`.
+- [x] Promover a implementacao validada para `origin/develop`.
+- [x] Registrar a CI hospedada zero-step por billing como nao aprovada.
+- [ ] Obter autorizacao separada para upgrade 0.10.5 e promocao para `main`.
 
 **Plano**: `docs/planning/TASK-038-disable-current-prompt-rules.md`.
 

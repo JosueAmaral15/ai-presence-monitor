@@ -59,3 +59,8 @@ transactional runtime upgrade; this task does not infer either operation.
   command then disabled it, cleared runtime state, retained rule configuration
   and task automation, and left a second profile unchanged;
 - operational runtime and `main` remain 0.10.4 pending separate authorization.
+- promotion: candidate and evidence advanced by fast-forward to
+  `origin/develop` at `8f7ad04`;
+- hosted Quality run `38650512753` created the Python 3.10, 3.11 and 3.12 Linux
+  jobs, but each ran zero steps and was annotated with the account billing
+  lock. It is an external non-pass and supplies no test evidence.
