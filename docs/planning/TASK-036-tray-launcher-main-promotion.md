@@ -55,3 +55,7 @@ authorized transactional upgrade is performed.
   tray, monitor and Discord reply observer remained active;
 - installed runtime: 0.10.3 with strict doctor status `ok`; it was not changed
   because no transactional runtime upgrade is required for source promotion.
+- hosted Quality run: `38525962759`; all Python 3.10, 3.11 and 3.12 Linux jobs
+  ran zero steps and were annotated with the account billing lock. This is a
+  failed external gate, not passing test evidence. The owner-authorized 0.10.4
+  exception is recorded in `docs/DECISIONS.md` and cannot cover another version.

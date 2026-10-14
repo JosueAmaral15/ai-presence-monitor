@@ -5,8 +5,8 @@
 ### Task 036 - Release 0.10.4 e promocao do launcher para main
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.4 aprovado localmente; promocao e registro da CI
-hospedada pendentes
+**Status**: candidato 0.10.4 aprovado localmente e em `develop`; CI hospedada
+registrada como zero-step por billing, promocao para `main` pendente
 **Objetivo**: transformar o launcher da bandeja em ativo verificado do bundle
 Linux 0.10.4 e promover o mesmo candidato validado de `develop` para `main`.
 
@@ -18,7 +18,8 @@ Linux 0.10.4 e promover o mesmo candidato validado de `develop` para `main`.
 - [x] Passar quality gate completo com 331 testes e 86% de cobertura.
 - [x] Passar 331 testes em Python 3.10, 3.11 e 3.12 no release gate.
 - [x] Gerar e verificar bundle limpo vinculado ao commit `1ff2c21`.
-- [ ] Registrar a limitacao atual da CI hospedada sem trata-la como aprovada.
+- [x] Registrar run `38525962759` como falha zero-step por billing, nao aprovado.
+- [x] Documentar excecao privada e versionada para esta promocao 0.10.4.
 - [ ] Promover o candidato por fast-forward para `develop` e `main`.
 
 **Plano**: `docs/planning/TASK-036-tray-launcher-main-promotion.md`.

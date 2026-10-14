@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-10-14 - Private Linux 0.10.4 may use a version-specific local CI exception
+
+**Decision**: permit the private Linux 0.10.4 candidate to advance from
+`develop` to `main` after the owner requested the necessary promotion work and
+the complete local, supported-Python, clean-release and live tray gates passed.
+
+**Reason**: hosted Quality run
+[`38525962759`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38525962759)
+created Python 3.10, 3.11 and 3.12 Linux jobs, but every Linux job ran zero
+steps. GitHub annotated each job with an account-level billing lock, so the run
+supplies no code-test evidence. Candidate `1ff2c21` instead passed 331 tests and
+86% coverage, Ruff, mypy and package checks; the same 331 tests passed on all
+three supported Python versions; and its clean 0.10.4 bundle passed isolated
+installation and project-isolation verification. The bundled launcher is mode
+0755, hash-identical to source, and the existing real tray instance remained
+active alongside both managed services.
+
+**Limit**: this exception applies only to private Linux version 0.10.4 and this
+main promotion. Hosted CI remains failed, not passed. The exception does not
+authorize a runtime upgrade, tag, GitHub release, public artifact, Windows
+support or a future version. A real hosted Linux run remains required when the
+billing lock is removed.
+
 ## 2026-10-13 - Private Linux 0.10.3 may use a version-specific local CI exception
 
 **Decision**: permit the private Linux 0.10.3 candidate to advance from
