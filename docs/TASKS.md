@@ -5,7 +5,7 @@
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.3; CI
+**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.4; CI
 hospedada pendente por bloqueio externo da conta GitHub
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
@@ -29,6 +29,26 @@ evidencia hospedada da matriz Linux.
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
 
 ## Concluidas em 2026-10-14
+
+### Task 037 - Upgrade transacional do runtime para 0.10.4
+
+**Prioridade**: Alta
+**Status**: concluida; runtime 0.10.4 instalado e componentes operacionais
+revalidados
+**Objetivo**: atualizar a instalacao Linux dedicada de 0.10.3 para 0.10.4 com
+rollback verificavel, preservando banco, configuracao, servicos e bandeja.
+
+- [x] Confirmar runtime 0.10.3, schema integro e tres componentes ativos.
+- [x] Validar o wheel 0.10.4 contra o manifesto limpo do release gate.
+- [x] Validar o wheel 0.10.3 preservado contra o manifesto anterior concluido.
+- [x] Obter `would_upgrade` no dry-run antes de autorizar a transacao.
+- [x] Parar a bandeja antiga e executar uma unica transacao autorizada.
+- [x] Confirmar manifesto `completed` e runtime instalado 0.10.4.
+- [x] Confirmar schema atual, doctor estrito `ok` e servicos restaurados.
+- [x] Iniciar uma unica bandeja nova com a versao atualizada.
+- [x] Obter `would_rollback` sem restaurar pacote ou banco.
+
+**Plano**: `docs/planning/TASK-037-runtime-upgrade-0104.md`.
 
 ### Task 036 - Release 0.10.4 e promocao do launcher para main
 
