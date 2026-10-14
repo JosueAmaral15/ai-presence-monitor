@@ -28,9 +28,10 @@ Operational rules:
    normative continuation checks pass. Diagnostic recovery, `dispatch-answer`
    and GUI automation always require explicit one-invocation authorization;
    never infer it from a persistent control.
-7. An AI-worker may run `disable-current-automation` to suspend only the worker
-   derived from its current project context. Never mutate another explicit
-   profile; profile editing belongs to the human tray.
+7. An AI-worker may run `disable-current-automation` or
+   `disable-current-prompt-rules` only for the worker derived from its current
+   project context. Never mutate another explicit profile; profile editing and
+   re-enabling rules belong to the human tray.
 8. Treat `dispatch_started` and `input_emitted` as preliminary transport
    states, not proof that Codex processed the input. A later hook is necessary;
    an E2E claim also requires a unique marker that the human did not type.

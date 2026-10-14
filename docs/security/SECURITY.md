@@ -1,5 +1,23 @@
 # Security Checklist
 
+## Task 038 - AI-worker prompt-rule shutdown
+
+- [x] The command derives one current worker from cwd, configured scope and the
+      required session environment; it accepts no identity override.
+- [x] Every rule in that profile is disabled before any future scheduler cycle.
+- [x] Pending due time, attempt, dispatch and confirmation state are cleared.
+- [x] Session, trigger, delay, text, repetition and occurrence limit are kept.
+- [x] Global automation permission and every other profile remain unchanged.
+- [x] Dry-run reports the affected enabled-rule count without persisting.
+- [x] Re-enabling and editing remain human tray operations.
+
+### Residual risk
+
+The worker identity boundary prevents accidental cross-project mutation but is
+not OS-level authorization. A process running as the same local user can change
+cwd, session environment or the control file. Disabling is intentionally
+one-way for AI workers; only the human tray can rearm the preserved rules.
+
 ## Task 036 - Linux tray launcher release
 
 - [x] The release manifest and `SHA256SUMS` bind the launcher contents.

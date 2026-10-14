@@ -127,6 +127,24 @@ def replace_prompt_rules(
     return replace(settings, prompt_rules=tuple(rules))
 
 
+def disable_all_prompt_rules(settings: ControlSettings) -> ControlSettings:
+    rules = tuple(
+        replace(
+            rule,
+            enabled=False,
+            occurrence_count=0,
+            armed_at=None,
+            next_due_at=None,
+            last_state="disabled",
+            last_attempt_at=None,
+            last_dispatch_at=None,
+            awaiting_confirmation=False,
+        )
+        for rule in settings.prompt_rules
+    )
+    return replace_prompt_rules(settings, rules)
+
+
 def process_prompt_rules(
     *,
     store: ControlStore,

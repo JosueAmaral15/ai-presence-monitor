@@ -10,6 +10,7 @@ from ai_presence_monitor.codex_input import CodexInputError, CodexInputResult
 from ai_presence_monitor.control import ControlSettings, ControlStore
 from ai_presence_monitor.prompt_rules import (
     configure_prompt_rule,
+    disable_all_prompt_rules,
     process_prompt_rules,
     replace_prompt_rules,
 )
@@ -51,6 +52,52 @@ def configured_settings(*rules: object) -> ControlSettings:
 
 
 class PromptRuleTests(unittest.TestCase):
+    def test_disable_all_rules_preserves_configuration_and_clears_runtime(self) -> None:
+        rule = configure_prompt_rule(
+            None,
+            enabled=True,
+            thread_id="session-1",
+            trigger="red_inactivity",
+            delay_minutes=270,
+            text="proceed",
+            repeat_enabled=True,
+            repeat_interval_minutes=30,
+            max_occurrences=5,
+            now=1_000.0,
+            rule_id="rule-1",
+        )
+        rule = replace(
+            rule,
+            occurrence_count=2,
+            next_due_at=2_000.0,
+            last_state="waiting_for_confirmation",
+            last_attempt_at=1_500.0,
+            last_dispatch_at=1_500.0,
+            awaiting_confirmation=True,
+        )
+        settings = configured_settings(rule)
+
+        disabled = disable_all_prompt_rules(settings)
+        saved = disabled.prompt_rules[0]
+
+        self.assertTrue(disabled.task_automation_enabled)
+        self.assertFalse(saved.enabled)
+        self.assertEqual(saved.rule_id, "rule-1")
+        self.assertEqual(saved.thread_id, "session-1")
+        self.assertEqual(saved.trigger, "red_inactivity")
+        self.assertEqual(saved.delay_minutes, 270)
+        self.assertEqual(saved.text, "proceed")
+        self.assertTrue(saved.repeat_enabled)
+        self.assertEqual(saved.repeat_interval_minutes, 30)
+        self.assertEqual(saved.max_occurrences, 5)
+        self.assertEqual(saved.occurrence_count, 0)
+        self.assertIsNone(saved.armed_at)
+        self.assertIsNone(saved.next_due_at)
+        self.assertEqual(saved.last_state, "disabled")
+        self.assertIsNone(saved.last_attempt_at)
+        self.assertIsNone(saved.last_dispatch_at)
+        self.assertFalse(saved.awaiting_confirmation)
+
     def test_reenable_and_configuration_changes_restart_the_cycle(self) -> None:
         base = configure_prompt_rule(
             None,

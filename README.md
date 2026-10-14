@@ -678,12 +678,16 @@ current directory and configured scope:
 
 ```bash
 ai-presence disable-current-automation
+ai-presence disable-current-prompt-rules
 ```
 
-The command accepts no worker or project override. Explicit profile mutation
-through `control --profile` is rejected; human profile editing belongs to the
-tray. This prevents accidental cross-project changes, but is not a security
-boundary against another process running as the same OS user.
+Both commands accept no worker or project override. The second command leaves
+task automation enabled while disabling every prompt rule in the current
+profile, cancelling pending runtime state and preserving saved configuration.
+Explicit profile mutation through `control --profile` is rejected; human
+profile editing and rule re-enabling belong to the tray. This prevents
+accidental cross-project changes, but is not a security boundary against
+another process running as the same OS user.
 
 See [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) and the
 [system tray guide](docs/SYSTEM-TRAY-NATIVE-INPUT.md) for controls, background

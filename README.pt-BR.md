@@ -344,10 +344,12 @@ inatividade vermelha, o novo atraso parte do rearmamento, sem reutilizar o
 evento antigo. Atividade valida antes do primeiro envio cancela esse vencimento
 e faz a regra aguardar um novo vermelho.
 
-Um agente pode suspender somente a automacao do worker derivado do diretorio e
-escopo correntes com `ai-presence disable-current-automation`. O comando nao
-aceita outro worker ou projeto como argumento; edicao humana dos perfis ocorre
-pela bandeja.
+Um agente pode suspender toda a automacao do worker derivado do diretorio e
+escopo correntes com `ai-presence disable-current-automation`, ou somente suas
+regras com `ai-presence disable-current-prompt-rules`. Os comandos nao aceitam
+outro worker ou projeto como argumento. O segundo preserva a configuracao das
+regras e deixa a autorizacao geral inalterada; reabilitacao e edicao humana dos
+perfis ocorrem pela bandeja.
 
 Consulte [docs/CONTINUE-CODEX.md](docs/CONTINUE-CODEX.md) para configuracao,
 execucao em segundo plano, sincronizacao e rollback, e

@@ -282,19 +282,22 @@ um hook posterior da mesma sessao exata. Um AI-worker pode consultar o estado
 sanitizado por `control show --profile WORKER_ID`, mas nao deve armar,
 postergar, remover ou editar regras em nome do usuario.
 
-O unico comando de mutacao de perfil permitido a um AI-worker e:
+Os unicos comandos de mutacao de perfil permitidos a um AI-worker sao:
 
 ```bash
 ai-presence disable-current-automation
+ai-presence disable-current-prompt-rules
 ```
 
 Ele deriva o worker exclusivamente do diretorio corrente, do escopo configurado
 e, quando aplicavel, da sessao presente no ambiente. Nao aceita identificador de
 outro perfil. `control enable`, `control disable` e `control target` com
-`--profile` sao proibidos e rejeitados. Desabilitar a automacao suspende os
-agendamentos sem apagar seus campos. O vencimento, o vermelho e o timer nao sao
-heartbeat nem evidencia de trabalho; somente atividade real observada por hook
-cumpre esse papel.
+`--profile` sao proibidos e rejeitados. Desabilitar a automacao suspende todos
+os agendamentos sem apagar seus campos. Desabilitar somente as regras cancela
+seus vencimentos e estados pendentes, preserva a configuracao e nao altera
+`task-automation`; somente o humano pode rearma-las pela bandeja. O vencimento,
+o vermelho e o timer nao sao heartbeat nem evidencia de trabalho; somente
+atividade real observada por hook cumpre esse papel.
 
 No fallback GUI, uma aba do GNOME Terminal nao e uma janela X11 independente. O nome da aba pode
 nao aparecer no titulo da janela e, nesse caso, nao serve como alvo seguro para

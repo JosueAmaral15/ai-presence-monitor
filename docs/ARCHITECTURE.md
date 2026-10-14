@@ -456,11 +456,13 @@ Depois de um envio repetitivo, a regra permanece em
 timer isolado simule continuidade indefinida. `task_automation_enabled` e o
 interruptor superior tanto das regras quanto do scheduler legado.
 
-`disable-current-automation` deriva o perfil do diretorio atual, escopo
-configurado e ID de sessao no ambiente, sem argumentos de identidade. Mutacoes
-de `control --profile` sao rejeitadas; a bandeja e a superficie humana de
-edicao. Essa separacao e uma barreira contra erro acidental, nao autenticacao
-contra processos executados pelo mesmo usuario local.
+`disable-current-automation` e `disable-current-prompt-rules` derivam o perfil
+do diretorio atual, escopo configurado e ID de sessao no ambiente, sem
+argumentos de identidade. O primeiro suspende o interruptor superior; o segundo
+desarma apenas as regras, limpa estado transitorio e preserva configuracao.
+Mutacoes de `control --profile` sao rejeitadas; a bandeja e a superficie humana
+de edicao e reativacao. Essa separacao e uma barreira contra erro acidental, nao
+autenticacao contra processos executados pelo mesmo usuario local.
 
 ## Source Layout
 

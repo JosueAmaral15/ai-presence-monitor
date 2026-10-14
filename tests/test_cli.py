@@ -22,6 +22,7 @@ from ai_presence_monitor.cli import (
     _continue_task,
     _control,
     _disable_current_automation,
+    _disable_current_prompt_rules,
     _dispatch_answer,
     _identity,
     _install_background_service,
@@ -180,6 +181,18 @@ class CliBehaviorTests(unittest.TestCase):
             disable_current_args.command,
             "disable-current-automation",
         )
+
+        disable_rules_args = parser.parse_args(
+            ["--dry-run", "disable-current-prompt-rules"]
+        )
+        self.assertEqual(
+            disable_rules_args.command,
+            "disable-current-prompt-rules",
+        )
+        with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
+            parser.parse_args(
+                ["disable-current-prompt-rules", "--profile", "other-worker"]
+            )
 
         input_args = parser.parse_args(
             [
@@ -752,6 +765,71 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertFalse(store.load(current_worker).task_automation_enabled)
             self.assertTrue(store.load(other_worker).task_automation_enabled)
 
+    def test_disable_current_prompt_rules_only_changes_derived_project_profile(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "current-project"
+            project.mkdir()
+            config = replace(make_config(root), control_path=root / "control.json")
+            store = ControlStore.from_config(config)
+            current_worker = _identity(
+                event_args(project, ai=None, project=project),
+                config,
+            )[0]
+            other_worker = "other-worker"
+            current_rule = PromptRule(
+                rule_id="current-rule",
+                enabled=True,
+                thread_id="session-1",
+                armed_at=1_000.0,
+                next_due_at=2_000.0,
+                last_state="armed",
+            )
+            other_rule = replace(current_rule, rule_id="other-rule")
+            store.save(
+                ControlSettings(
+                    task_automation_enabled=True,
+                    prompt_rules=(current_rule,),
+                ),
+                current_worker,
+            )
+            store.save(
+                ControlSettings(
+                    task_automation_enabled=True,
+                    prompt_rules=(other_rule,),
+                ),
+                other_worker,
+            )
+            args = argparse.Namespace(dry_run=False)
+
+            with patch("pathlib.Path.cwd", return_value=project), redirect_stdout(
+                StringIO()
+            ) as output:
+                self.assertEqual(_disable_current_prompt_rules(args, config), 0)
+
+            current = store.load(current_worker)
+            other = store.load(other_worker)
+            self.assertTrue(current.task_automation_enabled)
+            self.assertFalse(current.prompt_rules[0].enabled)
+            self.assertIsNone(current.prompt_rules[0].next_due_at)
+            self.assertTrue(other.prompt_rules[0].enabled)
+            self.assertEqual(other.prompt_rules[0].next_due_at, 2_000.0)
+            self.assertIn("quantidade=1", output.getvalue())
+
+            args.dry_run = True
+            store.save(
+                replace(current, prompt_rules=(current_rule,)),
+                current_worker,
+            )
+            with patch("pathlib.Path.cwd", return_value=project), redirect_stdout(
+                StringIO()
+            ) as dry_output:
+                self.assertEqual(_disable_current_prompt_rules(args, config), 0)
+            self.assertTrue(store.load(current_worker).prompt_rules[0].enabled)
+            self.assertIn("[dry-run]", dry_output.getvalue())
+
     def test_stop_alarm_reports_each_outcome_and_errors(self) -> None:
         args = argparse.Namespace(timeout=3.0, no_force=False, dry_run=False)
         outcomes = (
@@ -923,6 +1001,7 @@ class CliBehaviorTests(unittest.TestCase):
         for command in (
             "doctor",
             "disable-current-automation",
+            "disable-current-prompt-rules",
             "finish",
             "protocols",
             "questions",

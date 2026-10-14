@@ -2,6 +2,28 @@
 
 ## Em andamento
 
+### Task 038 - Desativacao de prompt rules pelo AI-worker
+
+**Prioridade**: Alta
+**Status**: implementada; quality gate aprovado, release gate e promocao
+pendentes
+**Objetivo**: permitir que uma IA desabilite todas as regras de prompt somente
+do proprio worker derivado, sem desligar a automacao geral nem afetar perfis de
+outros projetos.
+
+- [x] Adicionar comando sem argumentos de identidade.
+- [x] Derivar o mesmo worker corrente usado pelo limite de automacao.
+- [x] Desabilitar regras e limpar estado pendente preservando configuracao.
+- [x] Manter `task-automation` e outros perfis inalterados.
+- [x] Implementar dry-run sem persistencia.
+- [x] Cobrir isolamento, preservacao, parser e runtime desabilitado.
+- [x] Passar quality gate com 333 testes e 86% de cobertura.
+- [ ] Passar matriz Python e release gate 0.10.5.
+- [ ] Executar E2E isolado da CLI sem alterar controles reais.
+- [ ] Promover a implementacao validada para `develop`.
+
+**Plano**: `docs/planning/TASK-038-disable-current-prompt-rules.md`.
+
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica

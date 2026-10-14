@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-14 - v0.10.5
+
+- Added `disable-current-prompt-rules` so an AI worker can disable every prompt
+  rule belonging to its derived current profile without mutating another
+  worker, global automation permission or saved rule configuration.
+
 ## 2026-10-14 - v0.10.4
 
 - Added the executable root `start-tray.sh` launcher for starting the Linux

@@ -188,14 +188,18 @@ O agente pode suspender a autorizacao do perfil derivado de seu projeto atual:
 
 ```bash
 ai-presence disable-current-automation
+ai-presence disable-current-prompt-rules
 ```
 
 O comando nao aceita `--worker`, `--project`, `--scope`, `--computer` ou
 `--ai`. Em escopos que incluem sessao, exige `CODEX_THREAD_ID` ou
-`CODEX_SESSION_ID`. Ele preserva as regras e seus campos, mas o scheduler nao
-despacha enquanto `task-automation` estiver desligado. Essa limitacao evita
-alteracao acidental entre projetos; processos maliciosos sob o mesmo usuario do
-sistema operacional continuam fora desse limite logico.
+`CODEX_SESSION_ID`. O primeiro preserva as regras e seus campos, mas o scheduler
+nao despacha enquanto `task-automation` estiver desligado. O segundo desabilita
+todas as regras do perfil atual, cancela estado pendente e preserva seus campos,
+sem desligar a automacao geral. A reativacao permanece uma decisao humana na
+bandeja. Essa limitacao evita alteracao acidental entre projetos; processos
+maliciosos sob o mesmo usuario do sistema operacional continuam fora desse
+limite logico.
 
 Para usar a bandeja:
 

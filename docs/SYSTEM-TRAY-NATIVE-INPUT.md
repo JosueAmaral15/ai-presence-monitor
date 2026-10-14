@@ -242,12 +242,15 @@ projeto corrente:
 
 ```bash
 ai-presence disable-current-automation
+ai-presence disable-current-prompt-rules
 ```
 
-O comando nao aceita overrides de identidade. Para escopos `session` e
-`project-session`, ele exige o ID da sessao no ambiente. A restricao protege
-contra alteracoes acidentais entre projetos, nao contra um processo malicioso
-executado pelo mesmo usuario do sistema operacional.
+Os comandos nao aceitam overrides de identidade. Para escopos `session` e
+`project-session`, eles exigem o ID da sessao no ambiente. O segundo desabilita
+somente as regras, limpa vencimentos e estado de tentativa e preserva seus
+campos; a automacao geral continua inalterada. A restricao protege contra
+alteracoes acidentais entre projetos, nao contra um processo malicioso executado
+pelo mesmo usuario do sistema operacional.
 
 Definir o alvo global local ou remoto:
 

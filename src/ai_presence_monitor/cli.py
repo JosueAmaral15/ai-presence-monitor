@@ -56,6 +56,7 @@ from .platform_integration import (
     get_platform_factory,
 )
 from .product_health import collect_doctor_report
+from .prompt_rules import disable_all_prompt_rules
 from .protocols import (
     PROTOCOLS,
     choose_threshold,
@@ -98,6 +99,7 @@ DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
         "finish",
         "doctor",
         "disable-current-automation",
+        "disable-current-prompt-rules",
         "protocols",
         "questions",
         "schema-status",
@@ -627,6 +629,36 @@ def _disable_current_automation(
     args: argparse.Namespace,
     config: AppConfig,
 ) -> int:
+    worker_id = _current_worker_id(config)
+    store = ControlStore.from_config(config)
+    settings = store.load(worker_id).with_control("task-automation", False)
+    if not args.dry_run:
+        store.save(settings, worker_id)
+    prefix = "[dry-run] " if args.dry_run else ""
+    print(f"{prefix}automacao desativada somente para worker={worker_id}")
+    return 0
+
+
+def _disable_current_prompt_rules(
+    args: argparse.Namespace,
+    config: AppConfig,
+) -> int:
+    worker_id = _current_worker_id(config)
+    store = ControlStore.from_config(config)
+    settings = store.load(worker_id)
+    enabled_count = sum(1 for rule in settings.prompt_rules if rule.enabled)
+    updated = disable_all_prompt_rules(settings)
+    if not args.dry_run:
+        store.save(updated, worker_id)
+    prefix = "[dry-run] " if args.dry_run else ""
+    print(
+        f"{prefix}regras de prompt desativadas somente para worker={worker_id} "
+        f"quantidade={enabled_count}"
+    )
+    return 0
+
+
+def _current_worker_id(config: AppConfig) -> str:
     scope = config.codex_worker_scope
     session_id = next(
         (
@@ -649,13 +681,7 @@ def _disable_current_automation(
         project_path=Path.cwd(),
         session_id=session_id,
     )
-    store = ControlStore.from_config(config)
-    settings = store.load(worker_id).with_control("task-automation", False)
-    if not args.dry_run:
-        store.save(settings, worker_id)
-    prefix = "[dry-run] " if args.dry_run else ""
-    print(f"{prefix}automacao desativada somente para worker={worker_id}")
-    return 0
+    return worker_id
 
 
 def _tray(args: argparse.Namespace, config: AppConfig) -> int:
@@ -1748,6 +1774,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     disable_current_parser.set_defaults(
         func=lambda args, config: _disable_current_automation(args, config)
+    )
+
+    disable_rules_parser = subparsers.add_parser(
+        "disable-current-prompt-rules",
+        help=(
+            "Desativa as regras de prompt somente para o worker derivado do "
+            "projeto e da sessao correntes."
+        ),
+    )
+    disable_rules_parser.set_defaults(
+        func=lambda args, config: _disable_current_prompt_rules(args, config)
     )
 
     tray_parser = subparsers.add_parser(
