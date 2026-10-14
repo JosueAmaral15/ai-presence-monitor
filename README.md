@@ -131,6 +131,17 @@ optional desktop controls are needed:
 "$HOME/.local/share/ai-presence-monitor/venv/bin/ai-presence" tray
 ```
 
+From a source checkout on Linux Mint, the executable root launcher starts the
+icon in the current graphical session without keeping a terminal open:
+
+```bash
+./start-tray.sh
+```
+
+It is safe to run again: an existing launcher-managed or direct tray process
+is detected instead of starting a duplicate. A desktop notification reports
+the result when `notify-send` is available.
+
 Verify the installed product and inspect local health without printing secret
 values or modifying the database:
 

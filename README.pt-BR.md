@@ -139,6 +139,16 @@ ai-presence tray --check
 ai-presence tray
 ```
 
+Em um checkout no Linux Mint, inicie o icone sem manter um terminal aberto:
+
+```bash
+./start-tray.sh
+```
+
+O launcher executavel na raiz detecta uma bandeja ja ativa, evita duplicatas e
+mostra o resultado por notificacao do desktop quando `notify-send` estiver
+disponivel.
+
 O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
 local/remoto e a autorizacao do procedimento `continue`.
 

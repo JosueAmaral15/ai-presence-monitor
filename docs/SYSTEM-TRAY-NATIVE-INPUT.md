@@ -78,6 +78,18 @@ O entrypoint dedicado e equivalente:
 ai-presence-tray
 ```
 
+No checkout do projeto, o launcher executavel da raiz inicia a bandeja como
+uma unidade transitoria da sessao grafica e retorna sem prender o terminal:
+
+```bash
+./start-tray.sh
+```
+
+Ele usa primeiro o `.env` da raiz e depois o arquivo de configuracao do usuario,
+valida as dependencias com `tray --check`, evita uma segunda instancia e mostra
+uma notificacao quando possivel. O script nao habilita automacao, nao envia
+input e nao altera o banco.
+
 O processo precisa permanecer em execucao. **Exit** encerra somente o processo
 da bandeja; monitor, hooks e observer de respostas continuam independentes.
 

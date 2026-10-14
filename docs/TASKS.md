@@ -28,6 +28,23 @@ evidencia hospedada da matriz Linux.
 
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
 
+## Concluidas em 2026-10-14
+
+### Task 035 - Launcher executavel da bandeja
+
+**Prioridade**: Media
+**Status**: concluida; testes automatizados e inicializacao real aprovados
+**Objetivo**: permitir que o usuario inicie o icone da bandeja do Linux Mint
+por um arquivo executavel na raiz do projeto, sem manter terminal aberto.
+
+- [x] Localizar o runtime instalado e um `.env` legivel sem expor valores.
+- [x] Exigir sessao grafica e validar dependencias antes da inicializacao.
+- [x] Iniciar uma unidade transitoria do usuario com reinicio apenas em falha.
+- [x] Evitar duplicata gerenciada pelo launcher ou iniciada diretamente.
+- [x] Mostrar notificacao de desktop quando disponivel.
+- [x] Passar 328 testes, quality gate e smoke real da unidade transitoria.
+- [ ] Registrar commit e promover para `develop`.
+
 ## Concluidas em 2026-10-13
 
 ### Task 034 - Rearmamento de regras de prompt

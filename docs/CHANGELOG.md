@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added the executable root `start-tray.sh` launcher for starting the Linux
+  Mint system tray without keeping a terminal open or creating duplicates.
+
 ## 2026-10-13 - v0.10.3
 
 - Changed the default prompt-rule delay from 210 to 270 minutes.

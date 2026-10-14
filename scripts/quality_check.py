@@ -62,6 +62,7 @@ def main() -> int:
             "scripts/quality-check.sh",
             "scripts/release-gate.sh",
             "scripts/test-python-matrix.sh",
+            "start-tray.sh",
         ],
         clean_pythonpath=True,
     )
