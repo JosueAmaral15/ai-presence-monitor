@@ -33,7 +33,8 @@ evidencia hospedada da matriz Linux.
 ### Task 035 - Launcher executavel da bandeja
 
 **Prioridade**: Media
-**Status**: concluida; testes automatizados e inicializacao real aprovados
+**Status**: concluida; testes e inicializacao real aprovados, branch publicada
+e implementacao promovida para `develop`
 **Objetivo**: permitir que o usuario inicie o icone da bandeja do Linux Mint
 por um arquivo executavel na raiz do projeto, sem manter terminal aberto.
 
@@ -43,7 +44,7 @@ por um arquivo executavel na raiz do projeto, sem manter terminal aberto.
 - [x] Evitar duplicata gerenciada pelo launcher ou iniciada diretamente.
 - [x] Mostrar notificacao de desktop quando disponivel.
 - [x] Passar 328 testes, quality gate e smoke real da unidade transitoria.
-- [ ] Registrar commit e promover para `develop`.
+- [x] Registrar commit, publicar o branch e promover para `develop`.
 
 ## Concluidas em 2026-10-13
 
