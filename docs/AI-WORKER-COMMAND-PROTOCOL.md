@@ -137,6 +137,12 @@ parte explicita da tarefa; ele revalida o worker a cada poll e encerra depois
 de `finish`. O comando consulta apenas `account/rateLimits/read` e nao atualiza
 presenca, diagnostica a causa final, notifica, toca alarme ou envia input.
 
+Uma regra de prompt com **Require available Codex usage** depende desse
+observer em modo `--watch`. A regra somente aceita `usage_available` do mesmo
+worker e sessao, com TTL valido e observado depois do vencimento. O AI-worker
+nao deve fabricar evidencia, remover o gate nem substituir estado ausente ou
+desconhecido por disponibilidade presumida.
+
 Para coletar evidencias locais no Linux:
 
 ```bash

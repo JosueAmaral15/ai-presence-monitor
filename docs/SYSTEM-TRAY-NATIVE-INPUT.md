@@ -171,9 +171,10 @@ Nas preferencias:
 3. marque **Enabled** e escolha uma sessao exata do mesmo worker;
 4. escolha **After arming** ou **After red inactivity**;
 5. informe **Delay** e **Prompt**; os defaults sao `270 min` e `continue`;
-6. se desejar repeticao, marque **Repeat after confirmed session activity**,
+6. opcionalmente marque **Require available Codex usage**;
+7. se desejar repeticao, marque **Repeat after confirmed session activity**,
    informe o intervalo e a quantidade maxima de envios;
-7. pressione **Save**.
+8. pressione **Save**.
 
 O botao `-` remove uma regra. Cada linha possui ID estavel e seu proprio estado.
 Salvar sem mudar seus campos preserva o vencimento; alterar configuracao ou
@@ -195,6 +196,24 @@ No gatilho vermelho, o atraso comeca depois que o worker ativo atinge:
 Um worker ausente, finalizado (`idle`) ou com protocolo/relogio invalido
 permanece aguardando e nao libera input. O gate consulta o relogio canonico de
 inatividade, nao o ultimo alerta enviado ao Discord.
+
+O gate de uso e uma segunda condicao independente. Quando habilitado, uma
+regra vencida aceita somente a evidencia `usage_available` mais recente do
+mesmo worker e sessao, desde que tenha sido observada depois do vencimento e
+ainda esteja valida. Essa classificacao sanitizada usa a decisao agregada do
+Codex para as janelas de cinco horas, semanal, plano ou creditos aplicaveis.
+Ela nao salva percentuais, saldo, identidade da conta ou payload bruto.
+
+Evidencia ausente, expirada, desconhecida ou bloqueada produz
+`waiting_for_usage`; a regra continua habilitada, preserva o vencimento e nao
+consome uma ocorrencia. O observer deve permanecer ativo para aquela sessao:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --watch
+```
 
 Uma regra sem repeticao e desarmada antes de uma unica tentativa. Uma regra
 repetitiva usa limite padrao de tres envios e limite absoluto de 100. Depois de

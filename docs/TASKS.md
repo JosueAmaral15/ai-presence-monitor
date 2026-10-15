@@ -2,6 +2,29 @@
 
 ## Em andamento
 
+### Task 040 - Condicao de disponibilidade de uso nas prompt rules
+
+**Prioridade**: Alta
+**Status**: implementacao e gates locais aprovados; candidato limpo em preparacao
+**Objetivo**: permitir que cada regra exija disponibilidade agregada de uso do
+Codex, alem do gatilho temporal ou vermelho, sem presumir saldo nem misturar
+evidencia entre workers ou sessoes.
+
+- [x] Adicionar checkbox opt-in persistente por regra e perfil.
+- [x] Manter compatibilidade com controles antigos usando default `false`.
+- [x] Exigir `usage_available` valido, exato e posterior ao vencimento.
+- [x] Falhar fechado em estado ausente, expirado, desconhecido ou bloqueado.
+- [x] Preservar regra, vencimento e ocorrencias enquanto aguarda uso.
+- [x] Expor `waiting_for_usage` no estado e na bandeja.
+- [x] Documentar o observer necessario e os limites de seguranca.
+- [x] Passar 335 testes, 86% de cobertura e quality gate completo.
+- [x] Passar 335 testes em Python 3.10, 3.11 e 3.12.
+- [x] Confirmar leitura live `usage_available` em dry-run sem persistencia.
+- [ ] Construir e verificar o candidato 0.10.6.
+- [ ] Registrar commit, publicar branch e promover para `develop`.
+
+**Plano**: `docs/planning/TASK-040-prompt-rule-usage-gate.md`.
+
 ### Task 038 - Desativacao de prompt rules pelo AI-worker
 
 **Prioridade**: Alta

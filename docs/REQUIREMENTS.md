@@ -225,7 +225,8 @@
 - O usuario deve poder criar ate 20 regras de prompt por perfil, desabilitadas
   por padrao e separadas da decisao normativa do AI-worker.
 - Cada regra deve persistir sessao nativa exata, checkbox, gatilho, atraso,
-  texto, repeticao, intervalo, limite e estado de execucao.
+  texto, condicao de disponibilidade de uso, repeticao, intervalo, limite e
+  estado de execucao.
 - Atraso e texto devem usar defaults de 270 minutos e `continue`.
 - Salvar uma regra inalterada nao pode postergar seu vencimento; alterar ou
   reativar deve rearmar a contagem.
@@ -245,6 +246,12 @@
   pendente e exigir que o worker alcance o limiar novamente.
 - Worker ausente, idle, protocolo desconhecido ou relogio ausente nao deve
   liberar o envio.
+- A condicao opcional de uso deve aceitar somente `usage_available` sanitizado,
+  valido, do mesmo worker e sessao e observado depois do vencimento da regra.
+- Evidencia de uso ausente, expirada, desconhecida ou bloqueada deve falhar
+  fechada sem desabilitar a regra, consumir ocorrencia ou iniciar transporte.
+- O gate deve usar a decisao agregada do Codex, sem persistir saldos,
+  percentuais, identidade da conta ou payload bruto de limites.
 
 ## Bandeja e Controle de Entrada
 

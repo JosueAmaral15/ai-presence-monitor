@@ -25,6 +25,7 @@ PROMPT_RULE_STATES = frozenset(
         "disabled",
         "armed",
         "waiting_for_event",
+        "waiting_for_usage",
         "waiting_for_confirmation",
         "dispatching",
         "dispatch_started",
@@ -63,6 +64,7 @@ class PromptRule:
     trigger: str = "after_delay"
     delay_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
     text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
+    require_usage_available: bool = False
     repeat_enabled: bool = False
     repeat_interval_minutes: int = DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
     max_occurrences: int = DEFAULT_PROMPT_RULE_OCCURRENCES
@@ -555,6 +557,11 @@ def _prompt_rules_value(
                     DEFAULT_SCHEDULED_PROMPT_TEXT,
                     maximum_length=MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
                 ),
+                require_usage_available=_bool_value(
+                    raw_rule,
+                    "require_usage_available",
+                    False,
+                ),
                 repeat_enabled=_bool_value(
                     raw_rule,
                     "repeat_enabled",
@@ -668,6 +675,10 @@ def _validate_prompt_rules(settings: ControlSettings) -> None:
             raise ControlError("O texto da regra de prompt e invalido.")
         if any(character in text for character in ("\r", "\n", "\x00")):
             raise ControlError("O texto da regra de prompt precisa ter uma linha.")
+        if not isinstance(rule.require_usage_available, bool):
+            raise ControlError(
+                "A condicao de disponibilidade de uso precisa ser booleana."
+            )
         if rule.last_state not in PROMPT_RULE_STATES:
             raise ControlError("O estado da regra de prompt e invalido.")
         for label, timestamp_value in (

@@ -254,9 +254,20 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             layout.addWidget(QLabel("Prompt"), 3, 0)
             layout.addWidget(self.text, 3, 1, 1, 2)
 
+            self.require_usage = QCheckBox("Require available Codex usage")
+            self.require_usage.setChecked(
+                rule.require_usage_available if rule else False
+            )
+            self.require_usage.setToolTip(
+                "Dispatch only after fresh sanitized Codex account evidence "
+                "confirms that ordinary usage is available."
+            )
+            self._usage_gate_supported = profile_id is not None
+            layout.addWidget(self.require_usage, 4, 0, 1, 3)
+
             self.repeat = QCheckBox("Repeat after confirmed session activity")
             self.repeat.setChecked(rule.repeat_enabled if rule else False)
-            layout.addWidget(self.repeat, 4, 0, 1, 3)
+            layout.addWidget(self.repeat, 5, 0, 1, 3)
 
             self.repeat_interval = QSpinBox()
             self.repeat_interval.setRange(1, MAX_SCHEDULED_PROMPT_DELAY_MINUTES)
@@ -266,8 +277,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 if rule
                 else DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
             )
-            layout.addWidget(QLabel("Repeat interval"), 5, 0)
-            layout.addWidget(self.repeat_interval, 5, 1, 1, 2)
+            layout.addWidget(QLabel("Repeat interval"), 6, 0)
+            layout.addWidget(self.repeat_interval, 6, 1, 1, 2)
 
             self.max_occurrences = QSpinBox()
             self.max_occurrences.setRange(1, 100)
@@ -276,12 +287,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 if rule
                 else DEFAULT_PROMPT_RULE_OCCURRENCES
             )
-            layout.addWidget(QLabel("Maximum sends"), 6, 0)
-            layout.addWidget(self.max_occurrences, 6, 1, 1, 2)
+            layout.addWidget(QLabel("Maximum sends"), 7, 0)
+            layout.addWidget(self.max_occurrences, 7, 1, 1, 2)
 
             self.status = QLabel(_prompt_rule_status(rule))
             self.status.setWordWrap(True)
-            layout.addWidget(self.status, 7, 0, 1, 3)
+            layout.addWidget(self.status, 8, 0, 1, 3)
             self.repeat.toggled.connect(self._update_repeat_fields)
             self.enabled.toggled.connect(self._update_enabled_fields)
             self._update_enabled_fields(self.enabled.isChecked())
@@ -300,6 +311,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 self.repeat,
             ):
                 widget.setEnabled(checked)
+            self.require_usage.setEnabled(checked and self._usage_gate_supported)
             self._update_repeat_fields(self.repeat.isChecked())
 
         def result_rule(self) -> PromptRule:
@@ -310,6 +322,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 trigger=str(self.trigger.currentData()),
                 delay_minutes=self.delay.value(),
                 text=self.text.text(),
+                require_usage_available=self.require_usage.isChecked(),
                 repeat_enabled=self.repeat.isChecked(),
                 repeat_interval_minutes=self.repeat_interval.value(),
                 max_occurrences=self.max_occurrences.value(),
@@ -395,8 +408,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self._rebuild_rules(settings)
 
             note = QLabel(
-                "Token values stay in the operating-system environment and are "
-                "never saved here."
+                "The usage gate stores only sanitized availability evidence, "
+                "never balances, account identifiers or raw rate-limit payloads."
             )
             note.setWordWrap(True)
             layout.addWidget(note)
@@ -621,6 +634,11 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 f"Waiting for later activity from the exact session; "
                 f"{rule.occurrence_count}/{rule.max_occurrences} sends used."
             )
+        if rule.enabled and rule.last_state == "waiting_for_usage":
+            return (
+                "Waiting for fresh Codex usage availability observed after "
+                "this rule became due."
+            )
         if rule.enabled and rule.next_due_at is not None:
             due = datetime.fromtimestamp(rule.next_due_at).astimezone()
             return (
@@ -769,6 +787,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 "automation_disabled",
                 "waiting",
                 "waiting_for_event",
+                "waiting_for_usage",
                 "waiting_for_confirmation",
             }:
                 last_schedule_notice[notice_profile] = None

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-15 - v0.10.6
+
+- Added an opt-in per-rule Codex usage-availability condition in the system
+  tray.
+- Required fresh, unexpired, exact-worker and exact-session sanitized account
+  evidence observed after a prompt rule becomes due before dispatching it.
+- Kept blocked, unknown, missing and expired usage states fail-closed without
+  consuming an occurrence, disabling the rule or retrying input.
+
 ## 2026-10-14 - v0.10.5
 
 - Added `disable-current-prompt-rules` so an AI worker can disable every prompt

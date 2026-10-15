@@ -1,5 +1,23 @@
 # Security Checklist
 
+## Task 040 - Prompt-rule Codex usage gate
+
+- [x] The condition is opt-in and defaults to disabled for existing controls.
+- [x] Dispatch requires sanitized `usage_available` evidence from the exact
+      worker and session, observed after the rule became due and still valid.
+- [x] Missing, expired, unknown and blocked states fail closed without input.
+- [x] Waiting does not disable the rule, consume an occurrence or claim an
+      uncertain dispatch.
+- [x] The control file stores only the checkbox; balances, percentages,
+      account identity and raw App Server payloads remain excluded.
+
+### Residual risk
+
+The gate depends on the separate Codex-limit observer remaining active. It is
+a recent point-in-time account decision, not a reservation: availability may
+change between observation and dispatch. The exact-session correlation avoids
+cross-project evidence reuse but does not create an OS-level trust boundary.
+
 ## Task 038 - AI-worker prompt-rule shutdown
 
 - [x] The command derives one current worker from cwd, configured scope and the

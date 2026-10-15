@@ -176,6 +176,25 @@ inalterada preserva seu vencimento. Reabilitar a regra ou alterar qualquer
 campo cria um novo ciclo, zera ocorrencias e tentativas anteriores e reinicia a
 contagem.
 
+O checkbox **Require available Codex usage** acrescenta uma segunda condicao.
+Depois que atraso e gatilho forem satisfeitos, a regra exige uma evidencia
+sanitizada `usage_available` do mesmo worker e da mesma sessao, observada
+depois do vencimento e ainda dentro do TTL. O indicador agregado do Codex
+representa os controles de cinco horas, semanal, plano ou creditos aplicaveis;
+o monitor nao persiste percentuais, saldo, conta nem payload bruto. Ausencia,
+expiracao, estado desconhecido ou limite bloqueado mantem a regra em
+`waiting_for_usage`, sem envio nem consumo de ocorrencia.
+
+Quando esse checkbox estiver ativo, mantenha o producer correspondente em
+execucao para a sessao exata:
+
+```bash
+ai-presence observe-codex-limits \
+  --project /caminho/absoluto/do/projeto \
+  --session SESSAO_EXATA \
+  --watch
+```
+
 O gatilho pode contar desde a ativacao ou desde o vermelho canonico, seguido pelo
 atraso configurado. Repeticao exige intervalo e limite de ocorrencias, com
 default seguro de tres envios e limite absoluto de 100. Depois de cada envio, a

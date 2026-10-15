@@ -336,6 +336,16 @@ transporte. Uma regra repetitiva somente rearma depois de um hook posterior da
 mesma sessao, e falha ou incerteza a desabilita. Checkboxes, campos e estado de
 execucao sobrevivem ao fechamento e reabertura da bandeja.
 
+Cada regra tambem pode exigir disponibilidade de uso do Codex. Essa segunda
+condicao aceita somente evidencia sanitizada `usage_available`, ainda valida,
+do mesmo worker e da mesma sessao, observada depois do vencimento da regra. O
+resultado agregado acompanha as janelas de cinco horas, semanal, plano ou
+creditos que forem aplicaveis sem salvar saldos nem payloads brutos. Evidencia
+ausente, expirada, desconhecida ou bloqueada mantem a regra armada em
+`waiting_for_usage`, sem consumir uma ocorrencia. Ao habilitar a condicao,
+mantenha `ai-presence observe-codex-limits --project ... --session ... --watch`
+ativo para o worker.
+
 O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
 sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar
 qualquer campo inicia um novo ciclo, zera tentativas e ocorrencias anteriores e

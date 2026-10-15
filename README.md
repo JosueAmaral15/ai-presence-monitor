@@ -26,8 +26,8 @@ The project also provides:
 - direct Codex session input through `codex queue`, without taking over the
   user's mouse or keyboard;
 - an optional system tray for automation permissions and local/remote input;
-- persistent per-worker prompt rules with delay, red-inactivity and bounded
-  repetition through native Codex input;
+- persistent per-worker prompt rules with delay, red-inactivity, optional
+  Codex usage availability and bounded repetition through native Codex input;
 - immediate `continue` input with native-first transport and guarded GUI fallback;
 - one-shot red alerts with a bounded local alarm;
 - stable Linux operational adapters, with preserved Windows adapters behind an
@@ -665,6 +665,16 @@ disarmed before transport. Repeating rules pause after every send until a later
 hook from the same exact session is observed; failure or uncertainty disables
 the rule. The tray must be running when conditions are evaluated, but saved
 fields and runtime state survive restarts.
+
+Each rule can also require available Codex usage. This second condition uses
+only fresh sanitized `usage_available` evidence for the exact worker and
+session, observed after the rule became due. It therefore follows the
+aggregate availability decision reported by Codex across whichever five-hour,
+weekly, plan or credit controls apply to the account, without storing balances
+or raw rate-limit payloads. Missing, expired, unknown or blocked evidence keeps
+the rule armed in `waiting_for_usage` and never consumes an occurrence. Run
+`ai-presence observe-codex-limits --project ... --session ... --watch` for a
+rule that enables this condition.
 
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous

@@ -65,6 +65,7 @@ class ControlStoreTests(unittest.TestCase):
                         thread_id="thread-1",
                         delay_minutes=30,
                         text="proceed",
+                        require_usage_available=True,
                         repeat_enabled=True,
                         repeat_interval_minutes=10,
                         max_occurrences=4,
@@ -142,6 +143,7 @@ class ControlStoreTests(unittest.TestCase):
             self.assertEqual(rule.rule_id, "legacy-rule")
             self.assertIsNone(rule.armed_at)
             self.assertEqual(rule.next_due_at, 13_600.0)
+            self.assertFalse(rule.require_usage_available)
 
     def test_profiles_inherit_global_defaults_and_remain_isolated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

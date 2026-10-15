@@ -8,6 +8,11 @@ from unittest.mock import patch
 
 from ai_presence_monitor.codex_input import CodexInputError, CodexInputResult
 from ai_presence_monitor.control import ControlSettings, ControlStore
+from ai_presence_monitor.diagnostics import (
+    DiagnosticStore,
+    EvidenceKind,
+    EvidenceSource,
+)
 from ai_presence_monitor.prompt_rules import (
     configure_prompt_rule,
     disable_all_prompt_rules,
@@ -60,6 +65,7 @@ class PromptRuleTests(unittest.TestCase):
             trigger="red_inactivity",
             delay_minutes=270,
             text="proceed",
+            require_usage_available=True,
             repeat_enabled=True,
             repeat_interval_minutes=30,
             max_occurrences=5,
@@ -87,6 +93,7 @@ class PromptRuleTests(unittest.TestCase):
         self.assertEqual(saved.trigger, "red_inactivity")
         self.assertEqual(saved.delay_minutes, 270)
         self.assertEqual(saved.text, "proceed")
+        self.assertTrue(saved.require_usage_available)
         self.assertTrue(saved.repeat_enabled)
         self.assertEqual(saved.repeat_interval_minutes, 30)
         self.assertEqual(saved.max_occurrences, 5)
@@ -163,6 +170,7 @@ class PromptRuleTests(unittest.TestCase):
             {"trigger": "red_inactivity"},
             {"delay_minutes": 270},
             {"text": "proceed"},
+            {"require_usage_available": True},
             {"repeat_enabled": True},
             {"repeat_interval_minutes": 270},
             {"max_occurrences": 4},
@@ -175,6 +183,7 @@ class PromptRuleTests(unittest.TestCase):
                     "trigger": "after_delay",
                     "delay_minutes": 210,
                     "text": "continue",
+                    "require_usage_available": False,
                     "repeat_enabled": False,
                     "repeat_interval_minutes": 210,
                     "max_occurrences": 3,
@@ -369,6 +378,141 @@ class PromptRuleTests(unittest.TestCase):
             self.assertEqual(saved.occurrence_count, 1)
             self.assertEqual(saved.repeat_interval_minutes, 5)
             self.assertEqual(saved.max_occurrences, 3)
+
+    def test_usage_gate_waits_until_fresh_account_evidence_is_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            diagnostics = DiagnosticStore(root / "presence.db")
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-1",
+                trigger="after_delay",
+                delay_minutes=1,
+                text="continue",
+                require_usage_available=True,
+                repeat_enabled=False,
+                repeat_interval_minutes=5,
+                now=1_000.0,
+                rule_id="usage-rule",
+            )
+            control.save(configured_settings(rule), "worker-1")
+            client = FakeClient()
+
+            missing = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_060.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            diagnostics.record_evidence(
+                worker_id="worker-1",
+                session_id="session-1",
+                source=EvidenceSource.CODEX_APP_SERVER,
+                kind=EvidenceKind.ACCOUNT_LIMIT,
+                state="rate_limit_reached",
+                observed_at=1_061.0,
+                expires_at=2_000.0,
+            )
+            blocked = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_061.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            diagnostics.record_evidence(
+                worker_id="worker-1",
+                session_id="session-1",
+                source=EvidenceSource.CODEX_APP_SERVER,
+                kind=EvidenceKind.ACCOUNT_LIMIT,
+                state="usage_available",
+                observed_at=1_062.0,
+                expires_at=2_000.0,
+            )
+            sent = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_062.0,
+                client=client,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(missing.state, "waiting_for_usage")
+            self.assertEqual(blocked.state, "waiting_for_usage")
+            self.assertEqual(client.calls, [("session-1", "continue")])
+            self.assertEqual(sent.state, "dispatch_started")
+            saved = control.load("worker-1").prompt_rules[0]
+            self.assertFalse(saved.enabled)
+            self.assertTrue(saved.require_usage_available)
+            self.assertEqual(saved.occurrence_count, 1)
+
+    def test_usage_gate_rejects_stale_and_cross_scope_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            diagnostics = DiagnosticStore(root / "presence.db")
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-1",
+                trigger="after_delay",
+                delay_minutes=1,
+                text="continue",
+                require_usage_available=True,
+                repeat_enabled=False,
+                repeat_interval_minutes=5,
+                now=1_000.0,
+                rule_id="scoped-usage-rule",
+            )
+            control.save(configured_settings(rule), "worker-1")
+            for worker_id, session_id, observed_at in (
+                ("worker-1", "session-1", 1_059.0),
+                ("worker-1", "other-session", 1_061.0),
+                ("other-worker", "session-1", 1_062.0),
+            ):
+                diagnostics.record_evidence(
+                    worker_id=worker_id,
+                    session_id=session_id,
+                    source=EvidenceSource.CODEX_APP_SERVER,
+                    kind=EvidenceKind.ACCOUNT_LIMIT,
+                    state="usage_available",
+                    observed_at=observed_at,
+                    expires_at=2_000.0,
+                )
+            client = FakeClient()
+
+            blocked = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_063.0,
+                client=client,  # type: ignore[arg-type]
+            )
+            diagnostics.record_evidence(
+                worker_id="worker-1",
+                session_id="session-1",
+                source=EvidenceSource.CODEX_APP_SERVER,
+                kind=EvidenceKind.ACCOUNT_LIMIT,
+                state="usage_available",
+                observed_at=1_064.0,
+                expires_at=2_000.0,
+            )
+            sent = process_prompt_rules(
+                store=control,
+                profile_id="worker-1",
+                presence_store=presence,
+                now=1_064.0,
+                client=client,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(blocked.state, "waiting_for_usage")
+            self.assertEqual(sent.state, "dispatch_started")
+            self.assertEqual(client.calls, [("session-1", "continue")])
 
     def test_repetition_waits_for_exact_session_hook_and_stops_at_limit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

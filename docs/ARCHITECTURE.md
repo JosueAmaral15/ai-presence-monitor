@@ -116,6 +116,14 @@ diagnostic record. The limit observer does not subscribe to thread events,
 diagnose a cause, create an incident, notify Discord, play an alarm or send
 Codex input.
 
+An opt-in prompt-rule usage gate consumes this evidence without changing that
+producer boundary. Once the primary trigger is due, the scheduler requires the
+latest exact-worker and exact-session account-limit evidence to be
+`usage_available`, unexpired and observed no earlier than the due time. Every
+other state is fail-closed as `waiting_for_usage`; it neither claims dispatch
+nor consumes an occurrence. The scheduler never reads raw balances or calls
+the App Server itself, so polling cadence and input remain separate concerns.
+
 ### Linux system evidence observers
 
 Phase 4 adds `linux_evidence.py` and the Linux-only

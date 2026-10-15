@@ -18,6 +18,7 @@ from .control import (
     ControlStore,
     PromptRule,
 )
+from .diagnostics import DiagnosticStore, EvidenceKind, EvidenceSource
 from .protocols import get_protocol
 from .store import PresenceStore
 
@@ -26,6 +27,7 @@ PromptRuleRunState = Literal[
     "automation_disabled",
     "waiting",
     "waiting_for_event",
+    "waiting_for_usage",
     "waiting_for_confirmation",
     "dispatch_started",
     "input_emitted",
@@ -48,6 +50,7 @@ def configure_prompt_rule(
     trigger: str,
     delay_minutes: int,
     text: str,
+    require_usage_available: bool = False,
     repeat_enabled: bool,
     repeat_interval_minutes: int,
     max_occurrences: int = DEFAULT_PROMPT_RULE_OCCURRENCES,
@@ -68,6 +71,7 @@ def configure_prompt_rule(
         clean_trigger,
         delay,
         clean_text,
+        require_usage_available,
         repeat_enabled,
         interval,
         occurrence_limit,
@@ -79,6 +83,7 @@ def configure_prompt_rule(
             existing.trigger,
             existing.delay_minutes,
             existing.text,
+            existing.require_usage_available,
             existing.repeat_enabled,
             existing.repeat_interval_minutes,
             existing.max_occurrences,
@@ -94,6 +99,7 @@ def configure_prompt_rule(
             trigger=clean_trigger,
             delay_minutes=delay,
             text=clean_text,
+            require_usage_available=require_usage_available,
             repeat_enabled=repeat_enabled,
             repeat_interval_minutes=interval,
             max_occurrences=occurrence_limit,
@@ -111,6 +117,7 @@ def configure_prompt_rule(
         trigger=clean_trigger,
         delay_minutes=delay,
         text=clean_text,
+        require_usage_available=require_usage_available,
         repeat_enabled=repeat_enabled,
         repeat_interval_minutes=interval,
         max_occurrences=occurrence_limit,
@@ -217,6 +224,23 @@ def process_prompt_rules(
         if due_at is None or due_at > checked_at:
             waiting = waiting or PromptRuleRunResult(
                 "waiting",
+                rule_id=rule.rule_id,
+                due_at=due_at,
+            )
+            continue
+
+        if rule.require_usage_available and not _usage_available_after_due(
+            presence_store,
+            worker_id=profile_id,
+            session_id=rule.thread_id,
+            due_at=due_at,
+            checked_at=checked_at,
+        ):
+            if rule.last_state != "waiting_for_usage":
+                rule = replace(rule, last_state="waiting_for_usage")
+                settings = _save_rule(store, profile_id, settings, rule)
+            waiting = waiting or PromptRuleRunResult(
+                "waiting_for_usage",
                 rule_id=rule.rule_id,
                 due_at=due_at,
             )
@@ -353,6 +377,32 @@ def _red_inactivity_event_at(
     if clock is None:
         return None
     return float(clock) + red_threshold.after_seconds
+
+
+def _usage_available_after_due(
+    store: PresenceStore,
+    *,
+    worker_id: str | None,
+    session_id: str | None,
+    due_at: float,
+    checked_at: float,
+) -> bool:
+    if worker_id is None or session_id is None:
+        return False
+    evidence = DiagnosticStore(store.db_path).list_evidence(
+        worker_id=worker_id,
+        session_id=session_id,
+        valid_at=checked_at,
+    )
+    for item in evidence:
+        if item.observed_at < due_at:
+            continue
+        if (
+            item.source == EvidenceSource.CODEX_APP_SERVER
+            and item.kind == EvidenceKind.ACCOUNT_LIMIT
+        ):
+            return item.state == "usage_available"
+    return False
 
 
 def _validate_trigger(value: str) -> str:
