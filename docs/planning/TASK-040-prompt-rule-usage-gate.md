@@ -69,3 +69,10 @@ by this implementation task.
   `usage_available` without persisting evidence. The initial 10-second
   initialization timed out; one bounded pre-processing read with a 30-second
   timeout succeeded, and no further retry was made.
+- clean release gate: bundle 0.10.6 recorded exact candidate commit
+  `2651bdddeea8157dc286e7ad5375bf7175925dea`, repeated the quality and Python
+  matrix gates, and passed isolated installation verification;
+- installed-wheel E2E: a due rule made zero input calls and remained armed as
+  `waiting_for_usage` without evidence; fresh exact-scope `usage_available`
+  evidence then permitted one detached dispatch, incremented the occurrence
+  count and disarmed the one-shot rule.

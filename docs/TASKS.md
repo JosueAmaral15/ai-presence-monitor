@@ -5,7 +5,8 @@
 ### Task 040 - Condicao de disponibilidade de uso nas prompt rules
 
 **Prioridade**: Alta
-**Status**: implementacao e gates locais aprovados; candidato limpo em preparacao
+**Status**: candidato 0.10.6 aprovado; publicacao da branch e promocao para
+`develop` em andamento
 **Objetivo**: permitir que cada regra exija disponibilidade agregada de uso do
 Codex, alem do gatilho temporal ou vermelho, sem presumir saldo nem misturar
 evidencia entre workers ou sessoes.
@@ -20,8 +21,9 @@ evidencia entre workers ou sessoes.
 - [x] Passar 335 testes, 86% de cobertura e quality gate completo.
 - [x] Passar 335 testes em Python 3.10, 3.11 e 3.12.
 - [x] Confirmar leitura live `usage_available` em dry-run sem persistencia.
-- [ ] Construir e verificar o candidato 0.10.6.
-- [ ] Registrar commit, publicar branch e promover para `develop`.
+- [x] Construir e verificar o candidato 0.10.6 no commit `2651bdd`.
+- [x] Passar E2E isolado instalado diretamente do wheel 0.10.6.
+- [ ] Registrar evidencia, publicar branch e promover para `develop`.
 
 **Plano**: `docs/planning/TASK-040-prompt-rule-usage-gate.md`.
 
