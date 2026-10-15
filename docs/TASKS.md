@@ -5,8 +5,8 @@
 ### Task 041 - Notificacoes de desktop orientadas a eventos
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.7 aprovado localmente; publicacao da branch e
-promocao para `develop` pendentes
+**Status**: candidato 0.10.7 aprovado e promovido para `develop`; runtime
+instalado permanece em 0.10.5 e `main` em 0.10.4 aguardando decisoes separadas
 **Objetivo**: oferecer notificacoes locais opt-in e deduplicadas para eventos
 confiaveis do monitor, sem confundir inicio de transporte com processamento da
 mensagem pela IA.
@@ -24,7 +24,7 @@ mensagem pela IA.
 - [x] Confirmar disponibilidade da bandeja no Linux Mint com `tray --check`.
 - [x] Passar release gate 0.10.7 sobre o commit candidato `84f6d34` limpo.
 - [x] Verificar bundle e instalacao isolada do wheel 0.10.7.
-- [ ] Publicar a branch validada e promover para `develop`.
+- [x] Publicar a branch validada e promover para `develop`.
 - [ ] Obter autorizacao separada para upgrade 0.10.7 e promocao para `main`.
 
 **Plano**: `docs/planning/TASK-041-desktop-notifications.md`.

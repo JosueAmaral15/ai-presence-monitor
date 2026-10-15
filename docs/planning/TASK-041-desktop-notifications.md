@@ -49,3 +49,5 @@ runtime or promoting `develop` to `main` requires a separate explicit decision.
   tray without starting a persistent icon or mutating controls.
 - clean release gate: bundle 0.10.7 records candidate commit `84f6d34`, and the
   verifier passed checksums, manifest validation and isolated wheel install.
+- task branch published and fast-forwarded into `develop`; the installed
+  runtime remains 0.10.5 and `main` remains 0.10.4 pending separate decisions.
