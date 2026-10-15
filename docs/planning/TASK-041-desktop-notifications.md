@@ -47,3 +47,5 @@ runtime or promoting `develop` to `main` requires a separate explicit decision.
 - Python matrix: the same 342 tests passed on 3.10, 3.11 and 3.12;
 - Linux Mint graphical preflight: `tray --check` reported an available system
   tray without starting a persistent icon or mutating controls.
+- clean release gate: bundle 0.10.7 records candidate commit `84f6d34`, and the
+  verifier passed checksums, manifest validation and isolated wheel install.

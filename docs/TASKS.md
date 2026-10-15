@@ -5,7 +5,8 @@
 ### Task 041 - Notificacoes de desktop orientadas a eventos
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.7 passou quality gate e matriz; release gate pendente
+**Status**: candidato 0.10.7 aprovado localmente; publicacao da branch e
+promocao para `develop` pendentes
 **Objetivo**: oferecer notificacoes locais opt-in e deduplicadas para eventos
 confiaveis do monitor, sem confundir inicio de transporte com processamento da
 mensagem pela IA.
@@ -21,7 +22,8 @@ mensagem pela IA.
 - [x] Passar quality gate com 342 testes e 86% de cobertura.
 - [x] Passar 342 testes em Python 3.10, 3.11 e 3.12.
 - [x] Confirmar disponibilidade da bandeja no Linux Mint com `tray --check`.
-- [ ] Passar release gate 0.10.7 sobre o commit candidato limpo.
+- [x] Passar release gate 0.10.7 sobre o commit candidato `84f6d34` limpo.
+- [x] Verificar bundle e instalacao isolada do wheel 0.10.7.
 - [ ] Publicar a branch validada e promover para `develop`.
 - [ ] Obter autorizacao separada para upgrade 0.10.7 e promocao para `main`.
 
