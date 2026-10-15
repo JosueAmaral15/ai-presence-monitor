@@ -43,9 +43,8 @@ that remains a human tray action.
 
 ## Promotion boundary
 
-Validated source may advance to `develop`. Installing 0.10.5 or promoting it to
-`main` requires the normal release decision and a separately authorized
-transactional runtime upgrade; this task does not infer either operation.
+Validated source may advance to `develop`. Installing 0.10.5 and promoting it
+to `main` are separate decisions; this task does not infer either operation.
 
 ## Local evidence
 
@@ -58,7 +57,9 @@ transactional runtime upgrade; this task does not infer either operation.
 - installed isolated E2E: dry-run left the enabled rule unchanged; the real
   command then disabled it, cleared runtime state, retained rule configuration
   and task automation, and left a second profile unchanged;
-- operational runtime and `main` remain 0.10.4 pending separate authorization.
+- the separately authorized Task 039 transaction installed runtime 0.10.5,
+  preserved a verified 0.10.4 rollback and revalidated all three components;
+- `main` remains 0.10.4 pending a separate promotion decision;
 - promotion: candidate and evidence advanced by fast-forward to
   `origin/develop` at `8f7ad04`;
 - hosted Quality run `38650512753` created the Python 3.10, 3.11 and 3.12 Linux

@@ -5,9 +5,9 @@
 ### Task 038 - Desativacao de prompt rules pelo AI-worker
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.5 aprovado e promovido para `develop`; runtime e
-`main` permanecem em 0.10.4 aguardando autorizacao transacional e decisao de
-promocao
+**Status**: candidato 0.10.5 aprovado e promovido para `develop`; runtime
+instalado esta em 0.10.5; `main` permanece em 0.10.4 aguardando
+decisao separada de promocao
 **Objetivo**: permitir que uma IA desabilite todas as regras de prompt somente
 do proprio worker derivado, sem desligar a automacao geral nem afetar perfis de
 outros projetos.
@@ -23,14 +23,15 @@ outros projetos.
 - [x] Executar E2E instalado e isolado sem alterar controles reais.
 - [x] Promover a implementacao validada para `origin/develop`.
 - [x] Registrar a CI hospedada zero-step por billing como nao aprovada.
-- [ ] Obter autorizacao separada para upgrade 0.10.5 e promocao para `main`.
+- [x] Obter autorizacao e aplicar upgrade transacional do runtime para 0.10.5.
+- [ ] Obter decisao separada para promocao de `develop` para `main`.
 
 **Plano**: `docs/planning/TASK-038-disable-current-prompt-rules.md`.
 
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.4; CI
+**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.5; CI
 hospedada pendente por bloqueio externo da conta GitHub
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
@@ -52,6 +53,28 @@ evidencia hospedada da matriz Linux.
       hospedado Linux aprovado.
 
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
+
+## Concluidas em 2026-10-15
+
+### Task 039 - Upgrade transacional do runtime para 0.10.5
+
+**Prioridade**: Alta
+**Status**: concluida; runtime 0.10.5 instalado e componentes operacionais
+revalidados
+**Objetivo**: atualizar a instalacao Linux dedicada de 0.10.4 para 0.10.5 com
+rollback verificavel, preservando banco, configuracao, servicos e bandeja.
+
+- [x] Confirmar runtime 0.10.4, schema integro e tres componentes ativos.
+- [x] Validar os wheels 0.10.5 e 0.10.4 e o manifesto do release gate.
+- [x] Obter `would_upgrade` no dry-run antes da transacao.
+- [x] Parar a bandeja antiga e executar uma unica transacao autorizada.
+- [x] Confirmar manifesto `completed` e runtime instalado 0.10.5.
+- [x] Confirmar schema atual, doctor estrito `ok` e servicos restaurados.
+- [x] Iniciar uma unica bandeja nova com a versao atualizada.
+- [x] Obter `would_rollback` para 0.10.4 sem executar a reversao.
+- [x] Confirmar o novo comando no runtime instalado.
+
+**Plano**: `docs/planning/TASK-039-runtime-upgrade-0105.md`.
 
 ## Concluidas em 2026-10-14
 
