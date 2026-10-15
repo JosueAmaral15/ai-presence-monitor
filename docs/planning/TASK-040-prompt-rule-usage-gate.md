@@ -76,3 +76,6 @@ by this implementation task.
   `waiting_for_usage` without evidence; fresh exact-scope `usage_available`
   evidence then permitted one detached dispatch, incremented the occurrence
   count and disarmed the one-shot rule.
+- promotion: candidate and evidence advanced by fast-forward to
+  `origin/develop` at `a8da012`; the installed runtime and `main` were not
+  changed.

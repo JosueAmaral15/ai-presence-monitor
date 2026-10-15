@@ -5,8 +5,9 @@
 ### Task 040 - Condicao de disponibilidade de uso nas prompt rules
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.6 aprovado; publicacao da branch e promocao para
-`develop` em andamento
+**Status**: candidato 0.10.6 aprovado e promovido para `origin/develop`;
+runtime instalado permanece em 0.10.5 e `main` em 0.10.4 aguardando decisoes
+separadas
 **Objetivo**: permitir que cada regra exija disponibilidade agregada de uso do
 Codex, alem do gatilho temporal ou vermelho, sem presumir saldo nem misturar
 evidencia entre workers ou sessoes.
@@ -23,7 +24,8 @@ evidencia entre workers ou sessoes.
 - [x] Confirmar leitura live `usage_available` em dry-run sem persistencia.
 - [x] Construir e verificar o candidato 0.10.6 no commit `2651bdd`.
 - [x] Passar E2E isolado instalado diretamente do wheel 0.10.6.
-- [ ] Registrar evidencia, publicar branch e promover para `develop`.
+- [x] Registrar evidencia, publicar branch e promover para `develop`.
+- [ ] Obter autorizacao separada para upgrade 0.10.6 e promocao para `main`.
 
 **Plano**: `docs/planning/TASK-040-prompt-rule-usage-gate.md`.
 
