@@ -69,6 +69,21 @@ candidate may therefore use the version-specific exception recorded in
 `docs/DECISIONS.md` only after the final exact-candidate local and operational
 gates pass.
 
+## Promotion Result
+
+- Final release gate commit: `950e50f`.
+- The final bundle identified version 0.10.7, `source_dirty=false` and the exact
+  source commit; checksum, manifest and isolated-installation verification
+  passed.
+- The task branch, `develop` and `main` were pushed by fast-forward to the same
+  commit without creating a tag or release.
+- Post-promotion Quality run
+  [`38821943271`](https://github.com/JosueAmaral15/ai-presence-monitor/actions/runs/38821943271)
+  targeted that exact `main` commit. Its three Linux jobs again executed zero
+  steps and reported the same account-level billing lock.
+- Post-promotion strict doctor returned only `ok`; the installed runtime is
+  0.10.7 and monitor, reply observer and tray are active with `NRestarts=0`.
+
 ## Stop Conditions
 
 - Any uncertain upgrade, rollback or input result stops the task; no blind
