@@ -2,11 +2,37 @@
 
 ## Em andamento
 
+### Task 042 - Upgrade 0.10.7 e promocao privada para main
+
+**Prioridade**: Critica
+**Status**: runtime 0.10.7 instalado e operacional; gates locais aprovados;
+promocao aguardando o gate final do commit documental exato
+**Objetivo**: provar upgrade e rollback transacionais, estabilidade da bandeja
+e dos servicos, e promover o candidato Linux privado por fast-forward.
+
+- [x] Validar os wheels autenticos 0.10.5 e 0.10.7 por SHA-256.
+- [x] Executar dry-run e upgrade real de 0.10.5 para 0.10.7.
+- [x] Validar schema, doctor, servicos, controles e hooks apos o upgrade.
+- [x] Executar rollback manual com restauracao do banco e validar 0.10.5.
+- [x] Executar novo dry-run e upgrade final para 0.10.7.
+- [x] Confirmar uma bandeja ativa, tres componentes com `NRestarts=0` e
+      disponibilidade grafica no Linux Mint.
+- [x] Passar E2E isolado do observer de notificacoes no runtime instalado.
+- [x] Passar 342 testes, 86% de cobertura e quality gate completo.
+- [x] Passar 342 testes em Python 3.10, 3.11 e 3.12.
+- [x] Construir e verificar bundle limpo 0.10.7.
+- [x] Confirmar CI hospedada zero-step por billing e registrar excecao 0.10.7.
+- [ ] Repetir o release gate no commit documental exato.
+- [ ] Publicar o task branch e promover por fast-forward para `develop` e
+      `main`.
+
+**Plano**: `docs/planning/TASK-042-runtime-upgrade-main.md`.
+
 ### Task 041 - Notificacoes de desktop orientadas a eventos
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.7 aprovado e promovido para `develop`; runtime
-instalado permanece em 0.10.5 e `main` em 0.10.4 aguardando decisoes separadas
+**Status**: candidato 0.10.7 aprovado em `develop` e runtime instalado; promocao
+para `main` esta sendo concluida pela Task 042
 **Objetivo**: oferecer notificacoes locais opt-in e deduplicadas para eventos
 confiaveis do monitor, sem confundir inicio de transporte com processamento da
 mensagem pela IA.
@@ -25,7 +51,7 @@ mensagem pela IA.
 - [x] Passar release gate 0.10.7 sobre o commit candidato `84f6d34` limpo.
 - [x] Verificar bundle e instalacao isolada do wheel 0.10.7.
 - [x] Publicar a branch validada e promover para `develop`.
-- [ ] Obter autorizacao separada para upgrade 0.10.7 e promocao para `main`.
+- [x] Obter autorizacao separada para upgrade 0.10.7 e promocao para `main`.
 
 **Plano**: `docs/planning/TASK-041-desktop-notifications.md`.
 
