@@ -150,6 +150,13 @@ O launcher executavel na raiz detecta uma bandeja ja ativa, evita duplicatas e
 mostra o resultado por notificacao do desktop quando `notify-send` estiver
 disponivel.
 
+No menu da bandeja, **Enable desktop notifications** fica acima de **Respond to
+message...**. O checkbox global e persistente e inicia desabilitado. Quando
+ativo, mostra novos inicios e terminos de tarefa, fim de turno observado do
+Codex, alertas de inatividade, estados de perguntas/respostas Discord e
+resultados das prompt rules. Cursores no SQLite evitam repeticao apos reiniciar;
+o texto nao inclui o conteudo de prompts, perguntas ou respostas.
+
 O guia da bandeja explica os checkboxes, o comando `send-input`, o transporte
 local/remoto e a autorizacao do procedimento `continue`.
 

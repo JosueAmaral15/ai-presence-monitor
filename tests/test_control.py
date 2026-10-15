@@ -43,6 +43,7 @@ class ControlStoreTests(unittest.TestCase):
             store = ControlStore(path, ControlSettings())
             settings = ControlSettings(
                 task_automation_enabled=True,
+                desktop_notifications_enabled=True,
                 native_input_enabled=True,
                 gui_fallback_enabled=True,
                 remote_input_enabled=True,
@@ -104,6 +105,7 @@ class ControlStoreTests(unittest.TestCase):
             settings = ControlStore(path, ControlSettings()).load()
 
             self.assertTrue(settings.task_automation_enabled)
+            self.assertFalse(settings.desktop_notifications_enabled)
             self.assertFalse(settings.scheduled_prompt_enabled)
             self.assertEqual(
                 settings.scheduled_prompt_delay_minutes,
@@ -244,6 +246,7 @@ class ControlStoreTests(unittest.TestCase):
         )
 
         self.assertFalse(settings.task_automation_enabled)
+        self.assertFalse(settings.desktop_notifications_enabled)
         self.assertTrue(enabled.task_automation_enabled)
         self.assertEqual(targeted.codex_thread_id, "session")
         self.assertEqual(targeted.codex_remote, "wss://client")
@@ -294,6 +297,14 @@ class ControlStoreTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ControlError, "texto"):
                 store.save(replace(ControlSettings(), scheduled_prompt_text=" "))
+
+            with self.assertRaisesRegex(ControlError, "must be boolean"):
+                store.save(
+                    replace(
+                        ControlSettings(),
+                        desktop_notifications_enabled="yes",  # type: ignore[arg-type]
+                    )
+                )
 
     def test_write_failure_is_reported_as_control_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

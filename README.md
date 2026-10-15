@@ -25,7 +25,8 @@ The project also provides:
   store-only and guarded GUI alternatives;
 - direct Codex session input through `codex queue`, without taking over the
   user's mouse or keyboard;
-- an optional system tray for automation permissions and local/remote input;
+- an optional system tray for automation permissions, local/remote input, and
+  opt-in deduplicated desktop notifications;
 - persistent per-worker prompt rules with delay, red-inactivity, optional
   Codex usage availability and bounded repetition through native Codex input;
 - immediate `continue` input with native-first transport and guarded GUI fallback;
@@ -102,6 +103,12 @@ standard library does not ship the IANA time-zone database there.
 
 The system tray is optional on both platforms and uses PySide6. Native Codex
 input requires an installed Codex CLI that provides `codex queue`.
+
+The tray's **Enable desktop notifications** action is disabled by default and
+persists globally. When enabled, it reports new task lifecycle events, Codex
+turn-end hooks, inactivity alerts, Discord question/reply states, and prompt
+rule outcomes. Durable SQLite cursors prevent restart replay. Transport start
+is never described as proof that Codex interpreted a message.
 
 ## Installation
 

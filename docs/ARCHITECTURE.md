@@ -426,8 +426,34 @@ variavel de ambiente. CLI e `tray.py` leem o mesmo arquivo.
 
 `tray.py` importa PySide6 apenas ao iniciar a interface. Isso mantem a camada
 grafica fora da dependencia base e permite executar monitor/hooks em ambientes
-sem desktop. O menu oferece tres comandos; o dialogo de preferencias edita as
+sem desktop. O menu oferece quatro comandos; o dialogo de preferencias edita as
 flags e o compositor chama o mesmo `send_native_message` usado pela CLI.
+
+### Observador de notificacoes do desktop
+
+`desktop_notifications.py` e uma camada pura entre o SQLite e a apresentacao
+Qt. Ela le somente fatos persistidos, traduz eventos aceitos para mensagens
+curtas e mantem cursores em `observer_state`:
+
+```text
+events -------+
+alerts -------+--> DesktopNotificationObserver --> QSystemTrayIcon.showMessage
+questions ----+                 |
+                                +--> observer_state cursors
+prompt rules ----------------------> result notification under the same gate
+```
+
+O primeiro poll ancora eventos e alertas no maior ID atual, evitando replay de
+historico. Perguntas pendentes existentes ainda sao acionaveis e recebem um
+aviso uma unica vez. Mudancas posteriores de estado sao deduplicadas por
+`question_id` e status. Desabilitar o recurso reconhece o estado corrente para
+que a reativacao nao produza backlog.
+
+O observer nao acessa rede, nao envia input e nao atualiza relogios de presenca.
+Ele distingue `Stop`, `input_emitted` e `delivery_confirmed` segundo a evidencia
+real de cada estado. Somente adapters que persistem fatos no banco entram nesse
+fluxo; leitura generica de texto de outras interfaces graficas fica fora do
+contrato atual.
 
 A permissao `task_automation_enabled` e um gate, nao um scheduler. A decisao de
 executar `continue` continua pertencendo ao AI-worker e as pre-condicoes

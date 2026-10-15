@@ -1,5 +1,25 @@
 # Security Checklist
 
+## Task 041 - Desktop event notifications
+
+- [x] The feature is opt-in and defaults to disabled for existing controls.
+- [x] Durable cursors prevent replay after tray restart and rebasing suppresses
+      events accumulated while notifications are disabled.
+- [x] Notification text excludes prompt, question and answer contents.
+- [x] Only persisted event types are mapped; arbitrary GUI contents are not
+      inspected.
+- [x] `dispatch_started` and `input_emitted` remain transport evidence and are
+      not presented as successful AI interpretation.
+- [x] The observer performs no network call, input dispatch or presence update.
+
+### Residual risk
+
+Desktop notifications are best-effort and depend on the graphical session and
+desktop notification implementation. A local process running as the same user
+can alter SQLite or `control.json`. The Codex `Stop` hook identifies a turn-end
+event but does not contain or authenticate the response content. Platforms
+without a persistent adapter are not observed.
+
 ## Task 040 - Prompt-rule Codex usage gate
 
 - [x] The condition is opt-in and defaults to disabled for existing controls.

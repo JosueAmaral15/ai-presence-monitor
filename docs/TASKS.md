@@ -2,6 +2,31 @@
 
 ## Em andamento
 
+### Task 041 - Notificacoes de desktop orientadas a eventos
+
+**Prioridade**: Alta
+**Status**: candidato 0.10.7 passou quality gate e matriz; release gate pendente
+**Objetivo**: oferecer notificacoes locais opt-in e deduplicadas para eventos
+confiaveis do monitor, sem confundir inicio de transporte com processamento da
+mensagem pela IA.
+
+- [x] Adicionar checkbox persistente no menu acima de **Respond to message...**.
+- [x] Manter o controle global e desabilitado por padrao em arquivos antigos.
+- [x] Notificar inicio/fim de tarefa e `Stop` observado do Codex.
+- [x] Notificar alertas de inatividade e transicoes de perguntas Discord.
+- [x] Colocar resultados das prompt rules sob o mesmo interruptor mestre.
+- [x] Persistir cursores para nao repetir eventos depois de reiniciar a bandeja.
+- [x] Suprimir backlog criado enquanto o recurso estiver desabilitado.
+- [x] Limitar rajadas visuais e omitir prompt, pergunta e resposta do texto.
+- [x] Passar quality gate com 342 testes e 86% de cobertura.
+- [x] Passar 342 testes em Python 3.10, 3.11 e 3.12.
+- [x] Confirmar disponibilidade da bandeja no Linux Mint com `tray --check`.
+- [ ] Passar release gate 0.10.7 sobre o commit candidato limpo.
+- [ ] Publicar a branch validada e promover para `develop`.
+- [ ] Obter autorizacao separada para upgrade 0.10.7 e promocao para `main`.
+
+**Plano**: `docs/planning/TASK-041-desktop-notifications.md`.
+
 ### Task 040 - Condicao de disponibilidade de uso nas prompt rules
 
 **Prioridade**: Alta

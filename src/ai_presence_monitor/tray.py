@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from dataclasses import replace
 from datetime import datetime
@@ -25,6 +26,7 @@ from .control import (
     ControlStore,
     PromptRule,
 )
+from .desktop_notifications import DesktopNotification, DesktopNotificationObserver
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .prompt_rules import (
     configure_prompt_rule,
@@ -116,6 +118,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
     control_store = ControlStore.from_config(config)
     presence_store = PresenceStore(config.db_path)
+    desktop_observer = DesktopNotificationObserver(presence_store)
 
     def load_settings(profile_id: str | None = None) -> ControlSettings:
         return control_store.load(profile_id)
@@ -663,9 +666,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     automation_action = QAction("Enable task automation (global default)", menu)
     automation_action.setCheckable(True)
     automation_action.setChecked(load_settings().task_automation_enabled)
+    notifications_action = QAction("Enable desktop notifications", menu)
+    notifications_action.setCheckable(True)
+    notifications_action.setChecked(load_settings().desktop_notifications_enabled)
     respond_action = QAction("Respond to message...", menu)
     exit_action = QAction("Exit", menu)
     menu.addAction(automation_action)
+    menu.addAction(notifications_action)
     menu.addAction(respond_action)
     menu.addSeparator()
     menu.addAction(exit_action)
@@ -674,15 +681,56 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     def show_error(title: str, error: Exception) -> None:
         QMessageBox.critical(None, title, str(error))
 
+    def show_desktop_notification(notice: DesktopNotification) -> None:
+        if not notifications_action.isChecked():
+            return
+        icons = {
+            "information": QSystemTrayIcon.MessageIcon.Information,
+            "warning": QSystemTrayIcon.MessageIcon.Warning,
+            "critical": QSystemTrayIcon.MessageIcon.Critical,
+        }
+        timeout = 6000 if notice.severity == "critical" else 4000
+        tray.showMessage(notice.title, notice.message, icons[notice.severity], timeout)
+
+    def toggle_notifications(enabled: bool) -> None:
+        try:
+            settings = replace(
+                load_settings(),
+                desktop_notifications_enabled=enabled,
+            )
+            control_store.save(settings)
+            pending = desktop_observer.acknowledge_current()
+            detail = ""
+            if enabled and pending:
+                noun = "question" if pending == 1 else "questions"
+                detail = f" {pending} pending Discord {noun} currently exist."
+            tray.showMessage(
+                "AI Presence Monitor",
+                ("Desktop notifications enabled." if enabled else "Desktop notifications disabled.")
+                + detail,
+                QSystemTrayIcon.MessageIcon.Information,
+                3500,
+            )
+        except (ControlError, OSError, ValueError, sqlite3.Error) as exc:
+            notifications_action.blockSignals(True)
+            notifications_action.setChecked(not enabled)
+            notifications_action.blockSignals(False)
+            show_error("Unable to update desktop notifications", exc)
+
     def toggle_automation(enabled: bool) -> None:
         try:
             settings = load_settings().with_control("task-automation", enabled)
             control_store.save(settings)
-            tray.showMessage(
-                "AI Presence Monitor",
-                "Task automation enabled." if enabled else "Task automation disabled.",
-                QSystemTrayIcon.MessageIcon.Information,
-                2500,
+            show_desktop_notification(
+                DesktopNotification(
+                    key="control:task-automation",
+                    title="AI Presence Monitor",
+                    message=(
+                        "Task automation enabled."
+                        if enabled
+                        else "Task automation disabled."
+                    ),
+                )
             )
         except (ControlError, OSError) as exc:
             automation_action.blockSignals(True)
@@ -738,11 +786,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             notice_key = f"profiles:{type(exc).__name__}:{exc}"
             if last_schedule_notice.get("profiles") != notice_key:
                 last_schedule_notice["profiles"] = notice_key
-                tray.showMessage(
-                    "Scheduled prompt unavailable",
-                    str(exc),
-                    QSystemTrayIcon.MessageIcon.Critical,
-                    5000,
+                show_desktop_notification(
+                    DesktopNotification(
+                        key=notice_key,
+                        title="Scheduled prompt unavailable",
+                        message=str(exc),
+                        severity="critical",
+                    )
                 )
             return
         last_schedule_notice["profiles"] = None
@@ -775,11 +825,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 notice_key = f"error:{type(exc).__name__}:{exc}"
                 if last_schedule_notice.get(notice_profile) != notice_key:
                     last_schedule_notice[notice_profile] = notice_key
-                    tray.showMessage(
-                        "Scheduled prompt unavailable",
-                        f"{notice_profile}: {exc}",
-                        QSystemTrayIcon.MessageIcon.Critical,
-                        5000,
+                    show_desktop_notification(
+                        DesktopNotification(
+                            key=notice_key,
+                            title="Scheduled prompt unavailable",
+                            message=f"{notice_profile}: {exc}",
+                            severity="critical",
+                        )
                     )
                 continue
             if result_state in {
@@ -797,32 +849,77 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 continue
             last_schedule_notice[notice_profile] = notice_state
             if result_state == "failed_or_uncertain":
-                tray.showMessage(
-                    "Scheduled prompt not confirmed",
-                    f"{notice_profile} / {result_rule_id}: the attempt failed "
-                    "or was uncertain and the rule was disabled.",
-                    QSystemTrayIcon.MessageIcon.Warning,
-                    5000,
+                show_desktop_notification(
+                    DesktopNotification(
+                        key=f"prompt:{notice_profile}:{notice_state}",
+                        title="Scheduled prompt not confirmed",
+                        message=(
+                            f"{notice_profile} / {result_rule_id}: the attempt failed "
+                            "or was uncertain and the rule was disabled."
+                        ),
+                        severity="warning",
+                    )
                 )
                 continue
-            tray.showMessage(
-                "Scheduled prompt dispatched",
-                f"{notice_profile} / {result_rule_id}: transport started. "
-                "Await later session evidence.",
-                QSystemTrayIcon.MessageIcon.Information,
-                4000,
+            show_desktop_notification(
+                DesktopNotification(
+                    key=f"prompt:{notice_profile}:{notice_state}",
+                    title="Scheduled prompt dispatched",
+                    message=(
+                        f"{notice_profile} / {result_rule_id}: transport started. "
+                        "Await later session evidence."
+                    ),
+                )
             )
 
+    def check_desktop_events() -> None:
+        if not notifications_action.isChecked():
+            return
+        try:
+            notices = desktop_observer.poll()
+        except (ControlError, OSError, ValueError, sqlite3.Error) as exc:
+            notice_key = f"desktop-observer:{type(exc).__name__}:{exc}"
+            if last_schedule_notice.get("desktop-observer") == notice_key:
+                return
+            last_schedule_notice["desktop-observer"] = notice_key
+            show_desktop_notification(
+                DesktopNotification(
+                    key=notice_key,
+                    title="Desktop notifications unavailable",
+                    message=str(exc),
+                    severity="critical",
+                )
+            )
+            return
+        last_schedule_notice["desktop-observer"] = None
+        visible = notices[:5]
+        for notice in visible:
+            show_desktop_notification(notice)
+        hidden = len(notices) - len(visible)
+        if hidden > 0:
+            show_desktop_notification(
+                DesktopNotification(
+                    key="desktop:summary",
+                    title="Additional AI Presence events",
+                    message=f"{hidden} more events were recorded in this update.",
+                )
+            )
+
+    def check_cycle() -> None:
+        check_scheduled_prompt()
+        check_desktop_events()
+
     automation_action.toggled.connect(toggle_automation)
+    notifications_action.toggled.connect(toggle_notifications)
     respond_action.triggered.connect(respond)
     exit_action.triggered.connect(app.quit)
     tray.activated.connect(activated)
     schedule_timer = QTimer(app)
     schedule_timer.setInterval(1000)
-    schedule_timer.timeout.connect(check_scheduled_prompt)
+    schedule_timer.timeout.connect(check_cycle)
     schedule_timer.start()
     tray.show()
-    QTimer.singleShot(0, check_scheduled_prompt)
+    QTimer.singleShot(0, check_cycle)
     return app.exec()
 
 

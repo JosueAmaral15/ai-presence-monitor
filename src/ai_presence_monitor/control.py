@@ -80,6 +80,7 @@ class PromptRule:
 @dataclass(frozen=True)
 class ControlSettings:
     task_automation_enabled: bool = False
+    desktop_notifications_enabled: bool = False
     native_input_enabled: bool = True
     gui_fallback_enabled: bool = False
     remote_input_enabled: bool = False
@@ -102,6 +103,7 @@ class ControlSettings:
     def from_config(cls, config: AppConfig) -> ControlSettings:
         return cls(
             task_automation_enabled=config.task_automation_enabled,
+            desktop_notifications_enabled=False,
             native_input_enabled=config.native_input_enabled,
             gui_fallback_enabled=(
                 config.gui_fallback_enabled or config.gui_answer_enabled
@@ -250,6 +252,11 @@ class ControlStore:
                 values,
                 "task_automation_enabled",
                 defaults.task_automation_enabled,
+            ),
+            desktop_notifications_enabled=_bool_value(
+                values,
+                "desktop_notifications_enabled",
+                defaults.desktop_notifications_enabled,
             ),
             native_input_enabled=_bool_value(
                 values,
@@ -619,6 +626,8 @@ def _prompt_rules_value(
 
 
 def _validate_settings(settings: ControlSettings) -> None:
+    if not isinstance(settings.desktop_notifications_enabled, bool):
+        raise ControlError("Desktop notifications control must be boolean.")
     _validate_scheduled_prompt(settings)
     _validate_prompt_rules(settings)
 

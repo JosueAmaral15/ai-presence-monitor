@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-15 - v0.10.7
+
+- Added a persistent, opt-in **Enable desktop notifications** tray action above
+  the manual response action.
+- Added deduplicated desktop notices for task lifecycle, Codex `Stop` hooks,
+  inactivity alerts, Discord question/reply states and prompt-rule outcomes.
+- Persisted event, alert and question cursors without replaying old history or
+  exposing question, answer or prompt contents in notification text.
+- Kept transport states explicitly preliminary: desktop notices do not claim
+  that Codex interpreted input without later session evidence.
+
 ## 2026-10-15 - v0.10.6
 
 - Added an opt-in per-rule Codex usage-availability condition in the system

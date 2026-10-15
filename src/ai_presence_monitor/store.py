@@ -124,6 +124,27 @@ class WorkerState:
 
 
 @dataclass(frozen=True)
+class PresenceEvent:
+    event_id: int
+    worker_id: str
+    event_type: str
+    protocol: str
+    occurred_at: float
+    message: str | None
+    task: str | None
+
+
+@dataclass(frozen=True)
+class PresenceAlert:
+    alert_id: int
+    worker_id: str
+    protocol: str
+    level: str
+    triggered_at: float
+    signal_age_seconds: float
+
+
+@dataclass(frozen=True)
 class RemoteQuestion:
     question_id: str
     worker_id: str
@@ -336,6 +357,63 @@ class PresenceStore:
         with self.session() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._row_to_worker(row) for row in rows]
+
+    def latest_event_id(self) -> int:
+        with self.session() as conn:
+            row = conn.execute("SELECT COALESCE(MAX(id), 0) AS id FROM events").fetchone()
+        return int(row["id"])
+
+    def list_events_after(
+        self,
+        event_id: int,
+        *,
+        limit: int = 100,
+    ) -> list[PresenceEvent]:
+        if event_id < 0:
+            raise ValueError("Event cursor cannot be negative.")
+        if limit <= 0:
+            return []
+        with self.session() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, worker_id, event_type, protocol, occurred_at, message, task
+                FROM events
+                WHERE id > ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (event_id, limit),
+            ).fetchall()
+        return [self._row_to_event(row) for row in rows]
+
+    def latest_alert_id(self) -> int:
+        with self.session() as conn:
+            row = conn.execute("SELECT COALESCE(MAX(id), 0) AS id FROM alerts").fetchone()
+        return int(row["id"])
+
+    def list_alerts_after(
+        self,
+        alert_id: int,
+        *,
+        limit: int = 100,
+    ) -> list[PresenceAlert]:
+        if alert_id < 0:
+            raise ValueError("Alert cursor cannot be negative.")
+        if limit <= 0:
+            return []
+        with self.session() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, worker_id, protocol, level, triggered_at,
+                       signal_age_seconds
+                FROM alerts
+                WHERE id > ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (alert_id, limit),
+            ).fetchall()
+        return [self._row_to_alert(row) for row in rows]
 
     def latest_codex_session_id(self, worker_id: str) -> str | None:
         sessions = self.list_codex_sessions(worker_id=worker_id, limit=1)
@@ -934,6 +1012,29 @@ class PresenceStore:
             last_alert_level=row["last_alert_level"],
             last_alert_at=row["last_alert_at"],
             updated_at=row["updated_at"],
+        )
+
+    @staticmethod
+    def _row_to_event(row: sqlite3.Row) -> PresenceEvent:
+        return PresenceEvent(
+            event_id=row["id"],
+            worker_id=row["worker_id"],
+            event_type=row["event_type"],
+            protocol=row["protocol"],
+            occurred_at=row["occurred_at"],
+            message=row["message"],
+            task=row["task"],
+        )
+
+    @staticmethod
+    def _row_to_alert(row: sqlite3.Row) -> PresenceAlert:
+        return PresenceAlert(
+            alert_id=row["id"],
+            worker_id=row["worker_id"],
+            protocol=row["protocol"],
+            level=row["level"],
+            triggered_at=row["triggered_at"],
+            signal_age_seconds=row["signal_age_seconds"],
         )
 
     @staticmethod

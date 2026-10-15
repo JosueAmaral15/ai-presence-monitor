@@ -127,15 +127,46 @@ Nao use uma unidade systemd sem acesso ao barramento grafico.
 
 ## Menu da Bandeja
 
-O menu de contexto possui os tres comandos solicitados:
+O menu de contexto possui quatro comandos:
 
 - **Enable task automation (global default)**: habilita ou desabilita o default
   herdado por novos perfis; preferencias de um worker sao alteradas no dialogo;
+- **Enable desktop notifications**: habilita notificacoes locais deduplicadas;
 - **Respond to message...**: abre o compositor e permite escolher este
   computador ou o computador cliente;
 - **Exit**: remove o icone e encerra a bandeja.
 
 Um clique simples no icone abre as preferencias.
+
+### Notificacoes do desktop
+
+O checkbox de notificacoes e global, fica acima de **Respond to message...** e
+e salvo em `control.json`. Ele inicia desabilitado em configuracoes antigas.
+Ao desabilitar ou reabilitar, a bandeja avanca os cursores para o estado atual;
+eventos produzidos durante o periodo desabilitado nao sao despejados depois.
+Ao reabilitar, o aviso informa quantas perguntas Discord ainda estao pendentes.
+
+Com o recurso ativo, a bandeja observa:
+
+- `start` e `finish` registrados por AI-workers;
+- hook `Stop` do Codex, descrito como fim de turno observado;
+- alertas amarelo, laranja e vermelho persistidos pelo monitor;
+- pergunta Discord pendente, resposta autorizada, transporte de entrada,
+  evidencia posterior da sessao, falha de despacho, falha de publicacao e
+  expiracao;
+- disparo ou falha/incerteza de uma prompt rule.
+
+IDs de eventos e alertas e o ultimo estado de cada pergunta ficam em
+`observer_state`, portanto reiniciar a bandeja nao repete avisos consumidos. No
+maximo cinco avisos detalhados sao mostrados por ciclo; os demais viram um
+resumo. O texto nao inclui prompt, pergunta nem resposta.
+
+`dispatch_started` e `input_emitted` continuam sendo estados de transporte. O
+aviso correspondente exige evidencia posterior para falar em atividade e nunca
+afirma que a IA interpretou a mensagem. Atualmente respostas de IA sao
+observadas diretamente apenas no Codex, pelo hook `Stop`. Outras plataformas
+precisam de um adapter que grave eventos confiaveis no monitor; a bandeja nao
+inspeciona arbitrariamente o conteudo de janelas.
 
 ## Preferencias e Checkboxes
 
