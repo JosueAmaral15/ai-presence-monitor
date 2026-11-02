@@ -5,6 +5,8 @@
 - Kept PySide6 as an optional tray dependency while allowing clean
   development-only environments to type-check the delayed Qt imports.
 - Preserved strict missing-import checks for every non-Qt module.
+- Declared the setuptools build backend in the development extra so
+  no-isolation package builds do not depend on runner-specific venv contents.
 
 ## 2026-11-02 - v0.11.2
 

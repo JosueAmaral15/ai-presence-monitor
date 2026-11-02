@@ -7,12 +7,19 @@ combinations. Tests, aggregate coverage and Ruff passed, but mypy failed because
 the CI intentionally installs `.[dev]` without the optional `tray` extra and
 therefore cannot resolve `PySide6.*` imports.
 
+After correcting that boundary, Python 3.10 and 3.11 passed. Python 3.12 then
+exposed a separate packaging assumption: a no-isolation build requires the
+declared setuptools backend to exist in the development environment, while a
+fresh 3.12 venv no longer supplies it incidentally.
+
 ## Decision
 
 Keep PySide6 optional. Configure mypy to tolerate missing implementations only
 for `PySide6.*`, whose imports are delayed until the tray starts and whose
 absence already produces a dedicated runtime error. Do not weaken missing-import
 validation globally and do not make every headless CI job download Qt.
+Declare the existing `setuptools>=68` build backend in the development extra so
+the no-isolation build is reproducible on every supported Python version.
 
 ## Validation
 

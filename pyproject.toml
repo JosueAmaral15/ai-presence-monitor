@@ -28,6 +28,7 @@ dev = [
     "coverage>=7.6",
     "mypy>=1.11",
     "ruff>=0.8",
+    "setuptools>=68",
 ]
 tray = [
     "PySide6>=6.7",
