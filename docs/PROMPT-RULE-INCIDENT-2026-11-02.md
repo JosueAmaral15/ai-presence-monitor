@@ -50,3 +50,9 @@ Enquanto isso, desmarcar **Require available Codex usage** permite que uma regra
 puramente temporal seja avaliada pela bandeja, mas reduz a protecao contra
 tentativas durante indisponibilidade de tokens. Isso e uma escolha do usuario,
 nao a correcao definitiva.
+
+O primeiro dry-run do upgrade tambem revelou um bloqueador separado: o
+preflight do candidato comparava o schema 1 com as tabelas finais do schema 2 e
+rejeitava a migracao antes de inicia-la. O contrato agora declara as tabelas
+minimas por versao; schema 1 integro e aceito, enquanto schema 1 corrompido
+continua rejeitado.

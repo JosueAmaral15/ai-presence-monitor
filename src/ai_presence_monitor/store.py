@@ -38,6 +38,10 @@ REQUIRED_TABLES = frozenset(
         "diagnostic_recoveries",
     }
 )
+REQUIRED_TABLES_BY_SCHEMA = {
+    1: REQUIRED_TABLES - {"agent_conversations", "agent_messages"},
+    2: REQUIRED_TABLES,
+}
 
 
 @dataclass(frozen=True)
@@ -440,7 +444,9 @@ class PresenceStore:
 
     def latest_event_id(self) -> int:
         with self.session() as conn:
-            row = conn.execute("SELECT COALESCE(MAX(id), 0) AS id FROM events").fetchone()
+            row = conn.execute(
+                "SELECT COALESCE(MAX(id), 0) AS id FROM events"
+            ).fetchone()
         return int(row["id"])
 
     def list_events_after(
@@ -468,7 +474,9 @@ class PresenceStore:
 
     def latest_alert_id(self) -> int:
         with self.session() as conn:
-            row = conn.execute("SELECT COALESCE(MAX(id), 0) AS id FROM alerts").fetchone()
+            row = conn.execute(
+                "SELECT COALESCE(MAX(id), 0) AS id FROM alerts"
+            ).fetchone()
         return int(row["id"])
 
     def list_alerts_after(
@@ -883,7 +891,9 @@ class PresenceStore:
                 params,
             )
         if cursor.rowcount != 1:
-            raise ValueError(f"Estado da pergunta nao permite a operacao: {question_id}")
+            raise ValueError(
+                f"Estado da pergunta nao permite a operacao: {question_id}"
+            )
         return self.require_question(question_id)
 
     def record_question_answer(
@@ -1164,7 +1174,9 @@ class PresenceStore:
                 (timestamp, timestamp, conversation_id),
             )
         if cursor.rowcount != 1:
-            raise ValueError(f"Conversa nao encontrada ou ja arquivada: {conversation_id}")
+            raise ValueError(
+                f"Conversa nao encontrada ou ja arquivada: {conversation_id}"
+            )
         conversation = self.get_conversation(conversation_id)
         assert conversation is not None
         return conversation

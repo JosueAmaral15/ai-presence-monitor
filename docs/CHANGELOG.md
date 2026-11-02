@@ -17,6 +17,9 @@
 - Documented the 2026-11-02 missed-dispatch incident: the installed 0.10.7
   runtime had no prompt-rule observer, so the enabled rule correctly remained
   fail-closed in `waiting_for_usage` without starting transport.
+- Fixed transactional preflight to validate the minimum tables for the
+  database's current schema version, allowing a healthy schema-1 database to
+  migrate to schema 2 while still rejecting corruption.
 
 ## 2026-11-02 - v0.10.8
 

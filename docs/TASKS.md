@@ -14,6 +14,8 @@ vencida, tentativa de transporte e confirmacao do Codex.
 - [x] Reproduzir o estado em HOME, banco e controles isolados.
 - [x] Identificar a causa na configuracao, ownership, scheduler ou transporte.
 - [x] Implementar a menor correcao e teste de regressao correspondente.
+- [x] Corrigir o preflight transacional para aceitar schema 1 integro e
+      continuar rejeitando schema 1 corrompido.
 - [ ] Validar quality gate, matriz Python e pacote instalado.
 - [ ] Executar E2E exato autorizado e registrar a evidencia.
 

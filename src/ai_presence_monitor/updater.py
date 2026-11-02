@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable
 
 from .config import AppConfig, user_state_dir
-from .store import SCHEMA_VERSION, inspect_schema
+from .store import REQUIRED_TABLES_BY_SCHEMA, SCHEMA_VERSION, inspect_schema
 
 MANIFEST_VERSION = 1
 MANAGED_SERVICES = (
@@ -211,12 +211,17 @@ def rollback_upgrade(
         raise UpgradeError("Only a completed upgrade can be rolled back manually.")
     from_version = _manifest_string(manifest, "from_version")
     to_version = _manifest_string(manifest, "to_version")
-    rollback_wheel = _manifest_artifact(manifest_file.parent, manifest, "rollback_wheel")
+    rollback_wheel = _manifest_artifact(
+        manifest_file.parent, manifest, "rollback_wheel"
+    )
     target_wheel = _manifest_artifact(manifest_file.parent, manifest, "target_wheel")
     database_backup = _manifest_artifact(manifest_file.parent, manifest, "database")
     database_entry = manifest.get("database")
     assert isinstance(database_entry, dict)
-    if Path(_manifest_string(database_entry, "path")).resolve() != config.db_path.resolve():
+    if (
+        Path(_manifest_string(database_entry, "path")).resolve()
+        != config.db_path.resolve()
+    ):
         raise UpgradeError("Manifest database does not match the configured database.")
     active_services = _manifest_services(manifest)
     python = python_executable or sys.executable
@@ -333,7 +338,9 @@ def read_wheel_version(path: Path) -> str:
     return version
 
 
-def installed_version(python_executable: str, *, runner: Runner = subprocess.run) -> str:
+def installed_version(
+    python_executable: str, *, runner: Runner = subprocess.run
+) -> str:
     result = _run_checked(
         [
             python_executable,
@@ -367,7 +374,13 @@ def _validate_database_preflight(path: Path) -> None:
         raise UpgradeError("Database preflight failed.")
     if schema.current_version is not None and schema.current_version > SCHEMA_VERSION:
         raise UpgradeError("Database schema is newer than this updater.")
-    if schema.missing_tables:
+    current_version = schema.current_version
+    if current_version is None:
+        raise UpgradeError("Database schema version is unavailable.")
+    required_tables = REQUIRED_TABLES_BY_SCHEMA.get(current_version)
+    if required_tables is None:
+        raise UpgradeError("Database schema version has no supported migration path.")
+    if required_tables.intersection(schema.missing_tables):
         raise UpgradeError("Database preflight found missing required tables.")
 
 
@@ -464,7 +477,10 @@ def _load_manifest(path: Path) -> dict[str, object]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise UpgradeError("Upgrade manifest is unreadable.") from exc
-    if not isinstance(payload, dict) or payload.get("manifest_version") != MANIFEST_VERSION:
+    if (
+        not isinstance(payload, dict)
+        or payload.get("manifest_version") != MANIFEST_VERSION
+    ):
         raise UpgradeError("Upgrade manifest version is unsupported.")
     return payload
 

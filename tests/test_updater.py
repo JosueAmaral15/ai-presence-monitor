@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import subprocess
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ from ai_presence_monitor.store import PresenceStore
 from ai_presence_monitor.updater import (
     MANAGED_SERVICES,
     UpgradeError,
+    _validate_database_preflight,
     read_wheel_version,
     rollback_upgrade,
     upgrade_from_wheel,
@@ -21,11 +23,7 @@ from ai_presence_monitor.updater import (
 
 def make_wheel(root: Path, version: str) -> Path:
     path = root / f"ai_presence_monitor-{version}-py3-none-any.whl"
-    metadata = (
-        "Metadata-Version: 2.1\n"
-        "Name: ai-presence-monitor\n"
-        f"Version: {version}\n"
-    )
+    metadata = f"Metadata-Version: 2.1\nName: ai-presence-monitor\nVersion: {version}\n"
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(
             f"ai_presence_monitor-{version}.dist-info/METADATA",
@@ -62,7 +60,9 @@ class FakeRuntime:
         if command[:3] == ["systemctl", "--user", "is-active"]:
             unit = command[3]
             active = unit in self.active_services
-            return self._completed(command, 0 if active else 3, "active\n" if active else "inactive\n")
+            return self._completed(
+                command, 0 if active else 3, "active\n" if active else "inactive\n"
+            )
         if command[:3] == ["systemctl", "--user", "stop"]:
             unit = command[3]
             if unit == self.fail_stop_unit:
@@ -88,11 +88,18 @@ class FakeRuntime:
                     "name": name,
                     "status": (
                         "error"
-                        if self.version == self.fail_doctor_version and name == "database"
+                        if self.version == self.fail_doctor_version
+                        and name == "database"
                         else "ok"
                     ),
                 }
-                for name in ("runtime", "platform", "environment", "database", "controls")
+                for name in (
+                    "runtime",
+                    "platform",
+                    "environment",
+                    "database",
+                    "controls",
+                )
             ]
             if self.host_doctor_error:
                 checks.append(
@@ -101,11 +108,15 @@ class FakeRuntime:
                         "status": "error",
                     }
                 )
-            status = "error" if any(check["status"] == "error" for check in checks) else "ok"
+            status = (
+                "error" if any(check["status"] == "error" for check in checks) else "ok"
+            )
             return self._completed(
                 command,
                 2 if status == "error" else 0,
-                json.dumps({"version": self.version, "status": status, "checks": checks}),
+                json.dumps(
+                    {"version": self.version, "status": status, "checks": checks}
+                ),
             )
         raise AssertionError(f"Unexpected command: {command}")
 
@@ -119,6 +130,30 @@ class FakeRuntime:
 
 
 class TransactionalUpgradeTests(unittest.TestCase):
+    def test_database_preflight_accepts_intact_schema_one_for_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "presence.db"
+            PresenceStore(db_path)
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("DROP TABLE agent_messages")
+                conn.execute("DROP TABLE agent_conversations")
+                conn.execute("PRAGMA user_version = 1")
+
+            _validate_database_preflight(db_path)
+
+    def test_database_preflight_rejects_corrupted_schema_one(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "presence.db"
+            PresenceStore(db_path)
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("DROP TABLE agent_messages")
+                conn.execute("DROP TABLE agent_conversations")
+                conn.execute("DROP TABLE workers")
+                conn.execute("PRAGMA user_version = 1")
+
+            with self.assertRaisesRegex(UpgradeError, "missing required tables"):
+                _validate_database_preflight(db_path)
+
     def test_dry_run_validates_inputs_without_creating_backup(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -146,7 +181,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertFalse(backup_root.exists())
             self.assertFalse(any("install" in command for command in runtime.commands))
 
-    def test_success_creates_private_manifest_and_restarts_active_services(self) -> None:
+    def test_success_creates_private_manifest_and_restarts_active_services(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = make_config(root)
@@ -200,7 +237,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertEqual(runtime.version, "0.9.0")
 
-    def test_backup_filesystem_failure_is_reported_without_package_install(self) -> None:
+    def test_backup_filesystem_failure_is_reported_without_package_install(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = make_config(root)
@@ -211,7 +250,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             blocked_root.write_text("blocked", encoding="utf-8")
             runtime = FakeRuntime()
 
-            with self.assertRaisesRegex(UpgradeError, "Backup directory creation failed"):
+            with self.assertRaisesRegex(
+                UpgradeError, "Backup directory creation failed"
+            ):
                 upgrade_from_wheel(
                     config=config,
                     target_wheel=target,
@@ -223,7 +264,12 @@ class TransactionalUpgradeTests(unittest.TestCase):
                 )
 
             self.assertEqual(runtime.version, "0.8.0")
-            self.assertFalse(any(command[1:4] == ("-m", "pip", "install") for command in runtime.commands))
+            self.assertFalse(
+                any(
+                    command[1:4] == ("-m", "pip", "install")
+                    for command in runtime.commands
+                )
+            )
 
     def test_failed_postflight_rolls_back_package_database_and_services(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -252,7 +298,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "rolled_back_after_failure")
             self.assertEqual(runtime.version, "0.8.0")
             self.assertEqual(runtime.active_services, set(MANAGED_SERVICES))
-            self.assertEqual(PresenceStore(config.db_path).get_observer_state("upgrade"), "before")
+            self.assertEqual(
+                PresenceStore(config.db_path).get_observer_state("upgrade"), "before"
+            )
 
     def test_partial_service_stop_is_reversed_before_any_install(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -280,7 +328,12 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "aborted_before_install")
             self.assertEqual(runtime.active_services, set(MANAGED_SERVICES))
             self.assertEqual(runtime.version, "0.8.0")
-            self.assertFalse(any(command[1:4] == ("-m", "pip", "install") for command in runtime.commands))
+            self.assertFalse(
+                any(
+                    command[1:4] == ("-m", "pip", "install")
+                    for command in runtime.commands
+                )
+            )
 
     def test_partial_service_start_is_stopped_before_automatic_rollback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -304,7 +357,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
                 )
 
             first_service = MANAGED_SERVICES[0]
-            first_start = runtime.commands.index(("systemctl", "--user", "start", first_service))
+            first_start = runtime.commands.index(
+                ("systemctl", "--user", "start", first_service)
+            )
             later_stop = runtime.commands.index(
                 ("systemctl", "--user", "stop", first_service),
                 first_start,
@@ -353,7 +408,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             self.assertEqual(result.status, "manually_rolled_back")
             self.assertEqual(runtime.version, "0.8.0")
             self.assertEqual(runtime.active_services, set(MANAGED_SERVICES))
-            self.assertEqual(PresenceStore(config.db_path).get_observer_state("upgrade"), "before")
+            self.assertEqual(
+                PresenceStore(config.db_path).get_observer_state("upgrade"), "before"
+            )
 
     def test_authorization_and_manifest_checksum_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -387,7 +444,9 @@ class TransactionalUpgradeTests(unittest.TestCase):
             )
             assert upgraded.manifest_path is not None
             manifest = json.loads(upgraded.manifest_path.read_text(encoding="utf-8"))
-            rollback_copy = upgraded.manifest_path.parent / manifest["rollback_wheel"]["filename"]
+            rollback_copy = (
+                upgraded.manifest_path.parent / manifest["rollback_wheel"]["filename"]
+            )
             rollback_copy.write_bytes(rollback_copy.read_bytes() + b"tampered")
 
             with self.assertRaisesRegex(UpgradeError, "checksum failed"):
