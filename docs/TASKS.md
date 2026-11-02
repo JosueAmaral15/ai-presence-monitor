@@ -2,6 +2,25 @@
 
 ## Em andamento
 
+### Task 047 - Prompt rule nao despachou apos 52 minutos
+
+**Prioridade**: Critica
+**Status**: causa identificada; correcao em validacao para upgrade
+**Objetivo**: reproduzir e corrigir a regra configurada perto de 10:00 com
+atraso de 52 minutos que nao forneceu prompt ate 13:03, sem confundir regra
+vencida, tentativa de transporte e confirmacao do Codex.
+
+- [x] Inspecionar metadados sanitizados da regra, runtime, servico e logs.
+- [x] Reproduzir o estado em HOME, banco e controles isolados.
+- [x] Identificar a causa na configuracao, ownership, scheduler ou transporte.
+- [x] Implementar a menor correcao e teste de regressao correspondente.
+- [ ] Validar quality gate, matriz Python e pacote instalado.
+- [ ] Executar E2E exato autorizado e registrar a evidencia.
+
+**Plano**: `docs/planning/TASK-047-prompt-rule-missed-dispatch.md`.
+
+**Diagnostico**: `docs/PROMPT-RULE-INCIDENT-2026-11-02.md`.
+
 ### Task 046 - Integracao e release do chat e da retomada automatica
 
 **Prioridade**: Critica

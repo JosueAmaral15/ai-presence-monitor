@@ -12,6 +12,11 @@
   local transcript without treating hooks as message content.
 - Added project-scoped agent publication, conversation/message listing,
   redacted JSON export and non-destructive archiving commands.
+- Added a 52-minute usage-gated prompt-rule regression covering an idle worker,
+  tray/observer ownership and exactly one dispatch after usage recovery.
+- Documented the 2026-11-02 missed-dispatch incident: the installed 0.10.7
+  runtime had no prompt-rule observer, so the enabled rule correctly remained
+  fail-closed in `waiting_for_usage` without starting transport.
 
 ## 2026-11-02 - v0.10.8
 
