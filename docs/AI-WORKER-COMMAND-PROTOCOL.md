@@ -263,6 +263,29 @@ mouse ou teclado. Se `--thread` for omitido, zero ou mais de uma sessao recente
 do mesmo worker causa falha fechada. `store` e GUI sao alternativas explicitas;
 falha nativa nunca autoriza fallback nem retry.
 
+Quando uma resposta ou resultado do agente deve aparecer no historico local da
+bandeja, publique-a explicitamente a partir do proprio projeto:
+
+```bash
+ai-presence publish-agent-message \
+  --project "$PROJECT" \
+  --session SESSAO_EXATA \
+  --text "Resposta ou resultado objetivo para o usuario"
+```
+
+`$PROJECT` precisa ser o caminho absoluto do diretorio corrente e `start` deve
+ter criado o worker. O comando nao aceita perfil arbitrario, nao infere texto a
+partir de hooks e nao envia a mensagem automaticamente ao Discord. Perguntas de
+`ask-user` e respostas Discord correlacionadas aparecem no mesmo transcript.
+
+Para consultar o proprio historico:
+
+```bash
+ai-presence conversations --project "$PROJECT" --session SESSAO_EXATA
+ai-presence messages --project "$PROJECT" --session SESSAO_EXATA \
+  --conversation ID_DA_CONVERSA
+```
+
 ### 4. Continuidade
 
 `continue` envia entrada a uma sessao Codex. Por padrao, usa `codex queue` sem

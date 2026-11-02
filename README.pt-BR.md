@@ -334,6 +334,15 @@ No Protocolo 1, `last_signal_at` nao e alterado; o heartbeat publico continua
 obrigatorio. Agendamento, `dry-run`, falha GUI e worker inativo nao contam como
 atividade.
 
+A opcao **Agent chat...** da bandeja oferece uma conversa local por worker,
+agente e sessao Codex exata. Mensagens humanas sao persistidas antes da fila
+nativa e um hook posterior da sessao pode confirmar a entrega. Respostas
+explicitas do agente entram pelo comando `publish-agent-message`; perguntas e
+respostas Discord correlacionadas sao projetadas sem duplicacao. Hooks comuns
+nunca sao convertidos em texto de mensagem. O historico permanece no SQLite
+local privado ate arquivamento explicito e pode ser exportado em JSON com
+redacao opcional do conteudo.
+
 A bandeja oferece regras persistentes de prompt por projeto/agente. O usuario
 pode adicionar varias regras e configurar, em cada uma, sessao exata, gatilho,
 atraso, texto, repeticao, intervalo e quantidade maxima de envios. O gatilho

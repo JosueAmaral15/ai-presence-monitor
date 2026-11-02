@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-02 - v0.11.0
+
+- Added persistent local conversations scoped by exact worker, agent and Codex
+  session, with append-only messages and schema-2 migration.
+- Replaced the one-shot tray response form with an incrementally refreshed
+  transcript, bounded history loading and a persistent composer.
+- Persisted human messages before native dispatch and confirmed them only from
+  later exact-session hooks.
+- Projected correlated Discord questions and answers idempotently into the
+  local transcript without treating hooks as message content.
+- Added project-scoped agent publication, conversation/message listing,
+  redacted JSON export and non-destructive archiving commands.
+
 ## 2026-11-02 - v0.10.8
 
 - Added a durable prompt-rule observer that waits for fresh Codex usage

@@ -18,7 +18,7 @@ CODEX_SESSION_PATTERN = re.compile(
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=$|[ |])"
 )
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 SQLITE_BUSY_TIMEOUT_MS = int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
 REQUIRED_TABLES = frozenset(
@@ -27,6 +27,8 @@ REQUIRED_TABLES = frozenset(
         "events",
         "alerts",
         "remote_questions",
+        "agent_conversations",
+        "agent_messages",
         "observer_state",
         "diagnostic_evidence",
         "diagnostic_diagnoses",
@@ -180,6 +182,34 @@ class CodexSessionRef:
     observed_at: float
 
 
+@dataclass(frozen=True)
+class AgentConversation:
+    conversation_id: str
+    worker_id: str
+    agent_name: str
+    session_id: str
+    title: str | None
+    created_at: float
+    updated_at: float
+    archived_at: float | None
+
+
+@dataclass(frozen=True)
+class AgentMessage:
+    message_id: str
+    conversation_id: str
+    role: str
+    direction: str
+    transport: str
+    content: str
+    state: str
+    correlation_kind: str | None
+    correlation_id: str | None
+    error_code: str | None
+    created_at: float
+    updated_at: float
+
+
 class PresenceStore:
     def __init__(self, db_path: Path):
         self.db_path = db_path
@@ -192,6 +222,7 @@ class PresenceStore:
             timeout=SQLITE_BUSY_TIMEOUT_SECONDS,
         )
         conn.execute(f"PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}")
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -325,6 +356,55 @@ class PresenceStore:
                 """
                 CREATE INDEX IF NOT EXISTS idx_remote_questions_status
                 ON remote_questions(status, created_at)
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS agent_conversations (
+                    conversation_id TEXT PRIMARY KEY,
+                    worker_id TEXT NOT NULL,
+                    agent_name TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    title TEXT,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    archived_at REAL,
+                    UNIQUE (worker_id, agent_name, session_id)
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_agent_conversations_worker_time
+                ON agent_conversations(worker_id, updated_at DESC)
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS agent_messages (
+                    message_id TEXT PRIMARY KEY,
+                    conversation_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    direction TEXT NOT NULL,
+                    transport TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    correlation_kind TEXT,
+                    correlation_id TEXT,
+                    error_code TEXT,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    FOREIGN KEY (conversation_id)
+                        REFERENCES agent_conversations(conversation_id)
+                        ON DELETE RESTRICT,
+                    UNIQUE (correlation_kind, correlation_id)
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_agent_messages_conversation_time
+                ON agent_messages(conversation_id, created_at DESC, message_id DESC)
                 """
             )
             conn.execute(
@@ -922,7 +1002,31 @@ class PresenceStore:
                     session_id,
                 ),
             )
-        return cursor.rowcount
+            message_cursor = conn.execute(
+                """
+                UPDATE agent_messages
+                SET state = 'delivery_confirmed', updated_at = ?
+                WHERE message_id IN (
+                    SELECT message.message_id
+                    FROM agent_messages AS message
+                    JOIN agent_conversations AS conversation
+                      ON conversation.conversation_id = message.conversation_id
+                    WHERE conversation.worker_id = ?
+                      AND conversation.session_id = ?
+                      AND message.state IN ('dispatch_started', 'input_emitted')
+                      AND message.updated_at <= ?
+                      AND message.updated_at >= ?
+                )
+                """,
+                (
+                    observed_at,
+                    worker_id,
+                    session_id,
+                    observed_at,
+                    observed_at - timeout_seconds,
+                ),
+            )
+        return cursor.rowcount + message_cursor.rowcount
 
     def expire_questions(self, now: float | None = None) -> int:
         checked_at = time.time() if now is None else now
@@ -955,19 +1059,229 @@ class PresenceStore:
         self,
         *,
         status: str | None = None,
+        worker_id: str | None = None,
         limit: int = 50,
     ) -> list[RemoteQuestion]:
         query = "SELECT * FROM remote_questions"
-        params: tuple[object, ...]
+        filters: list[str] = []
+        params: list[object] = []
         if status:
-            query += " WHERE status = ?"
-            params = (status, limit)
-        else:
-            params = (limit,)
+            filters.append("status = ?")
+            params.append(status)
+        if worker_id:
+            filters.append("worker_id = ?")
+            params.append(worker_id)
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
         query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
         with self.session() as conn:
-            rows = conn.execute(query, params).fetchall()
+            rows = conn.execute(query, tuple(params)).fetchall()
         return [self._row_to_question(row) for row in rows]
+
+    def get_or_create_conversation(
+        self,
+        *,
+        worker_id: str,
+        agent_name: str,
+        session_id: str,
+        title: str | None = None,
+        now: float | None = None,
+    ) -> AgentConversation:
+        timestamp = time.time() if now is None else now
+        conversation_id = uuid.uuid4().hex
+        with self.session() as conn:
+            conn.execute(
+                """
+                INSERT INTO agent_conversations (
+                    conversation_id, worker_id, agent_name, session_id, title,
+                    created_at, updated_at, archived_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+                ON CONFLICT(worker_id, agent_name, session_id) DO UPDATE SET
+                    title = COALESCE(agent_conversations.title, excluded.title)
+                """,
+                (
+                    conversation_id,
+                    worker_id,
+                    agent_name,
+                    session_id,
+                    title,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            row = conn.execute(
+                """
+                SELECT * FROM agent_conversations
+                WHERE worker_id = ? AND agent_name = ? AND session_id = ?
+                """,
+                (worker_id, agent_name, session_id),
+            ).fetchone()
+        assert row is not None
+        return self._row_to_conversation(row)
+
+    def get_conversation(self, conversation_id: str) -> AgentConversation | None:
+        with self.session() as conn:
+            row = conn.execute(
+                "SELECT * FROM agent_conversations WHERE conversation_id = ?",
+                (conversation_id,),
+            ).fetchone()
+        return self._row_to_conversation(row) if row else None
+
+    def list_conversations(
+        self,
+        *,
+        worker_id: str,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[AgentConversation]:
+        with self.session() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM agent_conversations
+                WHERE worker_id = ? AND archived_at IS NULL
+                ORDER BY updated_at DESC, conversation_id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (worker_id, limit, offset),
+            ).fetchall()
+        return [self._row_to_conversation(row) for row in rows]
+
+    def archive_conversation(
+        self,
+        conversation_id: str,
+        *,
+        now: float | None = None,
+    ) -> AgentConversation:
+        timestamp = time.time() if now is None else now
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE agent_conversations
+                SET archived_at = ?, updated_at = ?
+                WHERE conversation_id = ? AND archived_at IS NULL
+                """,
+                (timestamp, timestamp, conversation_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError(f"Conversa nao encontrada ou ja arquivada: {conversation_id}")
+        conversation = self.get_conversation(conversation_id)
+        assert conversation is not None
+        return conversation
+
+    def append_agent_message(
+        self,
+        *,
+        conversation_id: str,
+        role: str,
+        direction: str,
+        transport: str,
+        content: str,
+        state: str,
+        correlation_kind: str | None = None,
+        correlation_id: str | None = None,
+        error_code: str | None = None,
+        now: float | None = None,
+    ) -> AgentMessage:
+        timestamp = time.time() if now is None else now
+        message_id = uuid.uuid4().hex
+        with self.session() as conn:
+            conn.execute(
+                """
+                INSERT INTO agent_messages (
+                    message_id, conversation_id, role, direction, transport,
+                    content, state, correlation_kind, correlation_id,
+                    error_code, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(correlation_kind, correlation_id) DO NOTHING
+                """,
+                (
+                    message_id,
+                    conversation_id,
+                    role,
+                    direction,
+                    transport,
+                    content,
+                    state,
+                    correlation_kind,
+                    correlation_id,
+                    error_code,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+            if correlation_kind is not None and correlation_id is not None:
+                row = conn.execute(
+                    """
+                    SELECT * FROM agent_messages
+                    WHERE correlation_kind = ? AND correlation_id = ?
+                    """,
+                    (correlation_kind, correlation_id),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT * FROM agent_messages WHERE message_id = ?",
+                    (message_id,),
+                ).fetchone()
+            conn.execute(
+                """
+                UPDATE agent_conversations SET updated_at = ?
+                WHERE conversation_id = ?
+                """,
+                (timestamp, conversation_id),
+            )
+        assert row is not None
+        return self._row_to_agent_message(row)
+
+    def update_agent_message_state(
+        self,
+        message_id: str,
+        *,
+        state: str,
+        error_code: str | None = None,
+        now: float | None = None,
+    ) -> AgentMessage:
+        timestamp = time.time() if now is None else now
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE agent_messages
+                SET state = ?, error_code = ?, updated_at = ?
+                WHERE message_id = ?
+                """,
+                (state, error_code, timestamp, message_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError(f"Mensagem nao encontrada: {message_id}")
+        message = self.get_agent_message(message_id)
+        assert message is not None
+        return message
+
+    def get_agent_message(self, message_id: str) -> AgentMessage | None:
+        with self.session() as conn:
+            row = conn.execute(
+                "SELECT * FROM agent_messages WHERE message_id = ?",
+                (message_id,),
+            ).fetchone()
+        return self._row_to_agent_message(row) if row else None
+
+    def list_agent_messages(
+        self,
+        *,
+        conversation_id: str,
+        limit: int = 50,
+        before: tuple[float, str] | None = None,
+    ) -> list[AgentMessage]:
+        query = "SELECT * FROM agent_messages WHERE conversation_id = ?"
+        params: list[object] = [conversation_id]
+        if before is not None:
+            query += " AND (created_at < ? OR (created_at = ? AND message_id < ?))"
+            params.extend((before[0], before[0], before[1]))
+        query += " ORDER BY created_at DESC, message_id DESC LIMIT ?"
+        params.append(limit)
+        with self.session() as conn:
+            rows = conn.execute(query, tuple(params)).fetchall()
+        return [self._row_to_agent_message(row) for row in reversed(rows)]
 
     def get_observer_state(self, key: str) -> str | None:
         with self.session() as conn:
@@ -1063,5 +1377,35 @@ class PresenceStore:
             input_emitted_at=row["input_emitted_at"],
             delivery_confirmed_at=row["delivery_confirmed_at"],
             last_error=row["last_error"],
+            updated_at=row["updated_at"],
+        )
+
+    @staticmethod
+    def _row_to_conversation(row: sqlite3.Row) -> AgentConversation:
+        return AgentConversation(
+            conversation_id=row["conversation_id"],
+            worker_id=row["worker_id"],
+            agent_name=row["agent_name"],
+            session_id=row["session_id"],
+            title=row["title"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            archived_at=row["archived_at"],
+        )
+
+    @staticmethod
+    def _row_to_agent_message(row: sqlite3.Row) -> AgentMessage:
+        return AgentMessage(
+            message_id=row["message_id"],
+            conversation_id=row["conversation_id"],
+            role=row["role"],
+            direction=row["direction"],
+            transport=row["transport"],
+            content=row["content"],
+            state=row["state"],
+            correlation_kind=row["correlation_kind"],
+            correlation_id=row["correlation_id"],
+            error_code=row["error_code"],
+            created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

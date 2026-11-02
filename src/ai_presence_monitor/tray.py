@@ -7,6 +7,7 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Any
 
+from .agent_chat import AgentChatError, project_remote_questions, send_human_message
 from .codex_input import (
     CodexInputError,
     CodexInputResult,
@@ -66,6 +67,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     config: AppConfig,
     *,
     check_only: bool = False,
+    chat_check_only: bool = False,
 ) -> int:
     ensure_runtime_enabled(
         experimental_windows_enabled=config.experimental_windows_enabled,
@@ -84,9 +86,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             QHBoxLayout,
             QLabel,
             QLineEdit,
+            QListWidget,
+            QListWidgetItem,
             QMenu,
             QMessageBox,
             QPlainTextEdit,
+            QPushButton,
             QScrollArea,
             QSpinBox,
             QSystemTrayIcon,
@@ -135,9 +140,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         combo = QComboBox()
         combo.addItem("Global defaults", None)
         configured_index = 0
-        workers = {
-            worker.worker_id: worker for worker in presence_store.list_workers()
-        }
+        workers = {worker.worker_id: worker for worker in presence_store.list_workers()}
         for profile_id in known_profile_ids():
             worker = workers.get(profile_id)
             task = worker.current_task if worker and worker.current_task else "no task"
@@ -170,7 +173,9 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             if session.session_id == configured:
                 configured_index = combo.count() - 1
         if configured and configured_index < 0:
-            label = configured if profile_id is None else f"saved session | {configured}"
+            label = (
+                configured if profile_id is None else f"saved session | {configured}"
+            )
             combo.insertItem(0, label, configured)
             configured_index = 0
         if configured_index >= 0:
@@ -242,16 +247,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.delay.setRange(1, MAX_SCHEDULED_PROMPT_DELAY_MINUTES)
             self.delay.setSuffix(" min")
             self.delay.setValue(
-                rule.delay_minutes
-                if rule
-                else DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
+                rule.delay_minutes if rule else DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES
             )
             layout.addWidget(QLabel("Delay"), 2, 0)
             layout.addWidget(self.delay, 2, 1, 1, 2)
 
-            self.text = QLineEdit(
-                rule.text if rule else DEFAULT_SCHEDULED_PROMPT_TEXT
-            )
+            self.text = QLineEdit(rule.text if rule else DEFAULT_SCHEDULED_PROMPT_TEXT)
             self.text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
             self.text.setPlaceholderText(DEFAULT_SCHEDULED_PROMPT_TEXT)
             layout.addWidget(QLabel("Prompt"), 3, 0)
@@ -286,9 +287,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.max_occurrences = QSpinBox()
             self.max_occurrences.setRange(1, 100)
             self.max_occurrences.setValue(
-                rule.max_occurrences
-                if rule
-                else DEFAULT_PROMPT_RULE_OCCURRENCES
+                rule.max_occurrences if rule else DEFAULT_PROMPT_RULE_OCCURRENCES
             )
             layout.addWidget(QLabel("Maximum sends"), 7, 0)
             layout.addWidget(self.max_occurrences, 7, 1, 1, 2)
@@ -335,9 +334,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         def __init__(self):
             super().__init__()
             recent_sessions = presence_store.list_codex_sessions(limit=1)
-            initial_profile = (
-                recent_sessions[0].worker_id if recent_sessions else None
-            )
+            initial_profile = recent_sessions[0].worker_id if recent_sessions else None
             self.profile = profile_combo(initial_profile)
             settings = load_settings(selected_profile(self.profile))
             self._original = settings
@@ -536,14 +533,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         def __init__(self):
             super().__init__()
             recent_sessions = presence_store.list_codex_sessions(limit=1)
-            initial_profile = (
-                recent_sessions[0].worker_id if recent_sessions else None
-            )
+            initial_profile = recent_sessions[0].worker_id if recent_sessions else None
             self.profile = profile_combo(initial_profile)
             settings = load_settings(selected_profile(self.profile))
             self.settings = settings
-            self.setWindowTitle("Respond to message")
-            self.setMinimumWidth(520)
+            self.setWindowTitle("Agent chat")
+            self.setMinimumSize(620, 620)
             layout = QVBoxLayout(self)
             form = QFormLayout()
             self.destination = QComboBox()
@@ -557,19 +552,50 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             )
             form.addRow("Codex session", self.thread_field)
             layout.addLayout(form)
+
+            history_bar = QHBoxLayout()
+            self.history_status = QLabel("Select a project and exact session.")
+            history_bar.addWidget(self.history_status, 1)
+            self.load_older = QToolButton()
+            self.load_older.setText("Load older")
+            self.load_older.setToolTip("Load older messages")
+            history_bar.addWidget(self.load_older)
+            layout.addLayout(history_bar)
+
+            self.transcript = QListWidget()
+            self.transcript.setWordWrap(True)
+            self.transcript.setSpacing(6)
+            self.transcript.setMinimumHeight(340)
+            layout.addWidget(self.transcript, 1)
+
             self.message = QPlainTextEdit()
             self.message.setPlaceholderText("Message to send to the Codex session")
-            self.message.setMinimumHeight(140)
+            self.message.setMinimumHeight(90)
+            self.message.setMaximumHeight(150)
             layout.addWidget(self.message)
-            buttons = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Ok
-                | QDialogButtonBox.StandardButton.Cancel
+            buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+            self.send_button = QPushButton("Send")
+            buttons.addButton(
+                self.send_button,
+                QDialogButtonBox.ButtonRole.AcceptRole,
             )
-            buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Send")
-            buttons.accepted.connect(self.accept)
             buttons.rejected.connect(self.reject)
+            buttons.button(QDialogButtonBox.StandardButton.Close).clicked.connect(
+                self.reject
+            )
             layout.addWidget(buttons)
             self.profile.currentIndexChanged.connect(self._load_selected_profile)
+            self.thread_field.currentIndexChanged.connect(self._reset_conversation)
+            self.thread_field.editTextChanged.connect(self._reset_conversation)
+            self.load_older.clicked.connect(self._load_more)
+            self.send_button.clicked.connect(self._send)
+            self.page_size = 50
+            self.loaded_limit = self.page_size
+            self.refresh_timer = QTimer(self)
+            self.refresh_timer.setInterval(2000)
+            self.refresh_timer.timeout.connect(self._refresh)
+            self.refresh_timer.start()
+            self._refresh()
 
         def _load_selected_profile(self, _index: int = -1) -> None:
             profile_id = selected_profile(self.profile)
@@ -580,8 +606,109 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 profile_id,
             )
 
+            self._reset_conversation()
+
         def destination_name(self) -> str:
             return str(self.destination.currentData())
+
+        def _identity(self) -> tuple[str, str, str] | None:
+            profile_id = selected_profile(self.profile)
+            session_id = selected_session(self.thread_field)
+            if profile_id is None or session_id is None:
+                return None
+            worker = presence_store.get_worker(profile_id)
+            agent_name = worker.ia_name if worker is not None else config.codex_ai_name
+            return profile_id, agent_name, session_id
+
+        def _reset_conversation(self, _value: Any = None) -> None:
+            self.loaded_limit = self.page_size
+            self._refresh()
+
+        def _load_more(self) -> None:
+            self.loaded_limit += self.page_size
+            self._refresh()
+
+        def _refresh(self) -> None:
+            identity = self._identity()
+            if identity is None:
+                self.transcript.clear()
+                self.history_status.setText("Select a project and exact session.")
+                self.send_button.setEnabled(False)
+                self.load_older.setEnabled(False)
+                return
+            worker_id, agent_name, session_id = identity
+            project_remote_questions(
+                presence_store,
+                worker_id=worker_id,
+                agent_name=agent_name,
+            )
+            conversation = presence_store.get_or_create_conversation(
+                worker_id=worker_id,
+                agent_name=agent_name,
+                session_id=session_id,
+            )
+            messages = presence_store.list_agent_messages(
+                conversation_id=conversation.conversation_id,
+                limit=self.loaded_limit,
+            )
+            scrollbar = self.transcript.verticalScrollBar()
+            was_at_bottom = scrollbar.value() >= scrollbar.maximum() - 4
+            selected_message = (
+                self.transcript.currentItem().data(Qt.ItemDataRole.UserRole)
+                if self.transcript.currentItem() is not None
+                else None
+            )
+            self.transcript.clear()
+            for message in messages:
+                timestamp = datetime.fromtimestamp(message.created_at).astimezone()
+                author = "You" if message.role == "human" else agent_name
+                item = QListWidgetItem(
+                    f"{author}  {timestamp:%Y-%m-%d %H:%M}\n"
+                    f"{message.content}\n{message.state.replace('_', ' ')}"
+                )
+                item.setData(Qt.ItemDataRole.UserRole, message.message_id)
+                item.setTextAlignment(
+                    Qt.AlignmentFlag.AlignRight
+                    if message.role == "human"
+                    else Qt.AlignmentFlag.AlignLeft
+                )
+                if message.role == "human":
+                    item.setBackground(QColor("#d9f4e8"))
+                else:
+                    item.setBackground(QColor("#eeeeee"))
+                self.transcript.addItem(item)
+                if message.message_id == selected_message:
+                    self.transcript.setCurrentItem(item)
+            self.history_status.setText(
+                f"{agent_name} · {len(messages)} message"
+                f"{'s' if len(messages) != 1 else ''}"
+            )
+            self.send_button.setEnabled(True)
+            self.load_older.setEnabled(len(messages) >= self.loaded_limit)
+            if was_at_bottom or not messages:
+                self.transcript.scrollToBottom()
+
+        def _send(self) -> None:
+            identity = self._identity()
+            if identity is None:
+                return
+            worker_id, agent_name, session_id = identity
+            try:
+                send_human_message(
+                    presence_store,
+                    settings=self.settings,
+                    worker_id=worker_id,
+                    agent_name=agent_name,
+                    session_id=session_id,
+                    content=self.message.toPlainText(),
+                    destination=self.destination_name(),
+                )
+            except (AgentChatError, CodexInputError, ValueError, sqlite3.Error) as exc:
+                show_error("Message was not sent", exc)
+                self._refresh()
+                return
+            self.message.clear()
+            self._refresh()
 
     def icon() -> QIcon:
         themed = QIcon.fromTheme("system-run")
@@ -605,18 +732,13 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
     def _scheduled_status(settings: ControlSettings) -> str:
         if settings.scheduled_prompt_enabled and settings.scheduled_prompt_due_at:
-            due = datetime.fromtimestamp(
-                settings.scheduled_prompt_due_at
-            ).astimezone()
+            due = datetime.fromtimestamp(settings.scheduled_prompt_due_at).astimezone()
             red_gate = (
                 " It will then wait for red inactivity."
                 if settings.scheduled_prompt_require_red_inactivity
                 else ""
             )
-            return (
-                f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; one attempt only."
-                f"{red_gate}"
-            )
+            return f"Armed for {due:%Y-%m-%d %H:%M:%S %Z}; one attempt only.{red_gate}"
         labels = {
             "dispatching": "Dispatch was claimed; automatic retry is disabled.",
             "dispatch_started": (
@@ -659,6 +781,25 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             ),
         }
         return labels.get(rule.last_state, "Rule is disabled.")
+
+    if chat_check_only:
+        dialog = MessageDialog()
+        dialog.show()
+        app.processEvents()
+        if not dialog.isVisible() or dialog.transcript.minimumHeight() < 300:
+            dialog.close()
+            if owned_app:
+                app.quit()
+            raise TrayUnavailableError(
+                "a janela de chat nao passou na verificacao visual."
+            )
+        print(
+            "Chat da bandeja construido com seletores, historico, compositor e envio."
+        )
+        dialog.close()
+        if owned_app:
+            app.quit()
+        return 0
 
     tray = QSystemTrayIcon(icon(), app)
     tray.setToolTip("AI Presence Monitor")
@@ -706,7 +847,11 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 detail = f" {pending} pending Discord {noun} currently exist."
             tray.showMessage(
                 "AI Presence Monitor",
-                ("Desktop notifications enabled." if enabled else "Desktop notifications disabled.")
+                (
+                    "Desktop notifications enabled."
+                    if enabled
+                    else "Desktop notifications disabled."
+                )
                 + detail,
                 QSystemTrayIcon.MessageIcon.Information,
                 3500,
@@ -756,22 +901,9 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     def respond() -> None:
         try:
             dialog = MessageDialog()
-            if dialog.exec() != QDialog.DialogCode.Accepted:
-                return
-            result = dispatch_tray_message(
-                settings=dialog.settings,
-                message=dialog.message.toPlainText(),
-                destination=dialog.destination_name(),
-                thread_id=selected_session(dialog.thread_field),
-            )
-            location = "client computer" if result.remote else "this computer"
-            QMessageBox.information(
-                None,
-                "Dispatch started",
-                f"Dispatch started for {location}. Await later session evidence.",
-            )
-        except (CodexInputError, ControlError) as exc:
-            show_error("Message was not sent", exc)
+            dialog.exec()
+        except (AgentChatError, ControlError, OSError, sqlite3.Error) as exc:
+            show_error("Agent chat unavailable", exc)
 
     def activated(reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -928,13 +1060,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI Presence Monitor system tray.")
     parser.add_argument("--env-file")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--check-chat", action="store_true")
     return parser
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     try:
-        result = run_tray(load_config(args.env_file), check_only=args.check)
+        result = run_tray(
+            load_config(args.env_file),
+            check_only=args.check,
+            chat_check_only=args.check_chat,
+        )
     except (
         ControlError,
         TrayUnavailableError,

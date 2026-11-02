@@ -550,6 +550,39 @@ congelada antes da publicacao e a resposta retorna por `codex queue`. Use
 explicitamente autorizado. Uma falha nativa nao permite trocar de transporte
 automaticamente.
 
+### Chat persistente da bandeja
+
+**Agent chat...** substitui o antigo formulario de resposta. Selecione o
+projeto/agente e a sessao Codex exata para ver o historico local, carregar
+mensagens anteriores e enviar novas mensagens sem fechar a janela. A mensagem
+humana e persistida antes do transporte; `dispatch started` e `input emitted`
+sao estados preliminares e somente um hook posterior da sessao exata produz
+`delivery confirmed`.
+
+Perguntas criadas por `ask-user` e respostas Discord autorizadas aparecem no
+mesmo historico por correlacao idempotente. Mensagens comuns do Codex nao sao
+copiadas dos hooks, pois os hooks nao fornecem seu texto. O agente deve usar
+`publish-agent-message` quando quiser publicar uma resposta explicita.
+
+O historico e plaintext local no SQLite privado e fica retido ate arquivamento
+explicito. A CLI permite exportar JSON, opcionalmente redigindo o conteudo:
+
+```bash
+ai-presence export-conversation --project "$PROJECT" --session SESSAO_EXATA \
+  --conversation ID --redact-content
+ai-presence archive-conversation --project "$PROJECT" --session SESSAO_EXATA \
+  --conversation ID
+```
+
+Arquivar nao exclui mensagens; apenas remove a conversa da listagem ativa.
+
+Antes de publicar uma versao, a janela real pode ser construida e validada sem
+manter a bandeja aberta:
+
+```bash
+ai-presence tray --check-chat
+```
+
 ### Solicitar continuidade
 
 A IA so pode executar `continue` quando:

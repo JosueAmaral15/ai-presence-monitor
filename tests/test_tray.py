@@ -47,9 +47,12 @@ class FakeClient:
 
 class TrayMessageTests(unittest.TestCase):
     def test_tray_parser_supports_check_without_loading_qt(self) -> None:
-        args = build_parser().parse_args(["--env-file", "/tmp/test.env", "--check"])
+        args = build_parser().parse_args(
+            ["--env-file", "/tmp/test.env", "--check", "--check-chat"]
+        )
         self.assertEqual(args.env_file, "/tmp/test.env")
         self.assertTrue(args.check)
+        self.assertTrue(args.check_chat)
 
     def test_local_message_ignores_remote_target(self) -> None:
         client = FakeClient()
@@ -146,10 +149,13 @@ class TrayMessageTests(unittest.TestCase):
 
     def test_tray_blocks_windows_before_loading_qt(self) -> None:
         config = make_config(Path("/tmp"))
-        with patch(
-            "ai_presence_monitor.platform_integration.sys.platform",
-            "win32",
-        ), self.assertRaisesRegex(UnsupportedPlatformError, "experimental"):
+        with (
+            patch(
+                "ai_presence_monitor.platform_integration.sys.platform",
+                "win32",
+            ),
+            self.assertRaisesRegex(UnsupportedPlatformError, "experimental"),
+        ):
             run_tray(config, check_only=True)
 
 

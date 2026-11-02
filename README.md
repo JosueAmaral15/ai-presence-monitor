@@ -661,6 +661,15 @@ Protocol 1 never treats `continue` as a public heartbeat. Scheduling, dry-run,
 transport failure, and inactive workers do not count as activity. Enabling task
 automation grants permission; it does not start a periodic timer.
 
+The tray's **Agent chat...** action provides a local conversation per exact
+worker, agent and Codex session. Human messages are stored before native queue
+dispatch; a later exact-session hook can confirm delivery. Explicit agent
+replies enter the transcript through `publish-agent-message`, while correlated
+Discord questions and answers are projected idempotently. Ordinary hook events
+never become message text. History remains in the private local SQLite database
+until explicitly archived and can be exported as JSON with optional content
+redaction.
+
 The optional system tray also provides persistent prompt rules. Select a
 project or agent profile and add one or more rules. Each rule stores its exact
 session, enabled state, trigger, delay, prompt, repetition interval and maximum

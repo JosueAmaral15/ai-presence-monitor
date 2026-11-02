@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import __version__
+from .agent_chat import AgentChatError, publish_agent_message
 from .alarm import AlarmControlError, AlarmController
 from .background_service import (
     BACKGROUND_COMPONENTS,
@@ -141,7 +142,9 @@ def _clock_value(worker: WorkerState) -> tuple[str, float | None]:
     return protocol.monitored_clock, worker.last_activity_at or worker.last_signal_at
 
 
-def _should_send_alert(worker: WorkerState, threshold_level: str, config: AppConfig, now: float) -> bool:
+def _should_send_alert(
+    worker: WorkerState, threshold_level: str, config: AppConfig, now: float
+) -> bool:
     if should_escalate(worker.last_alert_level, threshold_level):
         return True
 
@@ -179,6 +182,164 @@ def _identity(args: argparse.Namespace, config: AppConfig) -> tuple[str, str, st
     return worker_id, computer, ia_name, protocol
 
 
+def _current_chat_identity(
+    args: argparse.Namespace,
+    config: AppConfig,
+) -> tuple[str, str, str]:
+    current_project = Path.cwd().resolve()
+    requested_project = (args.project or current_project).expanduser().resolve()
+    if requested_project != current_project:
+        raise AgentChatError(
+            "Agent chat commands can only target the current project directory."
+        )
+    agent_name = (getattr(args, "ai", None) or config.codex_ai_name).strip()
+    session_id = (getattr(args, "session", None) or "").strip()
+    base_worker_id = config.codex_worker_id or f"{config.computer_name}:{agent_name}"
+    worker_id = scoped_worker_id(
+        base_worker_id,
+        config.codex_worker_scope,
+        project_path=requested_project,
+        session_id=session_id or None,
+    )
+    return worker_id, agent_name, session_id
+
+
+def _show_conversations(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.limit <= 200 or args.offset < 0:
+        raise AgentChatError("Conversation pagination is out of range.")
+    worker_id, _, _ = _current_chat_identity(args, config)
+    conversations = PresenceStore(config.db_path).list_conversations(
+        worker_id=worker_id,
+        limit=args.limit,
+        offset=args.offset,
+    )
+    payload = [
+        {
+            "conversation_id": item.conversation_id,
+            "worker_id": item.worker_id,
+            "agent_name": item.agent_name,
+            "session_id": item.session_id,
+            "title": item.title,
+            "updated_at": item.updated_at,
+        }
+        for item in conversations
+    ]
+    print(json.dumps(payload, ensure_ascii=True, indent=2))
+    return 0
+
+
+def _show_chat_messages(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.limit <= 200:
+        raise AgentChatError("Message pagination is out of range.")
+    worker_id, _, _ = _current_chat_identity(args, config)
+    store = PresenceStore(config.db_path)
+    conversation = store.get_conversation(args.conversation)
+    if conversation is None or conversation.worker_id != worker_id:
+        raise AgentChatError("Conversation not found in the current project scope.")
+    messages = store.list_agent_messages(
+        conversation_id=conversation.conversation_id,
+        limit=args.limit,
+    )
+    payload = [
+        {
+            "message_id": item.message_id,
+            "role": item.role,
+            "direction": item.direction,
+            "transport": item.transport,
+            "content": item.content,
+            "state": item.state,
+            "created_at": item.created_at,
+        }
+        for item in messages
+    ]
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _export_chat(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.limit <= 10_000:
+        raise AgentChatError("Export limit is out of range.")
+    worker_id, _, _ = _current_chat_identity(args, config)
+    store = PresenceStore(config.db_path)
+    conversation = store.get_conversation(args.conversation)
+    if conversation is None or conversation.worker_id != worker_id:
+        raise AgentChatError("Conversation not found in the current project scope.")
+    messages = store.list_agent_messages(
+        conversation_id=conversation.conversation_id,
+        limit=args.limit,
+    )
+    payload = {
+        "conversation": {
+            "conversation_id": conversation.conversation_id,
+            "worker_id": conversation.worker_id,
+            "agent_name": conversation.agent_name,
+            "session_id": conversation.session_id,
+            "title": conversation.title,
+            "created_at": conversation.created_at,
+            "updated_at": conversation.updated_at,
+            "archived_at": conversation.archived_at,
+        },
+        "messages": [
+            {
+                "message_id": item.message_id,
+                "role": item.role,
+                "direction": item.direction,
+                "transport": item.transport,
+                "content": "[redacted]" if args.redact_content else item.content,
+                "state": item.state,
+                "correlation_kind": item.correlation_kind,
+                "created_at": item.created_at,
+                "updated_at": item.updated_at,
+            }
+            for item in messages
+        ],
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _archive_chat(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, _, _ = _current_chat_identity(args, config)
+    store = PresenceStore(config.db_path)
+    conversation = store.get_conversation(args.conversation)
+    if conversation is None or conversation.worker_id != worker_id:
+        raise AgentChatError("Conversation not found in the current project scope.")
+    if args.dry_run:
+        print(f"[dry-run:archive-chat] conversation={conversation.conversation_id}")
+        return 0
+    archived = store.archive_conversation(conversation.conversation_id)
+    print(f"agent-chat: conversation={archived.conversation_id} state=archived")
+    return 0
+
+
+def _publish_agent_chat_message(args: argparse.Namespace, config: AppConfig) -> int:
+    worker_id, agent_name, session_id = _current_chat_identity(args, config)
+    if not session_id:
+        raise AgentChatError("An exact Codex session is required.")
+    worker = PresenceStore(config.db_path).get_worker(worker_id)
+    if worker is None:
+        raise AgentChatError("Current project worker not found. Run start first.")
+    if args.dry_run:
+        print(
+            "[dry-run:agent-chat] "
+            f"worker={worker_id} session={session_id} content_length={len(args.text)}"
+        )
+        return 0
+    result = publish_agent_message(
+        PresenceStore(config.db_path),
+        worker_id=worker_id,
+        agent_name=agent_name,
+        session_id=session_id,
+        content=args.text,
+    )
+    print(
+        "agent-chat: "
+        f"conversation={result.conversation.conversation_id} "
+        f"message={result.message.message_id} state={result.message.state}"
+    )
+    return 0
+
+
 def _record_event(args: argparse.Namespace, config: AppConfig, event_type: str) -> int:
     worker_id, computer, ia_name, protocol = _identity(args, config)
     message = args.message or DEFAULT_EVENT_MESSAGES[event_type]
@@ -196,7 +357,9 @@ def _record_event(args: argparse.Namespace, config: AppConfig, event_type: str) 
     should_notify = event_type != "touch" or getattr(args, "notify", False)
     if should_notify:
         try:
-            Notifier(config, dry_run=args.dry_run).send_point(event_type, worker, message)
+            Notifier(config, dry_run=args.dry_run).send_point(
+                event_type, worker, message
+            )
         except NotificationError as exc:
             print(str(exc), file=sys.stderr)
             return 2
@@ -208,7 +371,9 @@ def _record_event(args: argparse.Namespace, config: AppConfig, event_type: str) 
     return 0
 
 
-def _check_once(config: AppConfig, dry_run: bool = False, now: float | None = None) -> int:
+def _check_once(
+    config: AppConfig, dry_run: bool = False, now: float | None = None
+) -> int:
     store = PresenceStore(config.db_path)
     notifier = Notifier(config, dry_run=dry_run)
     now = time.time() if now is None else now
@@ -217,7 +382,9 @@ def _check_once(config: AppConfig, dry_run: bool = False, now: float | None = No
 
     if not window_status.alerts_allowed:
         local_hour = window_status.local_now.isoformat(timespec="minutes")
-        print(f"monitor: {window_status.reason}; alertas suprimidos. agora={local_hour}")
+        print(
+            f"monitor: {window_status.reason}; alertas suprimidos. agora={local_hour}"
+        )
         return 0
 
     for worker in store.list_workers(only_active=True):
@@ -288,17 +455,12 @@ def _run_codex_hook(args: argparse.Namespace, config: AppConfig) -> int:
 
 def _ask_user(args: argparse.Namespace, config: AppConfig) -> int:
     worker_id, _, _, _ = _identity(args, config)
-    timeout = (
-        config.question_timeout_seconds
-        if args.timeout is None
-        else args.timeout
-    )
+    timeout = config.question_timeout_seconds if args.timeout is None else args.timeout
     if timeout <= 0:
         raise ValueError("O prazo da pergunta precisa ser maior que zero.")
     if args.dry_run:
         answer_transport = (
-            getattr(args, "answer_transport", None)
-            or config.question_answer_transport
+            getattr(args, "answer_transport", None) or config.question_answer_transport
         )
         answer_destination = (
             getattr(args, "answer_destination", None)
@@ -689,16 +851,18 @@ def _tray(args: argparse.Namespace, config: AppConfig) -> int:
     from .tray import TrayUnavailableError, run_tray
 
     try:
-        return run_tray(config, check_only=args.check)
+        return run_tray(
+            config,
+            check_only=args.check,
+            chat_check_only=args.check_chat,
+        )
     except TrayUnavailableError as exc:
         print(f"Bandeja indisponivel: {exc}", file=sys.stderr)
         return 2
 
 
 def _send_input(args: argparse.Namespace, config: AppConfig) -> int:
-    settings = ControlStore.from_config(config).load(
-        getattr(args, "profile", None)
-    )
+    settings = ControlStore.from_config(config).load(getattr(args, "profile", None))
     destination = "remote" if args.destination == "client" else "local"
     try:
         if not args.message.strip():
@@ -797,8 +961,7 @@ def _install_reply_observer_service(
     if not args.dry_run and result.changed:
         print("Execute: systemctl --user daemon-reload")
         print(
-            "Execute: systemctl --user enable --now "
-            "ai-presence-reply-observer.service"
+            "Execute: systemctl --user enable --now ai-presence-reply-observer.service"
         )
     return 0
 
@@ -962,7 +1125,9 @@ def _show_protocols() -> int:
         print(f"{protocol.protocol_id}: {protocol.title}")
         print(f"  {protocol.description}")
         for threshold in protocol.thresholds:
-            print(f"  - {threshold.color_name}: depois de {format_duration(threshold.after_seconds)}")
+            print(
+                f"  - {threshold.color_name}: depois de {format_duration(threshold.after_seconds)}"
+            )
     return 0
 
 
@@ -1043,7 +1208,9 @@ def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
                 )
             if worker.status != "active":
                 if args.watch:
-                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    print(
+                        f"codex-limit: worker={worker_id} inativo; observer encerrado."
+                    )
                     return 0
                 raise ValueError(
                     f"Worker is not active: {worker_id}. Run start before recording evidence."
@@ -1054,16 +1221,15 @@ def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
             ttl_seconds=evidence_ttl,
         )
         if args.dry_run:
-            print(
-                "[dry-run:codex-limit] "
-                f"worker={worker_id} state={observation.state}"
-            )
+            print(f"[dry-run:codex-limit] worker={worker_id} state={observation.state}")
             return 0
         else:
             worker = PresenceStore(config.db_path).get_worker(worker_id)
             if worker is None or worker.status != "active":
                 if args.watch:
-                    print(f"codex-limit: worker={worker_id} inativo; observer encerrado.")
+                    print(
+                        f"codex-limit: worker={worker_id} inativo; observer encerrado."
+                    )
                     return 0
                 raise ValueError(
                     f"Worker became inactive before evidence was recorded: {worker_id}."
@@ -1169,9 +1335,7 @@ def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
         else None
     )
     power_observer = (
-        None
-        if args.skip_power
-        else LinuxPowerObserver(suspend_gap_seconds=suspend_gap)
+        None if args.skip_power else LinuxPowerObserver(suspend_gap_seconds=suspend_gap)
     )
     if args.no_services:
         services: tuple[str, ...] = ()
@@ -1196,7 +1360,9 @@ def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
                 )
             if worker.status != "active":
                 if args.watch:
-                    print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                    print(
+                        f"linux-evidence: worker={worker_id} inativo; observer encerrado."
+                    )
                     return 0
                 raise ValueError(
                     f"Worker is not active: {worker_id}. Run start before recording evidence."
@@ -1225,7 +1391,9 @@ def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
         worker = PresenceStore(config.db_path).get_worker(worker_id)
         if worker is None or worker.status != "active":
             if args.watch:
-                print(f"linux-evidence: worker={worker_id} inativo; observer encerrado.")
+                print(
+                    f"linux-evidence: worker={worker_id} inativo; observer encerrado."
+                )
                 return 0
             raise ValueError(
                 f"Worker became inactive before evidence was recorded: {worker_id}."
@@ -1272,7 +1440,11 @@ def _diagnose(args: argparse.Namespace, config: AppConfig) -> int:
         print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
     else:
         prefix = "[dry-run:diagnosis]" if args.dry_run else "diagnosis:"
-        age = "unknown" if math.isinf(result.age_seconds) else f"{result.age_seconds:.0f}s"
+        age = (
+            "unknown"
+            if math.isinf(result.age_seconds)
+            else f"{result.age_seconds:.0f}s"
+        )
         print(
             f"{prefix} worker={result.worker_id} kind={result.assessment.kind.value} "
             f"confidence={result.assessment.confidence.value} "
@@ -1307,7 +1479,11 @@ def _notify_diagnostic_incident(args: argparse.Namespace, config: AppConfig) -> 
     if args.json:
         print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
     else:
-        prefix = "[dry-run:diagnostic-notification]" if args.dry_run else "diagnostic-notification:"
+        prefix = (
+            "[dry-run:diagnostic-notification]"
+            if args.dry_run
+            else "diagnostic-notification:"
+        )
         print(
             f"{prefix} worker={result.worker_id} status={result.status} "
             f"cause={result.diagnosis_kind or '-'} "
@@ -1343,7 +1519,9 @@ def _recover_diagnostic_incident(args: argparse.Namespace, config: AppConfig) ->
     if args.json:
         print(json.dumps(payload, ensure_ascii=True, indent=2, sort_keys=True))
     else:
-        prefix = "[dry-run:diagnostic-recovery]" if args.dry_run else "diagnostic-recovery:"
+        prefix = (
+            "[dry-run:diagnostic-recovery]" if args.dry_run else "diagnostic-recovery:"
+        )
         print(
             f"{prefix} worker={result.worker_id} status={result.status} "
             f"cause={result.diagnosis_kind or '-'} "
@@ -1363,9 +1541,13 @@ def _add_identity_args(
         "--worker",
         help="ID exato do worker; quando informado, ignora a derivacao por escopo.",
     )
-    parser.add_argument("--computer", help="Nome do computador. Padrao: hostname ou .env.")
+    parser.add_argument(
+        "--computer", help="Nome do computador. Padrao: hostname ou .env."
+    )
     parser.add_argument("--ai", help="Nome da IA/agente. Padrao: codex.")
-    parser.add_argument("--protocol", choices=sorted(PROTOCOLS), help="Protocolo de monitoramento.")
+    parser.add_argument(
+        "--protocol", choices=sorted(PROTOCOLS), help="Protocolo de monitoramento."
+    )
     parser.add_argument(
         "--scope",
         choices=WORKER_SCOPES,
@@ -1395,40 +1577,128 @@ def build_parser() -> argparse.ArgumentParser:
         "--env-file",
         help="Arquivo .env. Padrao: arquivo dedicado do projeto ou configuracao do usuario.",
     )
-    parser.add_argument("--db", help="Caminho do banco SQLite. Sobrescreve PRESENCE_DB_PATH.")
-    parser.add_argument("--dry-run", action="store_true", help="Mostra notificacoes sem enviar.")
+    parser.add_argument(
+        "--db", help="Caminho do banco SQLite. Sobrescreve PRESENCE_DB_PATH."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Mostra notificacoes sem enviar."
+    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     init_parser = subparsers.add_parser("init", help="Cria/valida o banco local.")
     init_parser.set_defaults(func=lambda args, config: _init_db(config))
 
-    protocols_parser = subparsers.add_parser("protocols", help="Lista os protocolos disponiveis.")
+    protocols_parser = subparsers.add_parser(
+        "protocols", help="Lista os protocolos disponiveis."
+    )
     protocols_parser.set_defaults(func=lambda args, config: _show_protocols())
 
     start_parser = subparsers.add_parser("start", help="Registra inicio de tarefa.")
     _add_identity_args(start_parser)
-    start_parser.set_defaults(func=lambda args, config: _record_event(args, config, "start"))
+    start_parser.set_defaults(
+        func=lambda args, config: _record_event(args, config, "start")
+    )
 
-    heartbeat_parser = subparsers.add_parser("heartbeat", help="Registra ponto de atividade.")
+    heartbeat_parser = subparsers.add_parser(
+        "heartbeat", help="Registra ponto de atividade."
+    )
     _add_identity_args(heartbeat_parser)
-    heartbeat_parser.set_defaults(func=lambda args, config: _record_event(args, config, "heartbeat"))
+    heartbeat_parser.set_defaults(
+        func=lambda args, config: _record_event(args, config, "heartbeat")
+    )
 
     touch_parser = subparsers.add_parser(
         "touch",
         help="Registra atividade silenciosa, util no protocolo 2.",
     )
     _add_identity_args(touch_parser)
-    touch_parser.add_argument("--notify", action="store_true", help="Tambem posta no canal de ponto.")
-    touch_parser.set_defaults(func=lambda args, config: _record_event(args, config, "touch"))
+    touch_parser.add_argument(
+        "--notify", action="store_true", help="Tambem posta no canal de ponto."
+    )
+    touch_parser.set_defaults(
+        func=lambda args, config: _record_event(args, config, "touch")
+    )
 
     finish_parser = subparsers.add_parser("finish", help="Registra fim de tarefa.")
     _add_identity_args(finish_parser)
-    finish_parser.set_defaults(func=lambda args, config: _record_event(args, config, "finish"))
+    finish_parser.set_defaults(
+        func=lambda args, config: _record_event(args, config, "finish")
+    )
 
-    monitor_parser = subparsers.add_parser("monitor", help="Monitora atrasos e envia alertas.")
-    monitor_parser.add_argument("--once", action="store_true", help="Executa uma verificacao e sai.")
-    monitor_parser.add_argument("--interval", type=int, help="Intervalo do loop em segundos.")
+    conversations_parser = subparsers.add_parser(
+        "conversations",
+        help="Lista conversas do worker derivado do projeto corrente.",
+    )
+    conversations_parser.add_argument("--project", type=Path)
+    conversations_parser.add_argument("--session")
+    conversations_parser.add_argument("--ai")
+    conversations_parser.add_argument("--limit", type=int, default=50)
+    conversations_parser.add_argument("--offset", type=int, default=0)
+    conversations_parser.set_defaults(
+        func=lambda args, config: _show_conversations(args, config)
+    )
+
+    messages_parser = subparsers.add_parser(
+        "messages",
+        help="Lista mensagens de uma conversa do projeto corrente.",
+    )
+    messages_parser.add_argument("--project", type=Path)
+    messages_parser.add_argument("--session")
+    messages_parser.add_argument("--ai")
+    messages_parser.add_argument("--conversation", required=True)
+    messages_parser.add_argument("--limit", type=int, default=50)
+    messages_parser.set_defaults(
+        func=lambda args, config: _show_chat_messages(args, config)
+    )
+
+    export_chat_parser = subparsers.add_parser(
+        "export-conversation",
+        help="Exporta uma conversa do projeto corrente como JSON.",
+    )
+    export_chat_parser.add_argument("--project", type=Path)
+    export_chat_parser.add_argument("--session")
+    export_chat_parser.add_argument("--ai")
+    export_chat_parser.add_argument("--conversation", required=True)
+    export_chat_parser.add_argument("--limit", type=int, default=200)
+    export_chat_parser.add_argument("--redact-content", action="store_true")
+    export_chat_parser.set_defaults(
+        func=lambda args, config: _export_chat(args, config)
+    )
+
+    archive_chat_parser = subparsers.add_parser(
+        "archive-conversation",
+        help="Arquiva sem excluir uma conversa do projeto corrente.",
+    )
+    archive_chat_parser.add_argument("--project", type=Path)
+    archive_chat_parser.add_argument("--session")
+    archive_chat_parser.add_argument("--ai")
+    archive_chat_parser.add_argument("--conversation", required=True)
+    archive_chat_parser.set_defaults(
+        func=lambda args, config: _archive_chat(args, config)
+    )
+
+    publish_chat_parser = subparsers.add_parser(
+        "publish-agent-message",
+        help="Publica uma resposta explicita do agente no chat do projeto corrente.",
+    )
+    publish_chat_parser.add_argument("--project", type=Path)
+    publish_chat_parser.add_argument("--session", required=True)
+    publish_chat_parser.add_argument("--ai")
+    publish_chat_parser.add_argument("--text", required=True)
+    publish_chat_parser.set_defaults(
+        func=lambda args, config: _publish_agent_chat_message(args, config)
+    )
+
+    monitor_parser = subparsers.add_parser(
+        "monitor", help="Monitora atrasos e envia alertas."
+    )
+    monitor_parser.add_argument(
+        "--once", action="store_true", help="Executa uma verificacao e sai."
+    )
+    monitor_parser.add_argument(
+        "--interval", type=int, help="Intervalo do loop em segundos."
+    )
     monitor_parser.set_defaults(func=lambda args, config: _run_monitor(args, config))
 
     stop_alarm_parser = subparsers.add_parser(
@@ -1684,14 +1954,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Publica uma pergunta no Discord e aguarda resposta correlacionada.",
     )
     _add_identity_args(ask_parser)
-    ask_parser.add_argument("--question", required=True, help="Pergunta enviada ao usuario.")
-    ask_parser.add_argument("--timeout", type=int, help="Prazo da pergunta em segundos.")
+    ask_parser.add_argument(
+        "--question", required=True, help="Pergunta enviada ao usuario."
+    )
+    ask_parser.add_argument(
+        "--timeout", type=int, help="Prazo da pergunta em segundos."
+    )
     ask_parser.add_argument(
         "--answer-transport",
         choices=("native", "gui", "store"),
         help=(
-            "Entrega da resposta. Padrao: "
-            "PRESENCE_QUESTION_ANSWER_TRANSPORT ou native."
+            "Entrega da resposta. Padrao: PRESENCE_QUESTION_ANSWER_TRANSPORT ou native."
         ),
     )
     ask_parser.add_argument(
@@ -1717,24 +1990,36 @@ def build_parser() -> argparse.ArgumentParser:
         "observe-replies",
         help="Observa respostas autorizadas no canal de perguntas do Discord.",
     )
-    replies_parser.add_argument("--once", action="store_true", help="Consulta uma vez e sai.")
-    replies_parser.add_argument("--interval", type=int, help="Intervalo do polling em segundos.")
-    replies_parser.set_defaults(func=lambda args, config: _run_reply_observer(args, config))
+    replies_parser.add_argument(
+        "--once", action="store_true", help="Consulta uma vez e sai."
+    )
+    replies_parser.add_argument(
+        "--interval", type=int, help="Intervalo do polling em segundos."
+    )
+    replies_parser.set_defaults(
+        func=lambda args, config: _run_reply_observer(args, config)
+    )
 
     questions_parser = subparsers.add_parser(
         "questions",
         help="Lista perguntas e estados de entrega.",
     )
     questions_parser.add_argument("--status", help="Filtra por estado exato.")
-    questions_parser.add_argument("--limit", type=int, default=50, help="Quantidade maxima.")
-    questions_parser.set_defaults(func=lambda args, config: _show_questions(args, config))
+    questions_parser.add_argument(
+        "--limit", type=int, default=50, help="Quantidade maxima."
+    )
+    questions_parser.set_defaults(
+        func=lambda args, config: _show_questions(args, config)
+    )
 
     dispatch_parser = subparsers.add_parser(
         "dispatch-answer",
         help="Reenvia manualmente uma resposta apos revisar uma falha de entrega.",
     )
     dispatch_parser.add_argument("question_id", help="ID local da pergunta.")
-    dispatch_parser.set_defaults(func=lambda args, config: _dispatch_answer(args, config))
+    dispatch_parser.set_defaults(
+        func=lambda args, config: _dispatch_answer(args, config)
+    )
 
     continue_parser = subparsers.add_parser(
         "continue-task",
@@ -1812,9 +2097,7 @@ def build_parser() -> argparse.ArgumentParser:
             "para a propria sessao Codex."
         ),
     )
-    continue_parser.set_defaults(
-        func=lambda args, config: _continue_task(args, config)
-    )
+    continue_parser.set_defaults(func=lambda args, config: _continue_task(args, config))
 
     control_parser = subparsers.add_parser(
         "control",
@@ -1873,6 +2156,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Verifica suporte a bandeja sem manter o processo aberto.",
     )
+    tray_parser.add_argument(
+        "--check-chat",
+        action="store_true",
+        help="Constroi a janela de chat, valida seus controles e encerra.",
+    )
     tray_parser.set_defaults(func=lambda args, config: _tray(args, config))
 
     input_parser = subparsers.add_parser(
@@ -1906,7 +2194,9 @@ def build_parser() -> argparse.ArgumentParser:
         "codex-hook",
         help="Recebe JSON de hook do Codex e registra atividade observada.",
     )
-    hook_parser.add_argument("--verbose", action="store_true", help="Mostra resultado do hook.")
+    hook_parser.add_argument(
+        "--verbose", action="store_true", help="Mostra resultado do hook."
+    )
     hook_parser.add_argument(
         "--fail-closed",
         action="store_true",
@@ -1928,34 +2218,52 @@ def build_parser() -> argparse.ArgumentParser:
         "install-codex-hook",
         help="Instala hooks do AI Presence Monitor em hooks.json do Codex.",
     )
-    install_hook_parser.add_argument("--target", type=Path, help="Caminho do hooks.json.")
+    install_hook_parser.add_argument(
+        "--target", type=Path, help="Caminho do hooks.json."
+    )
     install_hook_parser.add_argument("--hook-script", type=Path, help="Script de hook.")
     install_hook_parser.add_argument(
         "--python",
         help="Executavel Python. Padrao: o mesmo Python desta instalacao.",
     )
-    install_hook_parser.add_argument("--timeout", type=int, default=5, help="Timeout do hook.")
-    install_hook_parser.add_argument("--no-backup", action="store_true", help="Nao cria backup.")
-    install_hook_parser.set_defaults(func=lambda args, config: _install_codex_hook(args, config))
+    install_hook_parser.add_argument(
+        "--timeout", type=int, default=5, help="Timeout do hook."
+    )
+    install_hook_parser.add_argument(
+        "--no-backup", action="store_true", help="Nao cria backup."
+    )
+    install_hook_parser.set_defaults(
+        func=lambda args, config: _install_codex_hook(args, config)
+    )
 
     uninstall_hook_parser = subparsers.add_parser(
         "uninstall-codex-hook",
         help="Remove hooks do AI Presence Monitor de hooks.json do Codex.",
     )
-    uninstall_hook_parser.add_argument("--target", type=Path, help="Caminho do hooks.json.")
-    uninstall_hook_parser.add_argument("--no-backup", action="store_true", help="Nao cria backup.")
-    uninstall_hook_parser.set_defaults(func=lambda args, config: _uninstall_codex_hook(args, config))
+    uninstall_hook_parser.add_argument(
+        "--target", type=Path, help="Caminho do hooks.json."
+    )
+    uninstall_hook_parser.add_argument(
+        "--no-backup", action="store_true", help="Nao cria backup."
+    )
+    uninstall_hook_parser.set_defaults(
+        func=lambda args, config: _uninstall_codex_hook(args, config)
+    )
 
     install_service_parser = subparsers.add_parser(
         "install-systemd-service",
         help="Gera o servico systemd de usuario para o monitor continuo.",
     )
-    install_service_parser.add_argument("--target", type=Path, help="Caminho do arquivo .service.")
+    install_service_parser.add_argument(
+        "--target", type=Path, help="Caminho do arquivo .service."
+    )
     install_service_parser.add_argument(
         "--python",
         help="Executavel Python. Padrao: o mesmo Python desta instalacao.",
     )
-    install_service_parser.add_argument("--no-backup", action="store_true", help="Nao cria backup.")
+    install_service_parser.add_argument(
+        "--no-backup", action="store_true", help="Nao cria backup."
+    )
     install_service_parser.set_defaults(
         func=lambda args, config: _install_systemd_service(args, config)
     )
@@ -1964,8 +2272,12 @@ def build_parser() -> argparse.ArgumentParser:
         "uninstall-systemd-service",
         help="Remove o arquivo de servico systemd de usuario.",
     )
-    uninstall_service_parser.add_argument("--target", type=Path, help="Caminho do arquivo .service.")
-    uninstall_service_parser.add_argument("--no-backup", action="store_true", help="Nao cria backup.")
+    uninstall_service_parser.add_argument(
+        "--target", type=Path, help="Caminho do arquivo .service."
+    )
+    uninstall_service_parser.add_argument(
+        "--no-backup", action="store_true", help="Nao cria backup."
+    )
     uninstall_service_parser.set_defaults(
         func=lambda args, config: _uninstall_systemd_service(args, config)
     )
@@ -2074,7 +2386,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emite somente o resultado sanitizado em JSON.",
     )
-    schema_parser.set_defaults(func=lambda args, config: _show_schema_status(args, config))
+    schema_parser.set_defaults(
+        func=lambda args, config: _show_schema_status(args, config)
+    )
 
     doctor_parser = subparsers.add_parser(
         "doctor",
@@ -2138,6 +2452,7 @@ def main(argv: list[str] | None = None) -> None:
         raise_code = args.func(args, config)
     except (
         CodexAppServerError,
+        AgentChatError,
         ControlError,
         UnsupportedPlatformError,
         ValueError,

@@ -2,6 +2,65 @@
 
 ## Em andamento
 
+### Task 046 - Integracao e release do chat e da retomada automatica
+
+**Prioridade**: Critica
+**Status**: em validacao; gates locais e smoke test do chat concluidos
+**Objetivo**: validar o produto integrado, atualizar o runtime Linux e provar
+os fluxos reais sem confundir emissao de input com processamento pelo Codex.
+
+- [x] Passar quality gate, matriz Python e build local.
+- [ ] Testar migracao de banco e rollback com copia privada verificavel.
+- [ ] Instalar o candidato no runtime dedicado de forma transacional.
+- [ ] Instalar e ativar `prompt-rule-observer` sem duplicar processos.
+- [ ] Executar E2E de chat por sessao exata e E2E de retomada com marcador.
+- [ ] Verificar `doctor --strict`, bandeja, monitor e observers apos upgrade.
+- [ ] Promover para `develop`; promover para `main` somente com gates reais.
+
+**Plano**: `docs/planning/TASK-046-integrated-chat-release.md`.
+
+**Evidencia local (2026-11-02)**: 353 testes passaram em Python 3.10, 3.11 e
+3.12; cobertura global de 87%; Ruff, mypy, compilacao, sintaxe shell, build e
+`git diff --check` passaram. `tray --check-chat` construiu a janela real no X11
+com HOME e banco isolados. O bundle de release limpo, upgrade instalado e E2E
+real continuam pendentes.
+
+### Task 045 - Experiencia de chat na bandeja e projecao Discord
+
+**Prioridade**: Alta
+**Status**: implementada e validada localmente; E2E pendente na Task 046
+**Objetivo**: substituir o formulario isolado por uma conversa persistente,
+legivel e vinculada ao projeto/agente/sessao exatos.
+
+- [x] Exibir seletores de projeto/sessao e transcript paginado.
+- [x] Persistir mensagem humana antes do transporte e atualizar seu estado.
+- [x] Projetar perguntas/respostas Discord no mesmo historico sem duplicacao.
+- [x] Atualizar incrementalmente sem roubar foco ou deslocar a leitura.
+- [x] Exibir estados preliminares e confirmados com semantica correta.
+- [x] Cobrir dominio, vazio, erro, troca de perfil, reinicio e isolamento.
+
+**Plano**: `docs/planning/TASK-045-tray-agent-chat.md`.
+
+### Task 044 - Dominio persistente e CLI do chat de agentes
+
+**Prioridade**: Critica
+**Status**: implementada; validacao integrada pendente na Task 046
+**Objetivo**: criar o contrato local de conversas e mensagens e permitir que o
+humano e o AI-worker publiquem no proprio escopo de forma auditavel.
+
+- [x] Migrar o SQLite de schema 1 para 2 sem perder tabelas existentes.
+- [x] Criar conversas unicas por worker, agente e sessao Codex exata.
+- [x] Criar mensagens append-only com papel, direcao, transporte, correlacao e
+      estado de entrega.
+- [x] Implementar listagem paginada e atualizacao de estado idempotente.
+- [x] Adicionar CLI para listar conversas/mensagens e publicar resposta do
+      agente somente no worker derivado do projeto corrente.
+- [x] Adicionar servico de envio humano que persiste antes de usar a fila.
+- [x] Adicionar exportacao com redacao opcional e arquivamento sem exclusao.
+- [x] Cobrir validacao, isolamento entre projetos, paginacao e migracao.
+
+**Plano**: `docs/planning/TASK-044-agent-chat-domain.md`.
+
 ### Task 043 - Chat persistente e retomada por recuperacao de uso
 
 **Prioridade**: Critica
@@ -52,19 +111,20 @@ depois de uma janela de cinco horas ou semanal.
 
 **Chat completo**:
 
-- [ ] Criar modelo SQLite de conversa e mensagem por projeto, agente e sessao
+- [x] Criar modelo SQLite de conversa e mensagem por projeto, agente e sessao
       Codex exata, com direcao, transporte, correlacao e estado de entrega.
-- [ ] Migrar perguntas/respostas Discord existentes para a mesma leitura de
+- [x] Migrar perguntas/respostas Discord existentes para a mesma leitura de
       historico sem perder os estados auditaveis de `remote_questions`.
-- [ ] Substituir **Respond to message** por uma janela de chat com lista de
+- [x] Substituir **Respond to message** por uma janela de chat com lista de
       conversas, transcript paginado, compositor, estados vazio/erro/pendente e
       atualizacao incremental.
-- [ ] Permitir envio local pela fila Codex e envio/resposta pelo Discord sem
+- [x] Permitir envio local pela fila Codex e projecao de pergunta/resposta
+      correlacionada do Discord sem
       confundir `dispatch_started`, `input_emitted` e `delivery_confirmed`.
-- [ ] Adicionar comando para o AI-worker publicar respostas explicitas no
+- [x] Adicionar comando para o AI-worker publicar respostas explicitas no
       transcript; capturar respostas arbitrarias somente quando existir uma API
       confiavel do Codex, sem inferi-las por hooks.
-- [ ] Implementar retencao, redacao/exportacao e limites de notificacao sem
+- [x] Implementar retencao, redacao/exportacao e limites de notificacao sem
       expor conteudo sensivel no desktop.
 - [ ] Validar isolamento entre dois projetos/agentes, reinicio da bandeja,
       ordenacao, concorrencia, Discord e sessao Codex exata.
