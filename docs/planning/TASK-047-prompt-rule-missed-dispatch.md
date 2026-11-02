@@ -18,6 +18,10 @@ state.
    skipped because the worker was idle, the service was absent, usage evidence
    was unavailable or the exact session was not configured.
 
+The installed-service validation must also verify that the generated unit uses
+an absolute Codex executable path and a bounded restart policy; an interactive
+NVM `PATH` must not be assumed inside the systemd user manager.
+
 ## Reproduction
 
 Create an isolated HOME, database and control profile. Exercise the same

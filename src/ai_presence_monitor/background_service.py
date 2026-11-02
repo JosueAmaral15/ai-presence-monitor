@@ -39,6 +39,7 @@ class BackgroundServiceManager(Protocol):
         env_file: Path,
         target_path: Path | None = None,
         python_executable: str | None = None,
+        codex_executable: str | None = None,
         dry_run: bool = False,
         backup: bool = True,
     ) -> BackgroundServiceResult: ...
@@ -68,6 +69,7 @@ class LinuxBackgroundServiceManager:
         env_file: Path,
         target_path: Path | None = None,
         python_executable: str | None = None,
+        codex_executable: str | None = None,
         dry_run: bool = False,
         backup: bool = True,
     ) -> BackgroundServiceResult:
@@ -95,6 +97,7 @@ class LinuxBackgroundServiceManager:
                 env_file=env_file,
                 target_path=target_path,
                 python_executable=python_executable,
+                codex_executable=codex_executable,
                 dry_run=dry_run,
                 backup=backup,
             )

@@ -38,12 +38,19 @@ class LinuxBackgroundServiceManagerTests(unittest.TestCase):
                 env_file=root / ".env",
                 target_path=root / "prompt-rules.service",
                 python_executable="/usr/bin/python3",
+                codex_executable="/opt/codex/bin/codex",
                 dry_run=True,
             )
 
             self.assertIn(" monitor", monitor.rendered_definition)
             self.assertIn("observe-replies", reply.rendered_definition)
             self.assertIn("observe-prompt-rules", prompt_rules.rendered_definition)
+            self.assertIn(
+                '"--codex-executable" "/opt/codex/bin/codex"',
+                prompt_rules.rendered_definition,
+            )
+            self.assertIn("StartLimitBurst=3", prompt_rules.rendered_definition)
+            self.assertIn("Restart=on-failure", prompt_rules.rendered_definition)
             self.assertIn("ai-presence-monitor.service", monitor.follow_up_commands[-1])
 
     def test_install_uninstall_and_output_are_idempotent(self) -> None:

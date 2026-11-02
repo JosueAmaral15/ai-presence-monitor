@@ -56,3 +56,8 @@ preflight do candidato comparava o schema 1 com as tabelas finais do schema 2 e
 rejeitava a migracao antes de inicia-la. O contrato agora declara as tabelas
 minimas por versao; schema 1 integro e aceito, enquanto schema 1 corrompido
 continua rejeitado.
+
+Depois do upgrade 0.11.0, o E2E operacional revelou que o systemd nao herdava o
+diretorio NVM que continha `codex`. A unidade entrou em reinicio e foi
+interrompida antes de qualquer despacho. O hotfix 0.11.1 grava o caminho
+absoluto do executavel no `ExecStart` e aplica limite de reinicios ao observer.

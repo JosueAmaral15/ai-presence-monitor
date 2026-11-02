@@ -128,6 +128,7 @@ class WindowsTaskSchedulerService:
         env_file: Path,
         target_path: Path | None = None,
         python_executable: str | None = None,
+        codex_executable: str | None = None,
         dry_run: bool = False,
         backup: bool = True,
     ) -> BackgroundServiceResult:
@@ -169,9 +170,7 @@ class WindowsTaskSchedulerService:
             changed=changed,
             backup_path=backup_path,
             rendered_definition=rendered,
-            follow_up_commands=(
-                f'schtasks.exe /Run /TN "{TASK_NAMES[component]}"',
-            ),
+            follow_up_commands=(f'schtasks.exe /Run /TN "{TASK_NAMES[component]}"',),
         )
 
     def uninstall(
@@ -185,7 +184,9 @@ class WindowsTaskSchedulerService:
         validate_component(component)
         target = (target_path or default_task_definition_path(component)).expanduser()
         current = target.read_text(encoding="utf-8") if target.exists() else ""
-        task_exists = self._task_exists(TASK_NAMES[component]) if not dry_run else target.exists()
+        task_exists = (
+            self._task_exists(TASK_NAMES[component]) if not dry_run else target.exists()
+        )
         changed = task_exists or target.exists()
         backup_path = None
         if not dry_run:

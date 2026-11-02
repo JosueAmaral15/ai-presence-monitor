@@ -16,6 +16,8 @@ vencida, tentativa de transporte e confirmacao do Codex.
 - [x] Implementar a menor correcao e teste de regressao correspondente.
 - [x] Corrigir o preflight transacional para aceitar schema 1 integro e
       continuar rejeitando schema 1 corrompido.
+- [x] Corrigir a unidade systemd para usar o caminho absoluto do Codex e
+      limitar loops de reinicio quando a dependencia falha.
 - [ ] Validar quality gate, matriz Python e pacote instalado.
 - [ ] Executar E2E exato autorizado e registrar a evidencia.
 

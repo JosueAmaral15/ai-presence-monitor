@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import sqlite3
 import sys
 import time
@@ -983,6 +984,14 @@ def _uninstall_reply_observer_service(
 
 def _install_background_service(args: argparse.Namespace, config: AppConfig) -> int:
     try:
+        codex_executable = getattr(args, "codex_executable", None)
+        if args.component == "prompt-rule-observer":
+            codex_executable = codex_executable or shutil.which("codex")
+            if codex_executable is None:
+                raise BackgroundServiceError(
+                    "Codex executable not found; use --codex-executable."
+                )
+            codex_executable = str(Path(codex_executable).expanduser().resolve())
         manager = get_platform_factory(
             experimental_windows_enabled=config.experimental_windows_enabled,
         ).create_background_service_manager()
@@ -991,6 +1000,7 @@ def _install_background_service(args: argparse.Namespace, config: AppConfig) -> 
             env_file=config.env_path,
             target_path=args.target,
             python_executable=args.python,
+            codex_executable=codex_executable,
             dry_run=args.dry_run,
             backup=not args.no_backup,
         )
@@ -2340,6 +2350,13 @@ def build_parser() -> argparse.ArgumentParser:
     install_background_parser.add_argument(
         "--python",
         help="Executavel Python. Padrao: o mesmo Python desta instalacao.",
+    )
+    install_background_parser.add_argument(
+        "--codex-executable",
+        help=(
+            "Executavel Codex absoluto usado pelo prompt-rule-observer. "
+            "Padrao: resolve codex no PATH durante a instalacao."
+        ),
     )
     install_background_parser.add_argument(
         "--no-backup",

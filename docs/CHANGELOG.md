@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-02 - v0.11.1
+
+- Resolved the Codex executable to an absolute path when installing the
+  prompt-rule observer, so systemd does not depend on an interactive NVM PATH.
+- Added an explicit `--codex-executable` installer option for portable Linux
+  installations.
+- Applied bounded restart policy to the prompt-rule observer to prevent an
+  unending five-second restart loop when a dependency cannot start.
+
 ## 2026-11-02 - v0.11.0
 
 - Added persistent local conversations scoped by exact worker, agent and Codex

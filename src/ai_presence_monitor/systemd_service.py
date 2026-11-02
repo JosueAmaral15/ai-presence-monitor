@@ -50,10 +50,14 @@ def render_user_service(
     env_file: Path,
     python_executable: str | None = None,
     service_command: str = "monitor",
+    service_arguments: tuple[str, ...] = (),
     description: str = "AI Presence Monitor",
 ) -> str:
     python = python_executable or sys.executable
-    is_reply_observer = service_command == "observe-replies"
+    is_bounded_observer = service_command in {
+        "observe-replies",
+        "observe-prompt-rules",
+    }
     exec_start = " ".join(
         (
             _systemd_quote(python),
@@ -62,6 +66,7 @@ def render_user_service(
             "--env-file",
             _systemd_quote(env_file.expanduser().resolve()),
             service_command,
+            *(_systemd_quote(argument) for argument in service_arguments),
         )
     )
     unit_lines = [
@@ -70,11 +75,11 @@ def render_user_service(
         "After=network-online.target",
         "Wants=network-online.target",
     ]
-    if is_reply_observer:
+    if is_bounded_observer:
         unit_lines.extend(("StartLimitIntervalSec=300", "StartLimitBurst=3"))
 
-    restart_policy = "on-failure" if is_reply_observer else "always"
-    restart_seconds = 30 if is_reply_observer else 5
+    restart_policy = "on-failure" if is_bounded_observer else "always"
+    restart_seconds = 30 if is_bounded_observer else 5
     return "\n".join(
         (
             *unit_lines,
@@ -108,6 +113,7 @@ def install_user_service(
     dry_run: bool = False,
     backup: bool = True,
     service_command: str = "monitor",
+    service_arguments: tuple[str, ...] = (),
     description: str = "AI Presence Monitor",
 ) -> SystemdServiceResult:
     target = (target_path or default_user_service_path()).expanduser()
@@ -115,6 +121,7 @@ def install_user_service(
         env_file=env_file,
         python_executable=python_executable,
         service_command=service_command,
+        service_arguments=service_arguments,
         description=description,
     )
     current = target.read_text(encoding="utf-8") if target.exists() else None
@@ -163,6 +170,7 @@ def install_prompt_rule_observer_service(
     env_file: Path,
     target_path: Path | None = None,
     python_executable: str | None = None,
+    codex_executable: str | None = None,
     dry_run: bool = False,
     backup: bool = True,
 ) -> SystemdServiceResult:
@@ -173,6 +181,11 @@ def install_prompt_rule_observer_service(
         dry_run=dry_run,
         backup=backup,
         service_command="observe-prompt-rules",
+        service_arguments=(
+            ("--codex-executable", codex_executable)
+            if codex_executable is not None
+            else ()
+        ),
         description="AI Presence Prompt Rule Observer",
     )
 
