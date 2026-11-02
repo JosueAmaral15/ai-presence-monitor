@@ -82,6 +82,7 @@ def observe_prompt_rules_once(
         ttl_seconds=evidence_ttl_seconds,
         observed_at=checked_at,
     )
+    queue_client = client or CodexQueueClient(executable=codex_executable)
     results: list[PromptRuleRunResult] = []
     for target in targets:
         record_codex_limit_observation(
@@ -96,7 +97,7 @@ def observe_prompt_rules_once(
                 profile_id=target.profile_id,
                 presence_store=presence_store,
                 now=checked_at,
-                client=client,
+                client=queue_client,
                 usage_gated_only=True,
             )
         )

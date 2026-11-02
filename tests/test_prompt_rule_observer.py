@@ -41,6 +41,64 @@ class FakeClient:
 
 
 class PromptRuleObserverTests(unittest.TestCase):
+    def test_observer_uses_configured_codex_executable_for_queue_transport(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            controls = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            presence.record_event(
+                worker_id="worker-path",
+                computer="computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-path",
+                trigger="after_delay",
+                delay_minutes=1,
+                text="continue",
+                require_usage_available=True,
+                repeat_enabled=False,
+                repeat_interval_minutes=1,
+                now=1_000.0,
+            )
+            controls.save(
+                replace_prompt_rules(
+                    ControlSettings(
+                        task_automation_enabled=True,
+                        native_input_enabled=True,
+                    ),
+                    [rule],
+                ),
+                "worker-path",
+            )
+            queue_client = FakeClient()
+
+            with patch(
+                "ai_presence_monitor.prompt_rule_observer.CodexQueueClient",
+                return_value=queue_client,
+            ) as client_factory:
+                result = observe_prompt_rules_once(
+                    control_store=controls,
+                    presence_store=presence,
+                    evidence_ttl_seconds=600,
+                    request_timeout=3.0,
+                    codex_executable="/opt/codex/bin/codex",
+                    now=1_060.0,
+                    collector=lambda **_: CodexLimitObservation(
+                        "usage_available", "available", 1_060.0, 1_660.0
+                    ),
+                )
+
+            client_factory.assert_called_once_with(executable="/opt/codex/bin/codex")
+            self.assertEqual(result.rule_results[0].state, "dispatch_started")
+            self.assertEqual(queue_client.calls, [("session-path", "continue")])
+
     def test_52_minute_usage_rule_requires_observer_then_dispatches_once(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

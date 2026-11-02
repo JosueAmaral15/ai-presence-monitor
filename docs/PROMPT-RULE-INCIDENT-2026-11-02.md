@@ -61,3 +61,10 @@ Depois do upgrade 0.11.0, o E2E operacional revelou que o systemd nao herdava o
 diretorio NVM que continha `codex`. A unidade entrou em reinicio e foi
 interrompida antes de qualquer despacho. O hotfix 0.11.1 grava o caminho
 absoluto do executavel no `ExecStart` e aplica limite de reinicios ao observer.
+
+O primeiro ciclo estavel do 0.11.1 confirmou `usage_available`, mas revelou que
+o transporte `codex queue` ainda criava seu proprio cliente com o nome relativo
+`codex`. As regras foram desarmadas como `failed_or_uncertain`, conforme a
+politica de nao repeticao. O 0.11.2 reutiliza o mesmo caminho absoluto na coleta
+e no transporte. Reabilitar uma regra desarmada continua sendo decisao humana
+na bandeja.

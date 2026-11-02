@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-02 - v0.11.2
+
+- Reused the configured absolute Codex executable for both App Server usage
+  observation and `codex queue` transport inside the prompt-rule observer.
+- Added regression coverage proving that a systemd-compatible executable path
+  reaches the queue client instead of falling back to the manager's PATH.
+
 ## 2026-11-02 - v0.11.1
 
 - Resolved the Codex executable to an absolute path when installing the
