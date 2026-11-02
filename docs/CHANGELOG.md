@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-02 - CI correction after v0.11.2
+
+- Kept PySide6 as an optional tray dependency while allowing clean
+  development-only environments to type-check the delayed Qt imports.
+- Preserved strict missing-import checks for every non-Qt module.
+
 ## 2026-11-02 - v0.11.2
 
 - Reused the configured absolute Codex executable for both App Server usage

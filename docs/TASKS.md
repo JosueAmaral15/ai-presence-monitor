@@ -2,6 +2,21 @@
 
 ## Em andamento
 
+### Task 048 - Gate CI com bandeja opcional
+
+**Prioridade**: Alta
+**Status**: em validacao
+**Objetivo**: manter o CI Linux reproduzivel sem instalar a dependencia grafica
+opcional, preservando tipagem estrita para o restante do produto.
+
+- [x] Reproduzir a falha nos tres jobs Linux do GitHub Actions.
+- [x] Confirmar que testes, cobertura e Ruff passam antes da falha de tipagem.
+- [x] Limitar a excecao do mypy exclusivamente aos modulos `PySide6.*`.
+- [ ] Passar o quality gate local e o CI remoto em Python 3.10, 3.11 e 3.12.
+- [ ] Promover o `develop` validado para `main`.
+
+**Plano**: `docs/planning/TASK-048-optional-tray-ci-gate.md`.
+
 ### Task 047 - Prompt rule nao despachou apos 52 minutos
 
 **Prioridade**: Critica

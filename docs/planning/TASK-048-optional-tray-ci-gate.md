@@ -1,0 +1,30 @@
+# Task 048 - Optional Tray CI Gate
+
+## Incident
+
+The `develop` workflow for commit `8384094` ran on all supported Linux/Python
+combinations. Tests, aggregate coverage and Ruff passed, but mypy failed because
+the CI intentionally installs `.[dev]` without the optional `tray` extra and
+therefore cannot resolve `PySide6.*` imports.
+
+## Decision
+
+Keep PySide6 optional. Configure mypy to tolerate missing implementations only
+for `PySide6.*`, whose imports are delayed until the tray starts and whose
+absence already produces a dedicated runtime error. Do not weaken missing-import
+validation globally and do not make every headless CI job download Qt.
+
+## Validation
+
+1. Run the complete local quality gate.
+2. Verify a clean environment containing only `.[dev]` can run mypy.
+3. Push the task branch, promote it to `develop` and require successful GitHub
+   Actions jobs for Python 3.10, 3.11 and 3.12.
+4. Recheck the installed runtime with strict doctor and confirm the prompt-rule
+   observer and tray session remain active with no restarts.
+
+## Promotion
+
+Fast-forward `main` only after the remote matrix and the already completed real
+chat and prompt-observer integrations are all green. The optional Windows job
+remains disabled under the current Linux-only product policy.
