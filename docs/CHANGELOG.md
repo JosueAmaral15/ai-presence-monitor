@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-02 - v0.10.8
+
+- Added a durable prompt-rule observer that waits for fresh Codex usage
+  availability and can resume an exact authorized session after its worker has
+  become inactive.
+- Kept the observer idle until an enabled usage-gated rule is due, and kept
+  blocked, unknown or missing availability fail-closed.
+- Split rule scheduling so the tray handles ordinary rules and the observer
+  exclusively handles usage-gated rules, preventing duplicate schedulers.
+- Added Linux user-service, upgrade/rollback, doctor and portable service
+  definitions for the prompt-rule observer.
+- Recorded the staged persistent agent-chat plan and the prompt-rule audit.
+
 ## 2026-10-15 - v0.10.7
 
 - Added a persistent, opt-in **Enable desktop notifications** tray action above

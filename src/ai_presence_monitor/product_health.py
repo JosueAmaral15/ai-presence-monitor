@@ -24,6 +24,7 @@ from .store import SchemaStatus, inspect_schema
 DOCTOR_SERVICES = (
     "ai-presence-monitor.service",
     "ai-presence-reply-observer.service",
+    "ai-presence-prompt-rule-observer.service",
 )
 
 

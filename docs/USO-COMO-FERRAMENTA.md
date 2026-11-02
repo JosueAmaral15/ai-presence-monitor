@@ -512,6 +512,14 @@ com `observe-codex-limits --project "$PROJECT" --session SESSAO_EXATA`. Ela nao
 deve manter `--watch` sem essa responsabilidade ter sido atribuida e nao deve
 interpretar a evidencia como autorizacao para notificar ou recuperar.
 
+Para retomada autorizada de longa duracao, o operador habilita uma prompt rule
+da sessao exata com **Require available Codex usage** e mantem o componente
+`prompt-rule-observer` ativo. Ele funciona com worker inativo, nao atualiza
+presenca por temporizador e somente envia quando a regra estiver vencida e o
+Codex informar uso agregado disponivel. A regra persistente e o controle
+`task-automation` sao a autorizacao; o observer nao cria regras por conta
+propria.
+
 Para evidencia Linux, use `observe-linux-state --project "$PROJECT"` somente
 com PIDs e servicos confirmados. Nao descubra automaticamente outro processo
 Codex por nome, nao trate rota local como Internet disponivel e nao use um

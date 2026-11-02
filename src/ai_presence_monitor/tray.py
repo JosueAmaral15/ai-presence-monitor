@@ -818,6 +818,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                         store=control_store,
                         profile_id=profile_id,
                         presence_store=presence_store,
+                        usage_gated_only=False,
                     )
                     result_state = rule_result.state
                     result_rule_id = rule_result.rule_id

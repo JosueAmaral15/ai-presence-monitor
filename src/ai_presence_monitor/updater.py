@@ -23,6 +23,7 @@ MANIFEST_VERSION = 1
 MANAGED_SERVICES = (
     "ai-presence-monitor.service",
     "ai-presence-reply-observer.service",
+    "ai-presence-prompt-rule-observer.service",
 )
 PACKAGE_NAME = "ai-presence-monitor"
 POSTFLIGHT_CORE_CHECKS = {

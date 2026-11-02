@@ -14,7 +14,7 @@ from ai_presence_monitor.background_service import (
 
 
 class LinuxBackgroundServiceManagerTests(unittest.TestCase):
-    def test_monitor_and_reply_components_wrap_systemd_definitions(self) -> None:
+    def test_all_components_wrap_systemd_definitions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             manager = LinuxBackgroundServiceManager()
@@ -33,9 +33,17 @@ class LinuxBackgroundServiceManagerTests(unittest.TestCase):
                 python_executable="/usr/bin/python3",
                 dry_run=True,
             )
+            prompt_rules = manager.install(
+                component="prompt-rule-observer",
+                env_file=root / ".env",
+                target_path=root / "prompt-rules.service",
+                python_executable="/usr/bin/python3",
+                dry_run=True,
+            )
 
             self.assertIn(" monitor", monitor.rendered_definition)
             self.assertIn("observe-replies", reply.rendered_definition)
+            self.assertIn("observe-prompt-rules", prompt_rules.rendered_definition)
             self.assertIn("ai-presence-monitor.service", monitor.follow_up_commands[-1])
 
     def test_install_uninstall_and_output_are_idempotent(self) -> None:

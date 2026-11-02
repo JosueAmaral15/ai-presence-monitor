@@ -159,6 +159,7 @@ def process_prompt_rules(
     presence_store: PresenceStore,
     now: float | None = None,
     client: CodexQueueClient | None = None,
+    usage_gated_only: bool | None = None,
 ) -> PromptRuleRunResult:
     checked_at = time.time() if now is None else now
     settings = store.load(profile_id)
@@ -171,6 +172,10 @@ def process_prompt_rules(
     for original in settings.prompt_rules:
         rule = original
         if not rule.enabled:
+            continue
+        if usage_gated_only is True and not rule.require_usage_available:
+            continue
+        if usage_gated_only is False and rule.require_usage_available:
             continue
         if rule.awaiting_confirmation:
             observed_at = _later_session_observation(

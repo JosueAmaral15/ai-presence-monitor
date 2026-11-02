@@ -679,9 +679,12 @@ session, observed after the rule became due. It therefore follows the
 aggregate availability decision reported by Codex across whichever five-hour,
 weekly, plan or credit controls apply to the account, without storing balances
 or raw rate-limit payloads. Missing, expired, unknown or blocked evidence keeps
-the rule armed in `waiting_for_usage` and never consumes an occurrence. Run
-`ai-presence observe-codex-limits --project ... --session ... --watch` for a
-rule that enables this condition.
+the rule armed in `waiting_for_usage` and never consumes an occurrence. Run the
+dedicated `ai-presence observe-prompt-rules` service for rules that enable this
+condition. It stays idle when no usage-gated rule is due and continues after a
+worker becomes inactive, so a rule can wait across a five-hour or weekly
+reset. Install it on Linux with `ai-presence install-background-service
+--component prompt-rule-observer`.
 
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous

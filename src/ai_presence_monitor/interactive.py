@@ -1094,7 +1094,7 @@ def run_interactive(env_file: Path, dry_run: bool = False) -> None:
             elif option in {"20", "21"}:
                 component = _prompt_choice(
                     "Componente",
-                    ["monitor", "reply-observer"],
+                    ["monitor", "reply-observer", "prompt-rule-observer"],
                     "monitor",
                 )
                 args = argparse.Namespace(

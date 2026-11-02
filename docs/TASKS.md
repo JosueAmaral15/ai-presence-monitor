@@ -2,6 +2,75 @@
 
 ## Em andamento
 
+### Task 043 - Chat persistente e retomada por recuperacao de uso
+
+**Prioridade**: Critica
+**Status**: em implementacao na branch
+`codex/task-043-agent-chat-usage-recovery`
+**Objetivo**: substituir o compositor isolado da bandeja por conversas
+persistentes por projeto/agente/sessao e permitir que uma prompt rule autorizada
+retome a sessao exata quando o Codex voltar a informar uso disponivel, inclusive
+depois de uma janela de cinco horas ou semanal.
+
+**Retomada automatica**:
+
+- [x] Identificar a limitacao: `observe-codex-limits --watch` encerrava quando o
+      worker ficava inativo e a bandeja era o unico scheduler das regras.
+- [x] Criar observer dedicado que continua avaliando regras vencidas mesmo com
+      worker `idle`.
+- [x] Consultar o App Server apenas quando houver regra habilitada, vencida,
+      vinculada a sessao exata e com **Require available Codex usage**.
+- [x] Preservar a regra em `waiting_for_usage` enquanto o estado for bloqueado,
+      ausente ou desconhecido.
+- [x] Enviar `continue` uma unica vez quando surgir evidencia fresca
+      `usage_available`; desarmar antes do transporte e exigir hook posterior
+      para confirmar atividade.
+- [x] Separar a execucao: bandeja trata regras comuns e o observer trata regras
+      condicionadas a uso, evitando disputa entre processos.
+- [x] Disponibilizar `observe-prompt-rules` e o componente de servico
+      `prompt-rule-observer`.
+- [ ] Instalar o novo servico no runtime dedicado e executar E2E real com
+      marcador exclusivo sem esgotar tokens deliberadamente.
+
+**Investigacao das prompt rules**:
+
+- [x] Confirmar por leitura que alteracao de campo ou reabilitacao rearma a
+      regra, enquanto salvar sem mudanca preserva o vencimento.
+- [x] Confirmar por testes que regra one-shot envia uma vez, espera evidencia
+      de uso exata/fresca e rejeita evidencia vencida ou de outro escopo.
+- [x] Reproduzir a lacuna operacional de longa duracao: o produtor antigo
+      dependia de worker ativo e a bandeja precisava permanecer aberta.
+- [x] Cobrir a correcao com worker encerrado, limite atingido, recuperacao de
+      uso e exatamente um despacho.
+- [x] Passar 344 testes, 86% de cobertura, Ruff, mypy, shell e build no
+      quality gate completo.
+- [x] Passar os mesmos 344 testes em Python 3.10, 3.11 e 3.12.
+- [x] Instalar o wheel 0.10.8 isoladamente e validar comando, ciclo ocioso e
+      definicao systemd do novo componente.
+- [ ] Registrar E2E instalado do servico e atualizar a conclusao desta
+      investigacao com evidencias reais.
+
+**Chat completo**:
+
+- [ ] Criar modelo SQLite de conversa e mensagem por projeto, agente e sessao
+      Codex exata, com direcao, transporte, correlacao e estado de entrega.
+- [ ] Migrar perguntas/respostas Discord existentes para a mesma leitura de
+      historico sem perder os estados auditaveis de `remote_questions`.
+- [ ] Substituir **Respond to message** por uma janela de chat com lista de
+      conversas, transcript paginado, compositor, estados vazio/erro/pendente e
+      atualizacao incremental.
+- [ ] Permitir envio local pela fila Codex e envio/resposta pelo Discord sem
+      confundir `dispatch_started`, `input_emitted` e `delivery_confirmed`.
+- [ ] Adicionar comando para o AI-worker publicar respostas explicitas no
+      transcript; capturar respostas arbitrarias somente quando existir uma API
+      confiavel do Codex, sem inferi-las por hooks.
+- [ ] Implementar retencao, redacao/exportacao e limites de notificacao sem
+      expor conteudo sensivel no desktop.
+- [ ] Validar isolamento entre dois projetos/agentes, reinicio da bandeja,
+      ordenacao, concorrencia, Discord e sessao Codex exata.
+
+**Plano**: `docs/planning/TASK-043-agent-chat-and-usage-recovery.md`.
+
 ### Task 040 - Condicao de disponibilidade de uso nas prompt rules
 
 **Prioridade**: Alta

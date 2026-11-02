@@ -19,10 +19,12 @@ from .config import APP_DIR_NAME
 TASK_NAMES = {
     "monitor": "AI Presence Monitor",
     "reply-observer": "AI Presence Reply Observer",
+    "prompt-rule-observer": "AI Presence Prompt Rule Observer",
 }
 TASK_COMMANDS = {
     "monitor": "monitor",
     "reply-observer": "observe-replies",
+    "prompt-rule-observer": "observe-prompt-rules",
 }
 
 
@@ -35,7 +37,12 @@ def _windows_data_dir() -> Path:
 
 def default_task_definition_path(component: str) -> Path:
     validate_component(component)
-    filename = "monitor-task.xml" if component == "monitor" else "reply-observer-task.xml"
+    filenames = {
+        "monitor": "monitor-task.xml",
+        "reply-observer": "reply-observer-task.xml",
+        "prompt-rule-observer": "prompt-rule-observer-task.xml",
+    }
+    filename = filenames[component]
     return _windows_data_dir() / "tasks" / filename
 
 
@@ -64,11 +71,12 @@ def render_task_definition(
             TASK_COMMANDS[component],
         ]
     )
-    description = (
-        "AI Presence continuous monitor"
-        if component == "monitor"
-        else "AI Presence Discord reply observer"
-    )
+    descriptions = {
+        "monitor": "AI Presence continuous monitor",
+        "reply-observer": "AI Presence Discord reply observer",
+        "prompt-rule-observer": "AI Presence prompt rule observer",
+    }
+    description = descriptions[component]
     account = user_id or _current_windows_user()
     return "\n".join(
         (

@@ -30,6 +30,16 @@ def default_reply_observer_service_path() -> Path:
     )
 
 
+def default_prompt_rule_observer_service_path() -> Path:
+    return (
+        Path.home()
+        / ".config"
+        / "systemd"
+        / "user"
+        / "ai-presence-prompt-rule-observer.service"
+    )
+
+
 def _systemd_quote(value: str | Path) -> str:
     escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -148,6 +158,25 @@ def install_reply_observer_service(
     )
 
 
+def install_prompt_rule_observer_service(
+    *,
+    env_file: Path,
+    target_path: Path | None = None,
+    python_executable: str | None = None,
+    dry_run: bool = False,
+    backup: bool = True,
+) -> SystemdServiceResult:
+    return install_user_service(
+        env_file=env_file,
+        target_path=target_path or default_prompt_rule_observer_service_path(),
+        python_executable=python_executable,
+        dry_run=dry_run,
+        backup=backup,
+        service_command="observe-prompt-rules",
+        description="AI Presence Prompt Rule Observer",
+    )
+
+
 def uninstall_reply_observer_service(
     *,
     target_path: Path | None = None,
@@ -156,6 +185,19 @@ def uninstall_reply_observer_service(
 ) -> SystemdServiceResult:
     return uninstall_user_service(
         target_path=target_path or default_reply_observer_service_path(),
+        dry_run=dry_run,
+        backup=backup,
+    )
+
+
+def uninstall_prompt_rule_observer_service(
+    *,
+    target_path: Path | None = None,
+    dry_run: bool = False,
+    backup: bool = True,
+) -> SystemdServiceResult:
+    return uninstall_user_service(
+        target_path=target_path or default_prompt_rule_observer_service_path(),
         dry_run=dry_run,
         backup=backup,
     )

@@ -56,6 +56,7 @@ from .platform_integration import (
     get_platform_factory,
 )
 from .product_health import collect_doctor_report
+from .prompt_rule_observer import observe_prompt_rules_once
 from .prompt_rules import disable_all_prompt_rules
 from .protocols import (
     PROTOCOLS,
@@ -1083,6 +1084,45 @@ def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
         time.sleep(interval)
 
 
+def _observe_prompt_rules(args: argparse.Namespace, config: AppConfig) -> int:
+    interval = (
+        args.interval
+        if args.interval is not None
+        else config.codex_limit_poll_interval_seconds
+    )
+    evidence_ttl = (
+        args.evidence_ttl
+        if args.evidence_ttl is not None
+        else config.codex_limit_evidence_ttl_seconds
+    )
+    if interval <= 0:
+        raise ValueError("Prompt-rule observer interval must be greater than zero.")
+    if evidence_ttl <= 0:
+        raise ValueError("Codex limit evidence TTL must be greater than zero.")
+
+    control_store = ControlStore.from_config(config)
+    presence_store = PresenceStore(config.db_path)
+    while True:
+        result = observe_prompt_rules_once(
+            control_store=control_store,
+            presence_store=presence_store,
+            evidence_ttl_seconds=evidence_ttl,
+            request_timeout=args.request_timeout,
+            codex_executable=args.codex_executable,
+        )
+        if result.targets:
+            states = ",".join(item.state for item in result.rule_results)
+            print(
+                "prompt-rule-observer: "
+                f"targets={len(result.targets)} usage={result.observation_state} "
+                f"rules={states}",
+                flush=True,
+            )
+        if args.once:
+            return 0
+        time.sleep(interval)
+
+
 def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
     if not sys.platform.startswith("linux"):
         raise UnsupportedPlatformError(
@@ -1476,6 +1516,43 @@ def build_parser() -> argparse.ArgumentParser:
     )
     codex_limits_parser.set_defaults(
         func=lambda args, config: _observe_codex_limits(args, config)
+    )
+
+    prompt_rule_observer_parser = subparsers.add_parser(
+        "observe-prompt-rules",
+        help=(
+            "Observa disponibilidade de uso e executa prompt rules vencidas "
+            "mesmo quando o worker esta inativo."
+        ),
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Executa um ciclo e encerra. Padrao: observer continuo.",
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--interval",
+        type=int,
+        help="Intervalo do observer em segundos.",
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--evidence-ttl",
+        type=int,
+        help="Validade da evidencia de uso em segundos.",
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=10.0,
+        help="Timeout da leitura JSON-RPC. Padrao: 10 segundos.",
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--codex-executable",
+        default="codex",
+        help="Executavel Codex. Padrao: codex no PATH.",
+    )
+    prompt_rule_observer_parser.set_defaults(
+        func=lambda args, config: _observe_prompt_rules(args, config)
     )
 
     linux_state_parser = subparsers.add_parser(

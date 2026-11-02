@@ -350,8 +350,11 @@ resultado agregado acompanha as janelas de cinco horas, semanal, plano ou
 creditos que forem aplicaveis sem salvar saldos nem payloads brutos. Evidencia
 ausente, expirada, desconhecida ou bloqueada mantem a regra armada em
 `waiting_for_usage`, sem consumir uma ocorrencia. Ao habilitar a condicao,
-mantenha `ai-presence observe-codex-limits --project ... --session ... --watch`
-ativo para o worker.
+mantenha o servico dedicado `ai-presence observe-prompt-rules` ativo. Ele fica
+ocioso sem regra condicionada a uso vencida e continua mesmo depois de o worker
+ficar inativo, permitindo aguardar uma janela de cinco horas ou semanal. No
+Linux, instale-o com `ai-presence install-background-service --component
+prompt-rule-observer`.
 
 O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
 sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar

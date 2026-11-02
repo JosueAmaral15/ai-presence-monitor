@@ -137,11 +137,21 @@ parte explicita da tarefa; ele revalida o worker a cada poll e encerra depois
 de `finish`. O comando consulta apenas `account/rateLimits/read` e nao atualiza
 presenca, diagnostica a causa final, notifica, toca alarme ou envia input.
 
-Uma regra de prompt com **Require available Codex usage** depende desse
-observer em modo `--watch`. A regra somente aceita `usage_available` do mesmo
-worker e sessao, com TTL valido e observado depois do vencimento. O AI-worker
-nao deve fabricar evidencia, remover o gate nem substituir estado ausente ou
+Uma regra de prompt com **Require available Codex usage** e processada pelo
+servico dedicado `prompt-rule-observer`, inclusive depois de `finish` ou de uma
+espera de cinco horas/uma semana. O servico somente consulta o Codex quando
+existe regra habilitada e vencida, e aceita `usage_available` do mesmo worker e
+sessao, com TTL valido e observado depois do vencimento. O AI-worker nao deve
+fabricar evidencia, remover o gate nem substituir estado ausente ou
 desconhecido por disponibilidade presumida.
+
+Instalacao Linux feita pelo operador humano:
+
+```bash
+ai-presence install-background-service --component prompt-rule-observer
+systemctl --user daemon-reload
+systemctl --user enable --now ai-presence-prompt-rule-observer.service
+```
 
 Para coletar evidencias locais no Linux:
 

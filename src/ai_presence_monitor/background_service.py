@@ -5,13 +5,15 @@ from pathlib import Path
 from typing import Protocol
 
 from .systemd_service import (
+    install_prompt_rule_observer_service,
     install_reply_observer_service,
     install_user_service,
+    uninstall_prompt_rule_observer_service,
     uninstall_reply_observer_service,
     uninstall_user_service,
 )
 
-BACKGROUND_COMPONENTS = ("monitor", "reply-observer")
+BACKGROUND_COMPONENTS = ("monitor", "reply-observer", "prompt-rule-observer")
 
 
 class BackgroundServiceError(RuntimeError):
@@ -79,7 +81,7 @@ class LinuxBackgroundServiceManager:
                 backup=backup,
             )
             unit = "ai-presence-monitor.service"
-        else:
+        elif component == "reply-observer":
             result = install_reply_observer_service(
                 env_file=env_file,
                 target_path=target_path,
@@ -88,6 +90,15 @@ class LinuxBackgroundServiceManager:
                 backup=backup,
             )
             unit = "ai-presence-reply-observer.service"
+        else:
+            result = install_prompt_rule_observer_service(
+                env_file=env_file,
+                target_path=target_path,
+                python_executable=python_executable,
+                dry_run=dry_run,
+                backup=backup,
+            )
+            unit = "ai-presence-prompt-rule-observer.service"
         return BackgroundServiceResult(
             action="install",
             component=component,
@@ -117,13 +128,20 @@ class LinuxBackgroundServiceManager:
                 backup=backup,
             )
             unit = "ai-presence-monitor.service"
-        else:
+        elif component == "reply-observer":
             result = uninstall_reply_observer_service(
                 target_path=target_path,
                 dry_run=dry_run,
                 backup=backup,
             )
             unit = "ai-presence-reply-observer.service"
+        else:
+            result = uninstall_prompt_rule_observer_service(
+                target_path=target_path,
+                dry_run=dry_run,
+                backup=backup,
+            )
+            unit = "ai-presence-prompt-rule-observer.service"
         return BackgroundServiceResult(
             action="uninstall",
             component=component,

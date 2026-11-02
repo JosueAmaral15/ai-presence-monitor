@@ -31,17 +31,16 @@ transport is claimed, no input is sent and no retry state is created.
 ## Producer boundary
 
 The scheduler consumes evidence but never polls the Codex App Server itself.
-The existing bounded observer must run for the exact active worker and session:
+Task 043 adds a dedicated durable observer for usage-gated prompt rules:
 
 ```bash
-ai-presence observe-codex-limits \
-  --project /absolute/project/path \
-  --session EXACT_SESSION \
-  --watch
+ai-presence observe-prompt-rules
 ```
 
-This separation keeps potentially blocking account reads outside the tray UI
-and preserves the existing read-only observer allowlist.
+It polls only while at least one exact-session rule is enabled and due, and it
+continues while the worker is inactive. This separation keeps potentially
+blocking account reads outside the tray UI and preserves the existing
+read-only observer allowlist.
 
 ## Validation
 
