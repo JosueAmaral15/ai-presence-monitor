@@ -68,3 +68,16 @@ o transporte `codex queue` ainda criava seu proprio cliente com o nome relativo
 politica de nao repeticao. O 0.11.2 reutiliza o mesmo caminho absoluto na coleta
 e no transporte. Reabilitar uma regra desarmada continua sendo decisao humana
 na bandeja.
+
+## Resultado final
+
+O runtime 0.11.2 foi instalado transacionalmente. `doctor --strict` passou com
+schema 2, hooks, monitor, observer Discord, observer de prompt rules e bandeja.
+O observer permaneceu ativo com `NRestarts=0`. Em estado isolado, um alvo real
+obteve `usage_available`, iniciou a fila uma vez e persistiu uma ocorrencia.
+
+Tres regras reais permanecem desabilitadas em `failed_or_uncertain`, incluindo
+as tentativas atingidas durante o diagnostico; uma regra separada continua
+habilitada em `waiting_for_event`. O software nao reabilita automaticamente uma
+tentativa incerta. O usuario deve revisar e salvar novamente apenas as regras
+que deseja executar.

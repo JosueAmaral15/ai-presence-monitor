@@ -30,3 +30,18 @@ steps remains external failed evidence and must not be described as passing.
 Stop the new observer and tray, restore the pre-upgrade database backup and old
 wheel transactionally, restore the previous service set, then rerun strict
 doctor. Never run the schema-1 runtime against a schema-2 database.
+
+## 2026-11-02 evidence
+
+- clean 0.11.2 bundle verified from `83a5c66`;
+- 357 tests passed on Python 3.10, 3.11 and 3.12 with 87% coverage;
+- isolated schema 1 to 2 migration and database-backup restoration passed;
+- transactional runtime upgrades completed with authentic rollback wheels;
+- strict doctor passed on 0.11.2 with all three services active;
+- prompt-rule observer and tray each reported `NRestarts=0`;
+- exact-session chat reached later `delivery_confirmed` evidence;
+- isolated real observer reached `usage_available` and one `dispatch_started`.
+
+Hosted GitHub CI remains external failed evidence. This candidate may advance
+to `develop`, but `main` still requires the repository's release decision for
+that unresolved external gate.

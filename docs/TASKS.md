@@ -5,7 +5,7 @@
 ### Task 047 - Prompt rule nao despachou apos 52 minutos
 
 **Prioridade**: Critica
-**Status**: causa identificada; correcao em validacao para upgrade
+**Status**: concluida no runtime Linux 0.11.2; regras falhadas exigem decisao humana
 **Objetivo**: reproduzir e corrigir a regra configurada perto de 10:00 com
 atraso de 52 minutos que nao forneceu prompt ate 13:03, sem confundir regra
 vencida, tentativa de transporte e confirmacao do Codex.
@@ -20,8 +20,8 @@ vencida, tentativa de transporte e confirmacao do Codex.
       limitar loops de reinicio quando a dependencia falha.
 - [x] Reutilizar o mesmo executavel absoluto no App Server e no transporte
       `codex queue`, sem fallback ao PATH do systemd.
-- [ ] Validar quality gate, matriz Python e pacote instalado.
-- [ ] Executar E2E exato autorizado e registrar a evidencia.
+- [x] Validar quality gate, matriz Python e pacote instalado.
+- [x] Executar E2E exato autorizado e registrar a evidencia.
 
 **Plano**: `docs/planning/TASK-047-prompt-rule-missed-dispatch.md`.
 
@@ -30,25 +30,31 @@ vencida, tentativa de transporte e confirmacao do Codex.
 ### Task 046 - Integracao e release do chat e da retomada automatica
 
 **Prioridade**: Critica
-**Status**: em validacao; gates locais e smoke test do chat concluidos
+**Status**: validada localmente e no runtime; promocao para `develop` pendente
 **Objetivo**: validar o produto integrado, atualizar o runtime Linux e provar
 os fluxos reais sem confundir emissao de input com processamento pelo Codex.
 
 - [x] Passar quality gate, matriz Python e build local.
-- [ ] Testar migracao de banco e rollback com copia privada verificavel.
-- [ ] Instalar o candidato no runtime dedicado de forma transacional.
-- [ ] Instalar e ativar `prompt-rule-observer` sem duplicar processos.
-- [ ] Executar E2E de chat por sessao exata e E2E de retomada com marcador.
-- [ ] Verificar `doctor --strict`, bandeja, monitor e observers apos upgrade.
+- [x] Testar migracao de banco e rollback com copia privada verificavel.
+- [x] Instalar o candidato no runtime dedicado de forma transacional.
+- [x] Instalar e ativar `prompt-rule-observer` sem duplicar processos.
+- [x] Executar E2E de chat por sessao exata e E2E de retomada com marcador.
+- [x] Verificar `doctor --strict`, bandeja, monitor e observers apos upgrade.
 - [ ] Promover para `develop`; promover para `main` somente com gates reais.
 
 **Plano**: `docs/planning/TASK-046-integrated-chat-release.md`.
 
-**Evidencia local (2026-11-02)**: 353 testes passaram em Python 3.10, 3.11 e
+**Evidencia local (2026-11-02)**: 357 testes passaram em Python 3.10, 3.11 e
 3.12; cobertura global de 87%; Ruff, mypy, compilacao, sintaxe shell, build e
-`git diff --check` passaram. `tray --check-chat` construiu a janela real no X11
-com HOME e banco isolados. O bundle de release limpo, upgrade instalado e E2E
-real continuam pendentes.
+`git diff --check` passaram. O release gate verificou o bundle 0.11.2 do commit
+`83a5c66`. A migracao 1->2 e restauracao 2->1 passaram em copia isolada. O
+runtime 0.11.2, schema 2, tres servicos, bandeja e hooks passaram em
+`doctor --strict`; o observer permaneceu ativo com `NRestarts=0`.
+
+O chat E2E persistiu e enviou um marcador exclusivo para a sessao exata e um
+hook posterior confirmou `delivery_confirmed`. O observer E2E isolado obteve
+`usage_available`, despachou um marcador exclusivo uma vez e persistiu
+`dispatch_started`, desabilitado, com uma ocorrencia.
 
 ### Task 045 - Experiencia de chat na bandeja e projecao Discord
 
@@ -131,7 +137,7 @@ depois de uma janela de cinco horas ou semanal.
 - [x] Passar os mesmos 344 testes em Python 3.10, 3.11 e 3.12.
 - [x] Instalar o wheel 0.10.8 isoladamente e validar comando, ciclo ocioso e
       definicao systemd do novo componente.
-- [ ] Registrar E2E instalado do servico e atualizar a conclusao desta
+- [x] Registrar E2E instalado do servico e atualizar a conclusao desta
       investigacao com evidencias reais.
 
 **Chat completo**:
