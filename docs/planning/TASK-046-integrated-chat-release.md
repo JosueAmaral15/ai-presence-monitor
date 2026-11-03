@@ -42,6 +42,12 @@ doctor. Never run the schema-1 runtime against a schema-2 database.
 - exact-session chat reached later `delivery_confirmed` evidence;
 - isolated real observer reached `usage_available` and one `dispatch_started`.
 
-Hosted GitHub CI remains external failed evidence. This candidate may advance
-to `develop`, but `main` still requires the repository's release decision for
-that unresolved external gate.
+Hosted GitHub CI later ran successfully on Python 3.10, 3.11 and 3.12 after the
+optional PySide6 typing boundary and the no-isolation build dependency were
+made reproducible. The same final commit passed on the task branch, `develop`
+and `main`; both promoted branches point to that commit.
+
+The earlier bundle remains historical evidence for the runtime implementation.
+The canonical local 0.11.2 bundle is regenerated from the final promoted
+closeout commit. Tagging and publishing a prerelease remain separate external
+actions and are not implied by branch promotion.

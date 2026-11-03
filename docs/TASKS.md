@@ -2,6 +2,20 @@
 
 ## Em andamento
 
+### Task 049 - Fechamento do candidato 0.11.2
+
+**Prioridade**: Alta
+**Status**: concluida; publicacao externa nao executada
+**Objetivo**: alinhar o commit promovido, a evidencia hospedada e o bundle
+local verificavel sem confundir promocao de branches com publicacao.
+
+- [x] Confirmar `develop` e `main` no mesmo commit por fast-forward.
+- [x] Passar o workflow remoto na branch de tarefa, em `develop` e em `main`.
+- [x] Regenerar e verificar o bundle local 0.11.2 a partir do commit final.
+- [x] Manter tag e prerelease fora do escopo sem autorizacao especifica.
+
+**Plano**: `docs/planning/TASK-049-release-closeout.md`.
+
 ### Task 048 - Gate CI com bandeja opcional
 
 **Prioridade**: Alta
@@ -70,6 +84,11 @@ O chat E2E persistiu e enviou um marcador exclusivo para a sessao exata e um
 hook posterior confirmou `delivery_confirmed`. O observer E2E isolado obteve
 `usage_available`, despachou um marcador exclusivo uma vez e persistiu
 `dispatch_started`, desabilitado, com uma ocorrencia.
+
+O GitHub Actions posteriormente passou em Python 3.10, 3.11 e 3.12 na branch
+de tarefa, em `develop` e em `main`. O bundle final foi regenerado somente
+depois do commit documental de fechamento, mantendo o manifesto ligado ao SHA
+promovido final.
 
 ### Task 045 - Experiencia de chat na bandeja e projecao Discord
 

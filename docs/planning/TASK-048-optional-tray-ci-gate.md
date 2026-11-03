@@ -35,3 +35,9 @@ the no-isolation build is reproducible on every supported Python version.
 Fast-forward `main` only after the remote matrix and the already completed real
 chat and prompt-observer integrations are all green. The optional Windows job
 remains disabled under the current Linux-only product policy.
+
+## Outcome
+
+The final commit passed the hosted matrix on Python 3.10, 3.11 and 3.12 on the
+task branch, then again after fast-forward promotion to `develop` and `main`.
+The optional Windows job remained skipped as designed.
