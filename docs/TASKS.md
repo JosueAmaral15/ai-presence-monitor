@@ -28,6 +28,9 @@ sessao grafica real usando HOME, configuracao e banco isolados. Nenhuma mensagem
 externa foi enviada: o E2E Discord com marcador exclusivo ainda exige
 autorizacao especifica antes da promocao para `main`.
 
+O workflow remoto `Quality` da branch de tarefa tambem passou nos tres jobs
+Linux (run `41721734878`).
+
 ### Task 051 - Release Linux 0.11.3
 
 **Prioridade**: Critica

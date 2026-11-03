@@ -60,3 +60,12 @@ correlation or accepting arbitrary channel messages as Codex input.
 Disable Discord chat synchronization. Existing messages and Discord delivery
 metadata remain auditable; the local chat and correlated `ask-user` workflow
 continue to operate.
+
+## Validation record
+
+Local validation passed 362 tests on Python 3.10, 3.11 and 3.12 with 86%
+coverage. Compilation, Ruff, mypy, shell syntax, wheel/sdist build and diff
+checks passed. The chat dialog constructed successfully in the real graphical
+session with isolated HOME, configuration and database paths. GitHub Actions
+run `41721734878` passed all three Linux jobs. A real Discord marker was not
+sent without separate authorization, so promotion remains pending that E2E.
