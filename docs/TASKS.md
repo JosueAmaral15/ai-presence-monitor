@@ -5,15 +5,15 @@
 ### Task 048 - Gate CI com bandeja opcional
 
 **Prioridade**: Alta
-**Status**: em validacao
+**Status**: concluida; matriz Linux remota aprovada
 **Objetivo**: manter o CI Linux reproduzivel sem instalar a dependencia grafica
 opcional, preservando tipagem estrita para o restante do produto.
 
 - [x] Reproduzir a falha nos tres jobs Linux do GitHub Actions.
 - [x] Confirmar que testes, cobertura e Ruff passam antes da falha de tipagem.
 - [x] Limitar a excecao do mypy exclusivamente aos modulos `PySide6.*`.
-- [ ] Passar o quality gate local e o CI remoto em Python 3.10, 3.11 e 3.12.
-- [ ] Promover o `develop` validado para `main`.
+- [x] Passar o quality gate local e o CI remoto em Python 3.10, 3.11 e 3.12.
+- [x] Promover o `develop` validado para `main`.
 
 **Plano**: `docs/planning/TASK-048-optional-tray-ci-gate.md`.
 
@@ -45,7 +45,7 @@ vencida, tentativa de transporte e confirmacao do Codex.
 ### Task 046 - Integracao e release do chat e da retomada automatica
 
 **Prioridade**: Critica
-**Status**: validada localmente e no runtime; promocao para `develop` pendente
+**Status**: concluida e promovida para `develop` e `main`
 **Objetivo**: validar o produto integrado, atualizar o runtime Linux e provar
 os fluxos reais sem confundir emissao de input com processamento pelo Codex.
 
@@ -55,7 +55,7 @@ os fluxos reais sem confundir emissao de input com processamento pelo Codex.
 - [x] Instalar e ativar `prompt-rule-observer` sem duplicar processos.
 - [x] Executar E2E de chat por sessao exata e E2E de retomada com marcador.
 - [x] Verificar `doctor --strict`, bandeja, monitor e observers apos upgrade.
-- [ ] Promover para `develop`; promover para `main` somente com gates reais.
+- [x] Promover para `develop`; promover para `main` somente com gates reais.
 
 **Plano**: `docs/planning/TASK-046-integrated-chat-release.md`.
 
@@ -74,7 +74,7 @@ hook posterior confirmou `delivery_confirmed`. O observer E2E isolado obteve
 ### Task 045 - Experiencia de chat na bandeja e projecao Discord
 
 **Prioridade**: Alta
-**Status**: implementada e validada localmente; E2E pendente na Task 046
+**Status**: concluida; E2E confirmado na Task 046
 **Objetivo**: substituir o formulario isolado por uma conversa persistente,
 legivel e vinculada ao projeto/agente/sessao exatos.
 
@@ -90,7 +90,7 @@ legivel e vinculada ao projeto/agente/sessao exatos.
 ### Task 044 - Dominio persistente e CLI do chat de agentes
 
 **Prioridade**: Critica
-**Status**: implementada; validacao integrada pendente na Task 046
+**Status**: concluida; validacao integrada confirmada na Task 046
 **Objetivo**: criar o contrato local de conversas e mensagens e permitir que o
 humano e o AI-worker publiquem no proprio escopo de forma auditavel.
 
@@ -110,8 +110,7 @@ humano e o AI-worker publiquem no proprio escopo de forma auditavel.
 ### Task 043 - Chat persistente e retomada por recuperacao de uso
 
 **Prioridade**: Critica
-**Status**: em implementacao na branch
-`codex/task-043-agent-chat-usage-recovery`
+**Status**: concluida e integrada
 **Objetivo**: substituir o compositor isolado da bandeja por conversas
 persistentes por projeto/agente/sessao e permitir que uma prompt rule autorizada
 retome a sessao exata quando o Codex voltar a informar uso disponivel, inclusive
@@ -134,7 +133,7 @@ depois de uma janela de cinco horas ou semanal.
       condicionadas a uso, evitando disputa entre processos.
 - [x] Disponibilizar `observe-prompt-rules` e o componente de servico
       `prompt-rule-observer`.
-- [ ] Instalar o novo servico no runtime dedicado e executar E2E real com
+- [x] Instalar o novo servico no runtime dedicado e executar E2E real com
       marcador exclusivo sem esgotar tokens deliberadamente.
 
 **Investigacao das prompt rules**:
@@ -172,7 +171,7 @@ depois de uma janela de cinco horas ou semanal.
       confiavel do Codex, sem inferi-las por hooks.
 - [x] Implementar retencao, redacao/exportacao e limites de notificacao sem
       expor conteudo sensivel no desktop.
-- [ ] Validar isolamento entre dois projetos/agentes, reinicio da bandeja,
+- [x] Validar isolamento entre dois projetos/agentes, reinicio da bandeja,
       ordenacao, concorrencia, Discord e sessao Codex exata.
 
 **Plano**: `docs/planning/TASK-043-agent-chat-and-usage-recovery.md`.
