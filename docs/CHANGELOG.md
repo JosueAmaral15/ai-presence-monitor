@@ -1,10 +1,12 @@
 # Changelog
 
-## 2026-11-03 - 0.11.2 candidate stabilization
+## 2026-11-03 - v0.11.3
 
 - Prevented the Linux alarm controller from persisting a transient pre-`exec`
   command fingerprint immediately after spawning GNU `timeout`.
 - Added deterministic regression coverage for the fork-to-exec transition.
+- Published the alarm stabilization under a distinct patch version so the
+  installed runtime and canonical bundle cannot be confused with 0.11.2.
 
 ## 2026-11-02 - CI correction after v0.11.2
 
