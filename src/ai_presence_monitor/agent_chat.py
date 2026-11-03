@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .codex_input import CodexInputError, CodexQueueClient, send_native_message
 from .control import ControlSettings
+from .discord_questions import DiscordQuestionClient, DiscordQuestionError
 from .store import AgentConversation, AgentMessage, PresenceStore
 
 MAX_CHAT_CONTENT_LENGTH = 16_000
@@ -28,6 +29,10 @@ CHAT_STATES = frozenset(
 
 
 class AgentChatError(RuntimeError):
+    pass
+
+
+class AgentChatPartialDeliveryError(AgentChatError):
     pass
 
 
@@ -62,6 +67,7 @@ def publish_agent_message(
     content: str,
     correlation_kind: str | None = None,
     correlation_id: str | None = None,
+    discord_client: DiscordQuestionClient | None = None,
 ) -> ChatDispatchResult:
     conversation = ensure_conversation(
         store,
@@ -80,6 +86,14 @@ def publish_agent_message(
         correlation_kind=correlation_kind,
         correlation_id=correlation_id,
     )
+    if discord_client is not None:
+        message = _mirror_to_discord(
+            store,
+            message=message,
+            worker_id=worker_id,
+            agent_name=agent_name,
+            client=discord_client,
+        )
     return ChatDispatchResult(conversation, message)
 
 
@@ -93,6 +107,7 @@ def send_human_message(
     content: str,
     destination: str = "local",
     client: CodexQueueClient | None = None,
+    discord_client: DiscordQuestionClient | None = None,
 ) -> ChatDispatchResult:
     conversation = ensure_conversation(
         store,
@@ -130,6 +145,20 @@ def send_human_message(
         message.message_id,
         state=result.state,
     )
+    if discord_client is not None:
+        try:
+            updated = _mirror_to_discord(
+                store,
+                message=updated,
+                worker_id=worker_id,
+                agent_name=agent_name,
+                client=discord_client,
+            )
+        except AgentChatError as exc:
+            raise AgentChatPartialDeliveryError(
+                "A entrega ao Codex foi iniciada, mas o espelhamento no Discord "
+                "falhou ou ficou incerto. Nao repita automaticamente."
+            ) from exc
     return ChatDispatchResult(conversation, updated)
 
 
@@ -178,6 +207,17 @@ def project_remote_questions(
                     "remote_question_error" if question_state == "failed" else None
                 ),
             )
+        if question_message.discord_state is None:
+            question_message = store.update_agent_message_discord(
+                question_message.message_id,
+                state="failed" if question_state == "failed" else "published",
+                channel_id=question.channel_id,
+                external_message_id=question.external_message_id,
+                error_code=(
+                    "remote_question_error" if question_state == "failed" else None
+                ),
+                now=question.updated_at,
+            )
         projected += 1
         if question.answer is None:
             continue
@@ -207,8 +247,62 @@ def project_remote_questions(
                 if answer_state == "failed"
                 else None,
             )
+        if answer_message.discord_state is None:
+            store.update_agent_message_discord(
+                answer_message.message_id,
+                state="received",
+                channel_id=question.channel_id,
+                external_message_id=question.reply_message_id,
+                now=question.answered_at or question.updated_at,
+            )
         projected += 1
     return projected
+
+
+def _mirror_to_discord(
+    store: PresenceStore,
+    *,
+    message: AgentMessage,
+    worker_id: str,
+    agent_name: str,
+    client: DiscordQuestionClient,
+) -> AgentMessage:
+    if message.discord_state in {"published", "received", "uncertain"}:
+        return message
+    pending = store.update_agent_message_discord(
+        message.message_id,
+        state="pending",
+    )
+    try:
+        posted = client.post_chat_message(
+            message_id=message.message_id,
+            worker_id=worker_id,
+            agent_name=agent_name,
+            role="agent" if message.role == "agent" else "human",
+            content=message.content,
+        )
+    except DiscordQuestionError as exc:
+        state = "uncertain" if exc.retryable else "failed"
+        error_code = (
+            "discord_delivery_uncertain"
+            if exc.retryable
+            else "discord_delivery_rejected"
+        )
+        store.update_agent_message_discord(
+            pending.message_id,
+            state=state,
+            error_code=error_code,
+        )
+        raise AgentChatError(
+            "O espelhamento Discord falhou ou ficou incerto; o envio nao sera "
+            "repetido automaticamente."
+        ) from exc
+    return store.update_agent_message_discord(
+        pending.message_id,
+        state="published",
+        channel_id=posted.channel_id,
+        external_message_id=posted.message_id,
+    )
 
 
 def append_message(

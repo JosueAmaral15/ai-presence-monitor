@@ -377,6 +377,28 @@ HTTP permanente ou falha inesperada ainda termina o observer e aciona essa
 protecao. No Windows, o Task Scheduler ja limita a tres reinicializacoes em
 falha.
 
+## Agent Chat and Discord Synchronization
+
+`agent_conversations` is scoped by worker, agent and exact Codex session.
+`agent_messages` stores one logical message and two independent delivery
+surfaces: the primary native/local state and the Discord mirror metadata. The
+schema-3 migration adds nullable channel ID, external message ID, state and a
+bounded error code without rewriting existing transcripts.
+
+When remote questions are enabled, tray-composed human messages are persisted,
+sent to the exact Codex session and then mirrored through the configured
+question webhook. `publish-agent-message` persists an explicit agent response
+and mirrors it through the same verified channel. Network uncertainty is
+recorded and never retried automatically, because the webhook may have accepted
+the request before the connection failed.
+
+The reverse direction is intentionally narrower. Discord content becomes
+Codex input only through `ask-user`: the reply observer requires the configured
+channel, an allowed human author, a direct reference to an unexpired pending
+question and its frozen exact-session destination. Webhook and bot messages are
+ignored by the input classifier, so transcript mirrors cannot feed themselves
+back into Codex.
+
 ## Continue Integrado
 
 ```text
@@ -509,7 +531,8 @@ compatibilidade.
 
 `store.py` owns `SCHEMA_VERSION` and records it in SQLite `PRAGMA user_version`
 after the idempotent schema initialization succeeds. Runtime initialization
-accepts legacy version 0, applies additive migrations and records version 1.
+accepts legacy versions, applies additive migrations and records the current
+version.
 It rejects a database newer than the runtime before applying DDL.
 
 `inspect_schema` opens existing databases with SQLite `mode=ro`, runs

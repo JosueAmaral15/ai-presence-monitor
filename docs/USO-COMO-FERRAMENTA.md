@@ -559,9 +559,18 @@ humana e persistida antes do transporte; `dispatch started` e `input emitted`
 sao estados preliminares e somente um hook posterior da sessao exata produz
 `delivery confirmed`.
 
+Quando `PRESENCE_REMOTE_QUESTIONS_ENABLED=true`, o chat usa o mesmo canal
+Discord configurado para perguntas. Mensagens humanas compostas na bandeja sao
+enviadas a sessao Codex exata e depois espelhadas no Discord. Respostas
+explicitas publicadas pelo agente com `publish-agent-message` aparecem no
+historico local e no Discord. O estado primario e o estado do espelho Discord
+sao independentes; uma falha parcial nao apaga a mensagem nem autoriza retry.
+
 Perguntas criadas por `ask-user` e respostas Discord autorizadas aparecem no
-mesmo historico por correlacao idempotente. Mensagens comuns do Codex nao sao
-copiadas dos hooks, pois os hooks nao fornecem seu texto. O agente deve usar
+mesmo historico por correlacao idempotente. O sentido Discord -> IA continua
+aceitando somente resposta direta de usuario permitido a uma pergunta ativa;
+mensagens soltas no canal nao se tornam input. Mensagens comuns do Codex nao
+sao copiadas dos hooks, pois os hooks nao fornecem seu texto. O agente deve usar
 `publish-agent-message` quando quiser publicar uma resposta explicita.
 
 O historico e plaintext local no SQLite privado e fica retido ate arquivamento

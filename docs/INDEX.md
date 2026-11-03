@@ -27,6 +27,7 @@
 - [Plano de orientacao para respostas Discord invalidas](planning/TASK-014-discord-reply-guidance.md)
 - [Plano de entrega nativa de respostas Discord](planning/TASK-020-native-discord-answer-routing.md)
 - [Plano do E2E nativo Discord e release Linux](planning/TASK-021-native-discord-e2e-release.md)
+- [Plano da sincronizacao bidirecional do chat Discord](planning/TASK-052-bidirectional-discord-chat-sync.md)
 - [Plano de diagnostico de causa por observers](planning/TASK-022-cause-aware-diagnostics.md)
 - [Plano do E2E de recovery e release 0.8.0](planning/TASK-023-recovery-e2e-release-080.md)
 - [Upgrade operacional 0.8.0 e proximos passos de produto](planning/TASK-024-operational-upgrade-productization.md)

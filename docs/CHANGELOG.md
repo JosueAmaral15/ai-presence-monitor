@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Added bidirectional Discord mirroring for explicit agent-chat messages when
+  remote questions are enabled: tray messages reach the exact Codex session
+  and the configured Discord channel, while explicit AI-worker publications
+  appear locally and on Discord.
+- Upgraded the SQLite contract to schema 3 with independent Discord channel,
+  message, state and error metadata for each logical chat message.
+- Kept Discord-to-Codex input fail-closed through the existing correlated
+  `ask-user` reply flow; arbitrary channel messages remain non-actionable.
+- Exposed Discord mirror status in the tray, message listings and conversation
+  exports, including rejected and uncertain writes without automatic retry.
+
 ## 2026-11-03 - v0.11.3
 
 - Prevented the Linux alarm controller from persisting a transient pre-`exec`

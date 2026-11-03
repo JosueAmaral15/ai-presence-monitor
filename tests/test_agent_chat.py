@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ai_presence_monitor.agent_chat import (
     AgentChatError,
+    AgentChatPartialDeliveryError,
     append_message,
     ensure_conversation,
     project_remote_questions,
@@ -15,6 +16,10 @@ from ai_presence_monitor.agent_chat import (
 )
 from ai_presence_monitor.codex_input import CodexInputError, CodexInputResult
 from ai_presence_monitor.control import ControlSettings
+from ai_presence_monitor.discord_questions import (
+    DiscordQuestionError,
+    PostedDiscordQuestion,
+)
 from ai_presence_monitor.store import SCHEMA_VERSION, PresenceStore, inspect_schema
 
 
@@ -42,8 +47,20 @@ class FakeClient:
         )
 
 
+class FakeDiscordClient:
+    def __init__(self, error: DiscordQuestionError | None = None) -> None:
+        self.error = error
+        self.calls: list[dict[str, str]] = []
+
+    def post_chat_message(self, **values: str) -> PostedDiscordQuestion:
+        self.calls.append(values)
+        if self.error is not None:
+            raise self.error
+        return PostedDiscordQuestion(message_id="900", channel_id="200")
+
+
 class AgentChatTests(unittest.TestCase):
-    def test_schema_one_migrates_additively_to_schema_two(self) -> None:
+    def test_schema_one_migrates_additively_to_current_schema(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "presence.db"
             with sqlite3.connect(path) as conn:
@@ -53,11 +70,42 @@ class AgentChatTests(unittest.TestCase):
 
             PresenceStore(path)
 
-            self.assertEqual(SCHEMA_VERSION, 2)
+            self.assertEqual(SCHEMA_VERSION, 3)
             self.assertTrue(inspect_schema(path).healthy)
             with sqlite3.connect(path) as conn:
                 value = conn.execute("SELECT value FROM legacy_marker").fetchone()[0]
             self.assertEqual(value, "preserved")
+
+    def test_schema_two_adds_discord_delivery_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "presence.db"
+            PresenceStore(path)
+            with sqlite3.connect(path) as conn:
+                conn.execute("PRAGMA user_version = 2")
+                for column in (
+                    "discord_channel_id",
+                    "discord_message_id",
+                    "discord_state",
+                    "discord_error_code",
+                ):
+                    conn.execute(f"ALTER TABLE agent_messages DROP COLUMN {column}")
+
+            PresenceStore(path)
+
+            with sqlite3.connect(path) as conn:
+                columns = {
+                    row[1]
+                    for row in conn.execute("PRAGMA table_info(agent_messages)")
+                }
+            self.assertTrue(
+                {
+                    "discord_channel_id",
+                    "discord_message_id",
+                    "discord_state",
+                    "discord_error_code",
+                }.issubset(columns)
+            )
+            self.assertTrue(inspect_schema(path).healthy)
 
     def test_conversations_are_isolated_and_correlation_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -180,6 +228,61 @@ class AgentChatTests(unittest.TestCase):
             self.assertIsNotNone(saved)
             assert saved is not None
             self.assertEqual(saved.state, "delivery_confirmed")
+
+    def test_explicit_agent_message_is_mirrored_without_duplicate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = PresenceStore(Path(tmp) / "presence.db")
+            discord = FakeDiscordClient()
+
+            result = publish_agent_message(
+                store,
+                worker_id="worker",
+                agent_name="codex",
+                session_id="session-1",
+                content="Task completed.",
+                discord_client=discord,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(result.message.discord_state, "published")
+            self.assertEqual(result.message.discord_channel_id, "200")
+            self.assertEqual(result.message.discord_message_id, "900")
+            self.assertEqual(discord.calls[0]["role"], "agent")
+            messages = store.list_agent_messages(
+                conversation_id=result.conversation.conversation_id
+            )
+            self.assertEqual(len(messages), 1)
+
+    def test_human_native_success_and_uncertain_discord_are_auditable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = PresenceStore(Path(tmp) / "presence.db")
+            native = FakeClient()
+            discord = FakeDiscordClient(
+                DiscordQuestionError("timeout", retryable=True)
+            )
+
+            with self.assertRaises(AgentChatPartialDeliveryError):
+                send_human_message(
+                    store,
+                    settings=ControlSettings(native_input_enabled=True),
+                    worker_id="worker",
+                    agent_name="codex",
+                    session_id="session-1",
+                    content="Proceed.",
+                    client=native,  # type: ignore[arg-type]
+                    discord_client=discord,  # type: ignore[arg-type]
+                )
+
+            conversation = store.list_conversations(worker_id="worker")[0]
+            message = store.list_agent_messages(
+                conversation_id=conversation.conversation_id
+            )[0]
+            self.assertEqual(message.state, "dispatch_started")
+            self.assertEqual(message.discord_state, "uncertain")
+            self.assertEqual(
+                message.discord_error_code,
+                "discord_delivery_uncertain",
+            )
+            self.assertEqual(native.calls, [("session-1", "Proceed.")])
 
     def test_transport_failure_and_validation_remain_auditable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

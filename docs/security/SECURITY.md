@@ -1,5 +1,25 @@
 # Security Checklist
 
+## Task 052 - Bidirectional Discord chat synchronization
+
+- [x] Local persistence occurs before any Discord network request.
+- [x] The configured question channel is verified from the webhook response.
+- [x] Discord mentions are disabled for mirrored human and agent content.
+- [x] Native delivery and Discord mirror states remain independent.
+- [x] Rejected and uncertain writes are recorded without automatic retry.
+- [x] Discord-to-Codex input still requires allowlist, direct reply correlation,
+      an active question and an exact frozen destination.
+- [x] Webhook and bot-authored transcript mirrors are ignored by the observer.
+- [x] No webhook URL, bot token or remote authentication value is persisted.
+
+### Residual risk
+
+Discord webhook delivery and native Codex delivery are not an atomic
+transaction. A timeout may leave the external write uncertain, so an operator
+must inspect the channel before any manual resend. Explicit content published
+through the chat is intentionally copied to the configured Discord channel and
+therefore inherits that channel's retention and access policy.
+
 ## Task 041 - Desktop event notifications
 
 - [x] The feature is opt-in and defaults to disabled for existing controls.

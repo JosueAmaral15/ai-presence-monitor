@@ -274,8 +274,10 @@ ai-presence publish-agent-message \
 ```
 
 `$PROJECT` precisa ser o caminho absoluto do diretorio corrente e `start` deve
-ter criado o worker. O comando nao aceita perfil arbitrario, nao infere texto a
-partir de hooks e nao envia a mensagem automaticamente ao Discord. Perguntas de
+ter criado o worker. O comando nao aceita perfil arbitrario nem infere texto a
+partir de hooks. Quando respostas remotas estao habilitadas, a publicacao e
+persistida primeiro e espelhada no canal Discord configurado. Falha ou incerteza
+do webhook fica auditavel e nunca autoriza repeticao automatica. Perguntas de
 `ask-user` e respostas Discord correlacionadas aparecem no mesmo transcript.
 
 Para consultar o proprio historico:

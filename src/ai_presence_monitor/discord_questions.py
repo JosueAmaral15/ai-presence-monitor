@@ -110,6 +110,59 @@ class DiscordQuestionClient:
             )
         return PostedDiscordQuestion(message_id=message_id, channel_id=channel_id)
 
+    def post_chat_message(
+        self,
+        *,
+        message_id: str,
+        worker_id: str,
+        agent_name: str,
+        role: Literal["human", "agent"],
+        content: str,
+    ) -> PostedDiscordQuestion:
+        heading = (
+            "**Resposta do AI-worker**"
+            if role == "agent"
+            else "**Mensagem do usuario para o AI-worker**"
+        )
+        body = (
+            f"{heading}\n"
+            f"Mensagem: `{message_id}`\n"
+            f"Worker: `{worker_id}`\n"
+            f"Agente: `{agent_name}`\n\n"
+            f"{content}"
+        )
+        if len(body) > 2000:
+            raise DiscordQuestionError(
+                "A mensagem do chat excede o limite de 2000 caracteres do Discord."
+            )
+        response = self._request_json(
+            _webhook_wait_url(self.webhook_url),
+            method="POST",
+            payload={
+                "content": body,
+                "allowed_mentions": {"parse": []},
+            },
+            label="mensagem do chat Discord",
+        )
+        if not isinstance(response, dict):
+            raise DiscordQuestionError("Discord nao retornou os dados da mensagem.")
+        external_message_id = _require_snowflake(
+            _string_value(response.get("id")),
+            "ID da mensagem publicada",
+        )
+        channel_id = _require_snowflake(
+            _string_value(response.get("channel_id")),
+            "ID do canal retornado",
+        )
+        if channel_id != self.channel_id:
+            raise DiscordQuestionError(
+                "O webhook publicou em canal diferente de DISCORD_QUESTION_CHANNEL_ID."
+            )
+        return PostedDiscordQuestion(
+            message_id=external_message_id,
+            channel_id=channel_id,
+        )
+
     def post_reply_guidance(
         self,
         *,

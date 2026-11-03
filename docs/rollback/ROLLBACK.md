@@ -218,6 +218,17 @@ permanecer sem afetar os dados de presenca.
 Para rollback de pacote, reinstale o wheel 0.2.0. O esquema novo e aditivo e a
 versao anterior ignora as tabelas desconhecidas.
 
+### Chat sincronizado com Discord (schema 3)
+
+Desative `PRESENCE_REMOTE_QUESTIONS_ENABLED` para interromper tanto novas
+perguntas quanto o espelhamento de mensagens explicitas. O historico local e os
+metadados Discord permanecem no SQLite e nao geram I/O sozinhos.
+
+Runtimes de schema 2 recusam abrir um banco marcado como schema 3. Para voltar a
+uma versao anterior, use o rollback transacional, que restaura conjuntamente o
+wheel e o backup do banco criado antes do upgrade. Nao altere `PRAGMA
+user_version` manualmente e nao remova colunas de um banco real.
+
 ## Task 007 - Continue integrado e layout `src/`
 
 Desativar somente a sincronizacao:

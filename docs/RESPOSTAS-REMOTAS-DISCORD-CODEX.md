@@ -406,6 +406,28 @@ ai-presence ask-user \
   --question "Devo alterar tambem a API publica?"
 ```
 
+## Sincronizacao com o chat da bandeja
+
+Com `PRESENCE_REMOTE_QUESTIONS_ENABLED=true`, o canal de perguntas tambem e o
+espelho do chat persistente:
+
+- uma mensagem humana enviada por **Agent chat...** e persistida, entregue a
+  sessao Codex selecionada e publicada no Discord;
+- uma resposta explicita do agente registrada por `publish-agent-message` e
+  publicada no mesmo canal;
+- pergunta `ask-user` e sua resposta direta autorizada aparecem nos dois
+  historicos por correlacao idempotente.
+
+O Discord nao e consumido como um chat irrestrito. Para enviar texto do canal
+ao agente, responda diretamente a uma pergunta `ask-user` ainda ativa. Isso
+evita que conversa de outro agente, bot, webhook ou projeto seja injetada na
+sessao errada.
+
+Os exports `messages` e `export-conversation` incluem `discord_state`, canal,
+ID externo e codigo de erro. `failed` indica rejeicao; `uncertain` indica que a
+conexao falhou sem permitir concluir se o Discord gravou a mensagem. Nenhum dos
+dois estados e reenviado automaticamente.
+
 ## Estados e Auditoria
 
 `ai-presence questions` mostra:

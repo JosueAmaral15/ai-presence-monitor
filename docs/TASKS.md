@@ -2,6 +2,32 @@
 
 ## Em andamento
 
+### Task 052 - Sincronizacao bidirecional do chat com Discord
+
+**Prioridade**: Alta
+**Status**: implementada e validada localmente; E2E Discord real pendente
+**Plano**: `docs/planning/TASK-052-bidirectional-discord-chat-sync.md`
+**Objetivo**: manter perguntas e respostas explicitas do agente e do usuario
+visiveis no chat local e no canal Discord configurado, preservando correlacao,
+allowlist, sessao exata e estados de entrega independentes.
+
+**Criterios de aceite**:
+
+- [x] Mensagens explicitas do agente sao persistidas e espelhadas no Discord.
+- [x] Mensagens humanas da bandeja chegam a sessao exata e sao espelhadas.
+- [x] Respostas Discord continuam exigindo resposta direta correlacionada.
+- [x] Falhas parciais ficam auditaveis sem duplicar mensagens ou repetir envio.
+- [x] Estado do Discord aparece na bandeja e nos exports da CLI.
+- [x] Configuracao, seguranca, rollback e protocolo do AI-worker documentados.
+- [x] Testes automatizados e gates de pacote aprovados.
+
+**Evidencia local (2026-11-03)**: 362 testes passaram em Python 3.10, 3.11 e
+3.12; cobertura global de 86%; Ruff, mypy, compilacao, sintaxe shell, build de
+wheel/sdist e `git diff --check` passaram. A janela de chat foi construida em
+sessao grafica real usando HOME, configuracao e banco isolados. Nenhuma mensagem
+externa foi enviada: o E2E Discord com marcador exclusivo ainda exige
+autorizacao especifica antes da promocao para `main`.
+
 ### Task 051 - Release Linux 0.11.3
 
 **Prioridade**: Critica

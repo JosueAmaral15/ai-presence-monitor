@@ -72,6 +72,7 @@ from .remote_questions import (
     RemoteQuestionError,
     ReplyObserverTransientError,
     ask_remote_question,
+    build_discord_client,
     observe_discord_replies_once,
     retry_answer_dispatch,
 )
@@ -249,6 +250,10 @@ def _show_chat_messages(args: argparse.Namespace, config: AppConfig) -> int:
             "transport": item.transport,
             "content": item.content,
             "state": item.state,
+            "discord_state": item.discord_state,
+            "discord_channel_id": item.discord_channel_id,
+            "discord_message_id": item.discord_message_id,
+            "discord_error_code": item.discord_error_code,
             "created_at": item.created_at,
         }
         for item in messages
@@ -289,6 +294,10 @@ def _export_chat(args: argparse.Namespace, config: AppConfig) -> int:
                 "content": "[redacted]" if args.redact_content else item.content,
                 "state": item.state,
                 "correlation_kind": item.correlation_kind,
+                "discord_state": item.discord_state,
+                "discord_channel_id": item.discord_channel_id,
+                "discord_message_id": item.discord_message_id,
+                "discord_error_code": item.discord_error_code,
                 "created_at": item.created_at,
                 "updated_at": item.updated_at,
             }
@@ -332,11 +341,17 @@ def _publish_agent_chat_message(args: argparse.Namespace, config: AppConfig) -> 
         agent_name=agent_name,
         session_id=session_id,
         content=args.text,
+        discord_client=(
+            build_discord_client(config)
+            if config.remote_questions_enabled
+            else None
+        ),
     )
     print(
         "agent-chat: "
         f"conversation={result.conversation.conversation_id} "
-        f"message={result.message.message_id} state={result.message.state}"
+        f"message={result.message.message_id} state={result.message.state} "
+        f"discord={result.message.discord_state or 'disabled'}"
     )
     return 0
 

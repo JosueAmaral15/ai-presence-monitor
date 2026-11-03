@@ -7,7 +7,12 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Any
 
-from .agent_chat import AgentChatError, project_remote_questions, send_human_message
+from .agent_chat import (
+    AgentChatError,
+    AgentChatPartialDeliveryError,
+    project_remote_questions,
+    send_human_message,
+)
 from .codex_input import (
     CodexInputError,
     CodexInputResult,
@@ -34,6 +39,7 @@ from .prompt_rules import (
     process_prompt_rules,
     replace_prompt_rules,
 )
+from .remote_questions import RemoteQuestionError, build_discord_client
 from .scheduled_prompt import (
     configure_scheduled_prompt,
     process_due_scheduled_prompt,
@@ -665,6 +671,11 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 item = QListWidgetItem(
                     f"{author}  {timestamp:%Y-%m-%d %H:%M}\n"
                     f"{message.content}\n{message.state.replace('_', ' ')}"
+                    + (
+                        f" · Discord {message.discord_state.replace('_', ' ')}"
+                        if message.discord_state
+                        else ""
+                    )
                 )
                 item.setData(Qt.ItemDataRole.UserRole, message.message_id)
                 item.setTextAlignment(
@@ -702,8 +713,24 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                     session_id=session_id,
                     content=self.message.toPlainText(),
                     destination=self.destination_name(),
+                    discord_client=(
+                        build_discord_client(config)
+                        if config.remote_questions_enabled
+                        else None
+                    ),
                 )
-            except (AgentChatError, CodexInputError, ValueError, sqlite3.Error) as exc:
+            except AgentChatPartialDeliveryError as exc:
+                show_error("Message partially delivered", exc)
+                self.message.clear()
+                self._refresh()
+                return
+            except (
+                AgentChatError,
+                CodexInputError,
+                RemoteQuestionError,
+                ValueError,
+                sqlite3.Error,
+            ) as exc:
                 show_error("Message was not sent", exc)
                 self._refresh()
                 return

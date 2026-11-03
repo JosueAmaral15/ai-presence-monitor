@@ -18,7 +18,7 @@ CODEX_SESSION_PATTERN = re.compile(
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=$|[ |])"
 )
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 SQLITE_BUSY_TIMEOUT_MS = int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
 REQUIRED_TABLES = frozenset(
@@ -41,6 +41,7 @@ REQUIRED_TABLES = frozenset(
 REQUIRED_TABLES_BY_SCHEMA = {
     1: REQUIRED_TABLES - {"agent_conversations", "agent_messages"},
     2: REQUIRED_TABLES,
+    3: REQUIRED_TABLES,
 }
 
 
@@ -210,6 +211,10 @@ class AgentMessage:
     correlation_kind: str | None
     correlation_id: str | None
     error_code: str | None
+    discord_channel_id: str | None
+    discord_message_id: str | None
+    discord_state: str | None
+    discord_error_code: str | None
     created_at: float
     updated_at: float
 
@@ -396,6 +401,10 @@ class PresenceStore:
                     correlation_kind TEXT,
                     correlation_id TEXT,
                     error_code TEXT,
+                    discord_channel_id TEXT,
+                    discord_message_id TEXT,
+                    discord_state TEXT,
+                    discord_error_code TEXT,
                     created_at REAL NOT NULL,
                     updated_at REAL NOT NULL,
                     FOREIGN KEY (conversation_id)
@@ -405,6 +414,21 @@ class PresenceStore:
                 )
                 """
             )
+            message_columns = {
+                row["name"]
+                for row in conn.execute("PRAGMA table_info(agent_messages)").fetchall()
+            }
+            message_migrations = {
+                "discord_channel_id": "TEXT",
+                "discord_message_id": "TEXT",
+                "discord_state": "TEXT",
+                "discord_error_code": "TEXT",
+            }
+            for column, column_type in message_migrations.items():
+                if column not in message_columns:
+                    conn.execute(
+                        f"ALTER TABLE agent_messages ADD COLUMN {column} {column_type}"
+                    )
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_agent_messages_conversation_time
@@ -1269,6 +1293,40 @@ class PresenceStore:
         assert message is not None
         return message
 
+    def update_agent_message_discord(
+        self,
+        message_id: str,
+        *,
+        state: str,
+        channel_id: str | None = None,
+        external_message_id: str | None = None,
+        error_code: str | None = None,
+        now: float | None = None,
+    ) -> AgentMessage:
+        timestamp = time.time() if now is None else now
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE agent_messages
+                SET discord_state = ?, discord_channel_id = ?,
+                    discord_message_id = ?, discord_error_code = ?, updated_at = ?
+                WHERE message_id = ?
+                """,
+                (
+                    state,
+                    channel_id,
+                    external_message_id,
+                    error_code,
+                    timestamp,
+                    message_id,
+                ),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError(f"Mensagem nao encontrada: {message_id}")
+        message = self.get_agent_message(message_id)
+        assert message is not None
+        return message
+
     def get_agent_message(self, message_id: str) -> AgentMessage | None:
         with self.session() as conn:
             row = conn.execute(
@@ -1418,6 +1476,10 @@ class PresenceStore:
             correlation_kind=row["correlation_kind"],
             correlation_id=row["correlation_id"],
             error_code=row["error_code"],
+            discord_channel_id=row["discord_channel_id"],
+            discord_message_id=row["discord_message_id"],
+            discord_state=row["discord_state"],
+            discord_error_code=row["discord_error_code"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

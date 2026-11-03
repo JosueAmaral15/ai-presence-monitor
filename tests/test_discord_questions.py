@@ -57,6 +57,35 @@ class DiscordQuestionClientTests(unittest.TestCase):
             request.headers["User-agent"], f"ai-presence-monitor/{__version__}"
         )
 
+    def test_post_chat_message_verifies_channel_and_disables_mentions(self) -> None:
+        with patch(
+            "ai_presence_monitor.discord_questions.urllib.request.urlopen",
+            return_value=FakeResponse({"id": "105", "channel_id": "200"}),
+        ) as urlopen:
+            posted = self.client.post_chat_message(
+                message_id="local-message",
+                worker_id="worker",
+                agent_name="codex",
+                role="agent",
+                content="@everyone task completed",
+            )
+
+        self.assertEqual(posted.message_id, "105")
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(payload["allowed_mentions"], {"parse": []})
+        self.assertIn("Resposta do AI-worker", payload["content"])
+        self.assertIn("@everyone task completed", payload["content"])
+
+        with self.assertRaisesRegex(DiscordQuestionError, "2000"):
+            self.client.post_chat_message(
+                message_id="local-message",
+                worker_id="worker",
+                agent_name="codex",
+                role="human",
+                content="x" * 2000,
+            )
+
     def test_fetch_messages_uses_bot_authorization_and_orders_snowflakes(self) -> None:
         with patch(
             "ai_presence_monitor.discord_questions.urllib.request.urlopen",
