@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-03 - 0.11.2 candidate stabilization
+
+- Prevented the Linux alarm controller from persisting a transient pre-`exec`
+  command fingerprint immediately after spawning GNU `timeout`.
+- Added deterministic regression coverage for the fork-to-exec transition.
+
 ## 2026-11-02 - CI correction after v0.11.2
 
 - Kept PySide6 as an optional tray dependency while allowing clean

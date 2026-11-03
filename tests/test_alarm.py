@@ -9,7 +9,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from ai_presence_monitor.alarm import (
     AlarmControlError,
@@ -19,6 +19,8 @@ from ai_presence_monitor.alarm import (
 from ai_presence_monitor.alarm_process import (
     AlarmProcessError,
     LinuxAlarmProcessBackend,
+    ProcessSnapshot,
+    command_fingerprint,
 )
 
 
@@ -50,6 +52,44 @@ class AlarmControllerTests(unittest.TestCase):
                     break
                 time.sleep(0.01)
             self.assertFalse(state_path.exists())
+
+    def test_linux_spawn_waits_for_timeout_exec_fingerprint(self) -> None:
+        if os.name == "nt":
+            self.skipTest("Linux process backend test")
+
+        backend = LinuxAlarmProcessBackend()
+        process = Mock(pid=123)
+        process.poll.return_value = None
+        expected_argv = [
+            "/usr/bin/timeout",
+            "--signal=TERM",
+            "--kill-after=1s",
+            "15s",
+            "player",
+        ]
+        expected = ProcessSnapshot("token", command_fingerprint(expected_argv))
+
+        with (
+            patch(
+                "ai_presence_monitor.alarm_process.shutil.which",
+                return_value="/usr/bin/timeout",
+            ),
+            patch(
+                "ai_presence_monitor.alarm_process.subprocess.Popen",
+                return_value=process,
+            ),
+            patch.object(
+                backend,
+                "snapshot",
+                side_effect=[ProcessSnapshot("token", "pre-exec"), expected],
+            ) as snapshot,
+            patch("ai_presence_monitor.alarm_process.time.sleep") as sleep,
+        ):
+            result = backend.spawn(["player"], max_duration_seconds=15)
+
+        self.assertIs(result, process)
+        self.assertEqual(snapshot.call_count, 2)
+        sleep.assert_called_once_with(0.01)
 
     def test_dry_run_and_no_force_timeout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

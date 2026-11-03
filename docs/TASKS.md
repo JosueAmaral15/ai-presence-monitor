@@ -2,10 +2,25 @@
 
 ## Em andamento
 
+### Task 050 - Corrida de identidade ao iniciar alarme Linux
+
+**Prioridade**: Critica
+**Status**: em validacao
+**Objetivo**: impedir que o controlador grave o fingerprint pre-`exec` do
+processo filho e classifique um alarme recem-iniciado como estado obsoleto.
+
+- [x] Reproduzir a falha no release gate e no teste isolado.
+- [x] Confirmar a transicao de `/proc/<pid>/cmdline` entre `fork` e `exec`.
+- [x] Aguardar de forma limitada o fingerprint esperado do GNU `timeout`.
+- [x] Adicionar regressao deterministica para o fingerprint transitorio.
+- [ ] Passar suite repetida, release gate, CI remoto e verificacao do bundle.
+
+**Plano**: `docs/planning/TASK-050-alarm-spawn-race.md`.
+
 ### Task 049 - Fechamento do candidato 0.11.2
 
 **Prioridade**: Alta
-**Status**: concluida; publicacao externa nao executada
+**Status**: retomada pela Task 050; publicacao externa nao executada
 **Objetivo**: alinhar o commit promovido, a evidencia hospedada e o bundle
 local verificavel sem confundir promocao de branches com publicacao.
 

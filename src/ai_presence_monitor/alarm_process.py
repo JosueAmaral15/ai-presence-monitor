@@ -6,6 +6,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -66,7 +67,7 @@ class LinuxAlarmProcessBackend:
             *argv,
         ]
         try:
-            return subprocess.Popen(
+            process = subprocess.Popen(
                 controlled_argv,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
@@ -75,6 +76,19 @@ class LinuxAlarmProcessBackend:
             )
         except OSError as exc:
             raise AlarmProcessError(f"Falha ao iniciar alarme: {exc}") from exc
+
+        expected_fingerprint = command_fingerprint(controlled_argv)
+        for _ in range(20):
+            snapshot = self.snapshot(process.pid)
+            if (
+                snapshot is not None
+                and snapshot.command_fingerprint == expected_fingerprint
+            ):
+                break
+            if process.poll() is not None:
+                break
+            time.sleep(0.01)
+        return process
 
     def snapshot(self, pid: int) -> ProcessSnapshot | None:
         stat_path = os.path.join("/proc", str(pid), "stat")
