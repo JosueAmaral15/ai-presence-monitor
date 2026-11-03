@@ -5,15 +5,15 @@
 ### Task 051 - Release Linux 0.11.3
 
 **Prioridade**: Critica
-**Status**: em validacao
+**Status**: concluida e promovida; publicacao externa nao executada
 **Objetivo**: publicar a estabilizacao do alarme sob uma versao patch distinta,
 atualizar o runtime transacionalmente e produzir um bundle inequivoco.
 
 - [x] Incrementar metadados de 0.11.2 para 0.11.3.
-- [ ] Passar quality gate, matriz Linux e CI remoto.
-- [ ] Atualizar o runtime dedicado e verificar servicos/bandeja.
-- [ ] Gerar e verificar o bundle local ligado ao commit final.
-- [ ] Promover por fast-forward para `develop` e `main`.
+- [x] Passar quality gate, matriz Linux e CI remoto.
+- [x] Atualizar o runtime dedicado e verificar servicos/bandeja.
+- [x] Gerar e verificar o bundle local ligado ao commit final.
+- [x] Promover por fast-forward para `develop` e `main`.
 
 **Plano**: `docs/planning/TASK-051-release-0113.md`.
 
