@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026-11-04 - v0.12.0
 
 - Added bidirectional Discord mirroring for explicit agent-chat messages when
   remote questions are enabled: tray messages reach the exact Codex session

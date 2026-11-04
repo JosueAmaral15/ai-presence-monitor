@@ -2,6 +2,24 @@
 
 ## Em andamento
 
+### Task 053 - Release Linux 0.12.0
+
+**Prioridade**: Critica
+**Status**: em andamento
+**Plano**: `docs/planning/TASK-053-release-0120.md`
+**Objetivo**: publicar a sincronizacao bidirecional do chat e o schema 3 sob
+uma versao minor propria, atualizar o runtime transacionalmente e promover
+somente depois dos gates locais, hospedados e operacionais.
+
+- [x] Validar o E2E Discord -> observer -> sessao Codex exata.
+- [x] Incrementar os metadados para 0.12.0.
+- [ ] Passar quality gate, matriz Linux e CI remoto da branch de release.
+- [ ] Gerar e verificar o bundle canonico ligado ao commit candidato.
+- [ ] Validar dry-run, upgrade 0.11.3 -> 0.12.0 e migracao 2 -> 3.
+- [ ] Provar rollback 0.12.0 -> 0.11.3 com restauracao do banco.
+- [ ] Reaplicar 0.12.0 e validar servicos, hooks, controles, bandeja e alarme.
+- [ ] Promover por fast-forward para `develop` e `main` com CI verde.
+
 ### Task 052 - Sincronizacao bidirecional do chat com Discord
 
 **Prioridade**: Alta
