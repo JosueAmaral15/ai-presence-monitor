@@ -43,6 +43,14 @@ stopped, and the launcher gained canonical-path detection plus a regression
 test. All gates must therefore run again on the corrected final commit before
 promotion.
 
+The corrected candidate at `d6bcb17` passed 363 tests on Python 3.10, 3.11
+and 3.12, 87% total coverage, Ruff, mypy, package build, isolated install
+smoke testing and release-bundle verification. Hosted workflow `Quality` run
+`41803668370` passed on that exact SHA. Final operational verification found
+runtime 0.12.0, schema 3 with integrity intact, five Codex hooks, the queue and
+controls healthy, all three observers plus the tray active with zero restarts,
+exactly one tray process and no local alarm process.
+
 ## Publication Boundary
 
 This task prepares the local product release, upgrades the authorized runtime

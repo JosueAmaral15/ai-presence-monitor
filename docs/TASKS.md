@@ -13,11 +13,11 @@ somente depois dos gates locais, hospedados e operacionais.
 
 - [x] Validar o E2E Discord -> observer -> sessao Codex exata.
 - [x] Incrementar os metadados para 0.12.0.
-- [ ] Passar quality gate, matriz Linux e CI remoto da branch de release.
-- [ ] Gerar e verificar o bundle canonico ligado ao commit candidato.
-- [ ] Validar dry-run, upgrade 0.11.3 -> 0.12.0 e migracao 2 -> 3.
-- [ ] Provar rollback 0.12.0 -> 0.11.3 com restauracao do banco.
-- [ ] Reaplicar 0.12.0 e validar servicos, hooks, controles, bandeja e alarme.
+- [x] Passar quality gate, matriz Linux e CI remoto da branch de release.
+- [x] Gerar e verificar o bundle canonico ligado ao commit candidato.
+- [x] Validar dry-run, upgrade 0.11.3 -> 0.12.0 e migracao 2 -> 3.
+- [x] Provar rollback 0.12.0 -> 0.11.3 com restauracao do banco.
+- [x] Reaplicar 0.12.0 e validar servicos, hooks, controles, bandeja e alarme.
 - [x] Corrigir a deteccao de bandeja duplicada iniciada por caminho symlink.
 - [ ] Promover por fast-forward para `develop` e `main` com CI verde.
 
