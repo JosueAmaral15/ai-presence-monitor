@@ -287,7 +287,11 @@ class RemoteQuestionFlowTests(unittest.TestCase):
             self.assertEqual(result.dispatched, 1)
             self.assertEqual(result.dispatch_failed, 0)
             self.assertEqual(native.sent[0]["thread_id"], "session-exact")
-            self.assertEqual(native.sent[0]["text"], "Use a opcao B.")
+            self.assertEqual(
+                native.sent[0]["text"],
+                f"[AI-PRESENCE-DISCORD-ANSWER:{question.question_id}]\n"
+                "Use a opcao B.",
+            )
             self.assertFalse(bool(native.sent[0]["detached"]))
             self.assertEqual(
                 store.require_question(question.question_id).status,

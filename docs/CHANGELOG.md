@@ -10,6 +10,9 @@
   message, state and error metadata for each logical chat message.
 - Kept Discord-to-Codex input fail-closed through the existing correlated
   `ask-user` reply flow; arbitrary channel messages remain non-actionable.
+- Added a monitor-generated question-ID envelope to native and GUI answer
+  delivery so exact-session E2E evidence cannot be confused with human-typed
+  answer text.
 - Exposed Discord mirror status in the tray, message listings and conversation
   exports, including rejected and uncertain writes without automatic retry.
 

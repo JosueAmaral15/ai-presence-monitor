@@ -28,7 +28,8 @@ correlation or accepting arbitrary channel messages as Codex input.
 4. Keep `ask-user` authoritative for Discord-to-agent input. The reply observer
    continues to require an allowed user, the configured channel, a live direct
    message reference and an unexpired question before dispatching to the exact
-   session.
+   session. Prefix dispatched input with a monitor-generated question marker so
+   an E2E can distinguish transport from human-typed text.
 5. Show both primary delivery and Discord mirror state in the tray and expose
    the metadata in CLI/JSON exports.
 6. Document configuration, failure semantics and the AI-worker contract.
@@ -67,5 +68,12 @@ Local validation passed 362 tests on Python 3.10, 3.11 and 3.12 with 86%
 coverage. Compilation, Ruff, mypy, shell syntax, wheel/sdist build and diff
 checks passed. The chat dialog constructed successfully in the real graphical
 session with isolated HOME, configuration and database paths. GitHub Actions
-run `41721734878` passed all three Linux jobs. A real Discord marker was not
-sent without separate authorization, so promotion remains pending that E2E.
+run `41721734878` passed all three Linux jobs.
+
+The authorized real E2E then published an explicit agent message to Discord.
+Question `981016f5-2514-41a9-b3f6-1384c52f8657` accepted one correlated reply,
+projected one question and one answer into the local transcript, and dispatched
+once to the frozen current Codex session. The session received the generated
+`AI-PRESENCE-DISCORD-ANSWER` envelope and a later exact-worker hook recorded
+activity. After adding the envelope, all 362 tests, 87% coverage, the full
+quality gate and the Python 3.10-3.12 matrix passed again.

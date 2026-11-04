@@ -223,6 +223,11 @@ sincrona a `codex queue`. Sucesso produz `input_emitted`; timeout ou rejeicao
 produz `dispatch_failed`, sem retry e sem fallback GUI automaticos. Um hook so
 confirma a entrega nativa quando traz a mesma sessao salva.
 
+O input entregue recebe o prefixo
+`[AI-PRESENCE-DISCORD-ANSWER:ID_DA_PERGUNTA]`, gerado pelo monitor. Ele preserva
+uma correlacao que o usuario nao precisa digitar e permite distinguir uma
+resposta realmente transportada de texto manual semelhante.
+
 Para uma sessao em computador cliente, use `--answer-destination client` e
 configure o gate remoto, endpoint e nome da variavel de token. O valor do token
 fica somente no ambiente e nunca e salvo com a pergunta.

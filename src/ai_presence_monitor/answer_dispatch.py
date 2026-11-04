@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from .codex_input import CodexInputError, CodexQueueClient
@@ -14,6 +14,15 @@ AnswerDispatchState = Literal["input_emitted"]
 
 class AnswerDispatchError(RuntimeError):
     pass
+
+
+def format_answer_input(question: RemoteQuestion) -> str:
+    if not question.answer:
+        raise AnswerDispatchError("A pergunta nao possui resposta para entregar.")
+    return (
+        f"[AI-PRESENCE-DISCORD-ANSWER:{question.question_id}]\n"
+        f"{question.answer}"
+    )
 
 
 @dataclass(frozen=True)
@@ -39,8 +48,7 @@ class NativeCodexAnswerDispatcher:
     def dispatch(self, question: RemoteQuestion) -> AnswerDispatchResult:
         if not self.controls.native_input_enabled:
             raise AnswerDispatchError("O transporte nativo esta desativado.")
-        if not question.answer:
-            raise AnswerDispatchError("A pergunta nao possui resposta para entregar.")
+        answer_input = format_answer_input(question)
         if not question.target_session_id:
             raise AnswerDispatchError("A pergunta nao possui uma sessao Codex vinculada.")
 
@@ -66,7 +74,7 @@ class NativeCodexAnswerDispatcher:
         try:
             result = self.client.send(
                 thread_id=question.target_session_id,
-                text=question.answer,
+                text=answer_input,
                 remote=remote,
                 remote_auth_token_env=auth_env,
                 detached=False,
@@ -94,7 +102,9 @@ class GuiQuestionAnswerDispatcher:
         if not self.controls.gui_fallback_enabled:
             raise AnswerDispatchError("O fallback GUI esta desativado.")
         try:
-            self.dispatcher.dispatch(question)
+            self.dispatcher.dispatch(
+                replace(question, answer=format_answer_input(question))
+            )
         except GuiDispatchError as exc:
             raise AnswerDispatchError(str(exc)) from exc
         return AnswerDispatchResult(transport="gui", state="input_emitted")

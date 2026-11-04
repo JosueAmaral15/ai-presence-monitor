@@ -263,6 +263,12 @@ mouse ou teclado. Se `--thread` for omitido, zero ou mais de uma sessao recente
 do mesmo worker causa falha fechada. `store` e GUI sao alternativas explicitas;
 falha nativa nunca autoriza fallback nem retry.
 
+A entrada entregue comeca com
+`[AI-PRESENCE-DISCORD-ANSWER:ID_DA_PERGUNTA]`. Esse envelope e gerado pelo
+monitor, nao pelo usuario, e permite correlacionar a resposta recebida com o
+registro auditavel e com a sessao exata. O texto humano permanece na linha
+seguinte.
+
 Quando uma resposta ou resultado do agente deve aparecer no historico local da
 bandeja, publique-a explicitamente a partir do proprio projeto:
 

@@ -5,7 +5,7 @@
 ### Task 052 - Sincronizacao bidirecional do chat com Discord
 
 **Prioridade**: Alta
-**Status**: implementada e validada localmente; E2E Discord real pendente
+**Status**: concluida e validada com E2E Discord real
 **Plano**: `docs/planning/TASK-052-bidirectional-discord-chat-sync.md`
 **Objetivo**: manter perguntas e respostas explicitas do agente e do usuario
 visiveis no chat local e no canal Discord configurado, preservando correlacao,
@@ -24,12 +24,20 @@ allowlist, sessao exata e estados de entrega independentes.
 **Evidencia local (2026-11-03)**: 362 testes passaram em Python 3.10, 3.11 e
 3.12; cobertura global de 86%; Ruff, mypy, compilacao, sintaxe shell, build de
 wheel/sdist e `git diff --check` passaram. A janela de chat foi construida em
-sessao grafica real usando HOME, configuracao e banco isolados. Nenhuma mensagem
-externa foi enviada: o E2E Discord com marcador exclusivo ainda exige
-autorizacao especifica antes da promocao para `main`.
+sessao grafica real usando HOME, configuracao e banco isolados.
 
 O workflow remoto `Quality` da branch de tarefa tambem passou nos tres jobs
 Linux (run `41721734878`).
+
+**Evidencia E2E real (2026-11-03)**: uma resposta explicita do agente foi
+persistida e publicada no Discord. A pergunta
+`981016f5-2514-41a9-b3f6-1384c52f8657` recebeu uma resposta direta autorizada,
+foi projetada no transcript sem duplicacao e despachada uma vez para a sessao
+Codex exata. A sessao recebeu o envelope gerado pelo monitor
+`[AI-PRESENCE-DISCORD-ANSWER:981016f5-2514-41a9-b3f6-1384c52f8657]`, seguido
+do texto humano, e o hook operacional registrou atividade posterior as
+21:06:11. Depois da inclusao do envelope, os 362 testes, a cobertura de 87%, o
+quality gate e a matriz Python 3.10-3.12 passaram novamente.
 
 ### Task 051 - Release Linux 0.11.3
 
