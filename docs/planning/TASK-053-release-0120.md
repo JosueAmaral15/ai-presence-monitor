@@ -51,6 +51,12 @@ runtime 0.12.0, schema 3 with integrity intact, five Codex hooks, the queue and
 controls healthy, all three observers plus the tray active with zero restarts,
 exactly one tray process and no local alarm process.
 
+The release commit was promoted by fast-forward. Hosted workflow `Quality`
+passed on `develop` as run `41804289338` and on `main` as run `41804422886`,
+both for `38f9eb9`. The closeout commit carries only this final evidence and
+the completed task state; it must follow the same fast-forward path and pass
+the same hosted workflow before the release is considered closed.
+
 ## Publication Boundary
 
 This task prepares the local product release, upgrades the authorized runtime
