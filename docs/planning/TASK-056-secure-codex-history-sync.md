@@ -45,6 +45,19 @@ locks, caches and active runtime state.
 - Phase 4: relay discovery, revocation and recovery.
 - Phase 5: real two-device E2E and compatibility matrix.
 
+## Phase 1 implementation
+
+The read-only command below reports aggregate categories without opening file
+contents, printing session filenames or returning the absolute home path:
+
+```bash
+ai-presence inspect-codex-repository --root "$HOME/.codex"
+```
+
+`conversation_candidate` means schema review only. It is not permission to
+export or merge the file. Every unknown extension or location fails closed.
+Symlinks are skipped and reported only as a count.
+
 ## Gates
 
 - no secret-bearing path or raw credential enters an export;
@@ -52,4 +65,3 @@ locks, caches and active runtime state.
 - concurrent histories merge without deletion or silent replacement;
 - pairing can be revoked per device;
 - tests cover malicious archives, path traversal, replay and schema drift.
-

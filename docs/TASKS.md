@@ -18,7 +18,7 @@ disponivel, sem substituir nem depender de Prompt Rules.
 - [x] Manter estados incertos sem repeticao automatica.
 - [x] Validar isolamento, reinicio, transporte e regressao de Prompt Rules.
 
-**Evidencia local (2026-11-04)**: 378 testes passaram com cobertura global de
+**Evidencia local (2026-11-04)**: 381 testes passaram com cobertura global de
 86%; compilacao, Ruff, mypy, sintaxe shell, build de wheel/sdist e
 `git diff --check` passaram. O teste visual Qt isolado construiu as abas
 **Controls**, **Prompt rules** e **Usage recovery**. Fixtures provaram uma unica
@@ -31,48 +31,70 @@ ficar disponivel; a validacao nao consumira tokens deliberadamente.
 ### Task 057 - Avaliacao e pacote de skill para Agensi
 
 **Prioridade**: Media
-**Status**: avaliacao em andamento; nenhuma conta ou publicacao executada
+**Status**: pacote local validado; nenhuma conta ou publicacao executada
 **Plano**: `docs/planning/TASK-057-agensi-skill-assessment.md`
 **Objetivo**: verificar a proposta comercial recebida e preparar, se aprovada,
 uma skill portavel que ensine agentes a operar uma instalacao existente do AI
 Presence Monitor sem incluir segredos nem substituir o runtime.
 
 - [x] Comparar a mensagem recebida com termos e documentacao publicos.
-- [ ] Definir o limite entre a skill de integracao e o produto executavel.
-- [ ] Preparar pacote local e executar validacoes de seguranca.
+- [x] Definir o limite entre a skill de integracao e o produto executavel.
+- [x] Preparar pacote local e executar validacoes de seguranca.
 - [ ] Submeter ou publicar somente mediante aprovacao externa especifica.
+
+**Evidencia local (2026-11-04)**: o candidato em
+`marketplace/agensi/ai-presence-monitor/` passou no `quick_validate.py` do
+Codex. O ZIP local contem apenas `SKILL.md` e uma referencia Markdown, sem
+executavel, segredo, caminho pessoal ou leitor de ambiente. A ficha usa somente
+frontmatter portavel (`name` e `description`); metadados comerciais especificos
+da Agensi serao preenchidos fora do pacote se houver autorizacao de submissao.
 
 ### Task 056 - Sincronizacao segura de historico Codex entre computadores
 
 **Prioridade**: Alta
-**Status**: arquitetura e inventario pendentes; copia direta proibida
+**Status**: fase 1 implementada; exportacao, pareamento e merge pendentes
 **Plano**: `docs/planning/TASK-056-secure-codex-history-sync.md`
 **Objetivo**: permitir pareamento entre dispositivos e mesclagem automatica de
 historicos de conversa exportaveis, preservando proveniencia e sem copiar
 credenciais, configuracoes privadas, locks ou bancos ativos de `~/.codex`.
 
-- [ ] Inventariar formatos e classificar dados sincronizaveis e proibidos.
+- [x] Inventariar formatos e classificar candidatos e dados proibidos.
 - [ ] Definir identidade de dispositivo e pareamento autenticado de uso unico.
 - [ ] Implementar exportacao sanitizada e mesclagem append-only local.
 - [ ] Criptografar transporte e armazenamento fora do dispositivo de origem.
 - [ ] Validar conflitos, duplicatas, interrupcoes e dois computadores reais.
 - [ ] Nunca modificar uma pasta `.codex` ativa sem adaptador oficial validado.
 
+**Evidencia local (2026-11-04)**: `inspect-codex-repository` percorreu o
+repositorio real sem abrir conteudo e agregou oito categorias, omitindo IDs de
+sessao e o caminho pessoal. Apenas JSONL sob raizes conhecidas foi marcado como
+`schema-review-only`; bancos SQLite/WAL/SHM, credenciais/configuracao, locks,
+runtime, instalacoes, dados auxiliares privados e desconhecidos ficaram
+bloqueados. Testes cobrem segredo no conteudo, nome privado de sessao, raiz
+invalida e fail-closed para formatos inesperados.
+
 ### Task 055 - Distribuicao publica e gerenciadores de pacotes
 
 **Prioridade**: Alta
-**Status**: preparacao em andamento; publicacao externa nao executada
+**Status**: auditoria concluida; origem/licenca do MP3 bloqueia relicenciamento
 **Plano**: `docs/planning/TASK-055-public-package-distribution.md`
 **Objetivo**: transformar os artefatos Linux validados em distribuicoes
 publicas verificaveis, com licenca, metadados e canais adequados para GitHub,
 PyPI, Snap e APT/PPA.
 
-- [ ] Auditar titularidade, dependencias e licencas antes de escolher a licenca.
+- [x] Auditar titularidade, dependencias e licencas antes de escolher a licenca.
 - [ ] Remover marcadores de pacote privado somente apos a decisao juridica.
 - [ ] Reconstruir artefatos canonicos a partir do commit atual.
 - [ ] Preparar Snap com justificativa de confinamento e revisao manual.
 - [ ] Preparar PyPI e APT/PPA sem publicar ou reservar nomes implicitamente.
 - [ ] Publicar cada canal somente com aprovacao explicita no limite externo.
+
+**Bloqueio documentado (2026-11-04)**:
+`docs/audits/TASK-055-license-audit.md` encontrou somente um autor Git e nenhuma
+dependencia vendorizada, mas `assets/alarm-four2.mp3` nao possui origem ou
+licenca registrada. O arquivo nao e usado nem entra no wheel. Antes de aplicar
+Apache-2.0, o titular deve comprovar direitos compativeis, autorizar a remocao
+do ativo inutilizado ou substitui-lo por som com proveniencia documentada.
 
 ### Task 054 - Pacote Debian e matriz de compatibilidade Linux
 

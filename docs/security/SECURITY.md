@@ -79,6 +79,23 @@ produce `unknown` and suppress dispatch until the adapter is reviewed. A local
 process running as the same user can still alter `control.json`, and a native
 queue start remains preliminary until later session evidence is recorded.
 
+## Task 056 - Codex repository inventory boundary
+
+- [x] Inventory is read-only and never opens file content.
+- [x] Reports aggregate category counts, not session filenames or the absolute
+      home path.
+- [x] Symlinks are skipped and unreadable paths fail closed.
+- [x] Conversation JSONL is marked for schema review only, never export-ready.
+- [x] Credentials, configuration, active databases, locks, runtime state,
+      installation content, private auxiliary data and unknown paths are
+      blocked.
+
+### Residual risk
+
+Filename-based classification cannot establish that a conversation candidate
+is safe or compatible. No export, pairing, encryption or merge is enabled until
+the event schema and redaction rules pass independent tests.
+
 ## Task 038 - AI-worker prompt-rule shutdown
 
 - [x] The command derives one current worker from cwd, configured scope and the

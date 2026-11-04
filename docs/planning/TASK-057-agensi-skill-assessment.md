@@ -12,10 +12,12 @@ The public Agensi terms identify Agensi BV in the Netherlands and describe a
 70 percent creator share, a 20 percent affiliate commission for purchases made
 within six months, Stripe Connect or USDC payout onboarding, automated security
 scanning and manual listing review. These public terms support several claims
-in the message. The claimed monthly visitor count and the statement that a
-creator keeps 90 percent on purchases of their own skill were not independently
-verified as contractual guarantees and must not be used in product copy without
-evidence.
+in the message. The terms also state that creators acting as affiliates receive
+the affiliate commission on their own skills in addition to the 70 percent
+creator share, which supports the message's 90 percent calculation under the
+current terms. The claimed monthly visitor count was not independently verified
+and must not be used in product copy without evidence. Commission rates and
+periods remain changeable under the platform terms.
 
 The referenced ChatGPT conversation was not readable through the public URL.
 The assessment therefore treats the text supplied by the user as an
@@ -45,3 +47,15 @@ protocol and report preliminary versus confirmed delivery states. It must not:
 5. Present the package and listing copy for human review.
 6. Create an account, configure payouts or upload only after explicit approval.
 
+## Local package candidate
+
+The reviewable source lives at
+`marketplace/agensi/ai-presence-monitor/`. It contains only a `SKILL.md` and a
+focused operations reference. It intentionally contains no installer, runtime,
+secret, environment-variable reader, network client or executable payload.
+
+Official references used for this assessment:
+
+- <https://www.agensi.io/docs/packaging>
+- <https://www.agensi.io/docs/review-and-approval>
+- <https://www.agensi.io/terms>

@@ -824,6 +824,20 @@ systemctl --user restart ai-presence-reply-observer.service
 
 Se houver alarme audivel, execute `ai-presence stop-alarm` imediatamente.
 
+## Inventario Seguro do Repositorio Codex
+
+Antes de projetar sincronizacao entre computadores, use o inventario read-only:
+
+```bash
+ai-presence inspect-codex-repository --root "$HOME/.codex"
+```
+
+O comando nao le conteudo, nao mostra IDs de sessao e nao devolve o caminho
+absoluto do usuario. JSONL em `sessions`, `archived_sessions`, `history.jsonl`
+e `session_index.jsonl` aparece apenas como `schema-review-only`. Isso nao
+autoriza exportacao. Credenciais/configuracao, SQLite/WAL/SHM, locks, runtime,
+plugins, skills, anexos e formatos desconhecidos permanecem bloqueados.
+
 ## Limites e Documentos Relacionados
 
 - [AI-WORKER-COMMAND-PROTOCOL.md](AI-WORKER-COMMAND-PROTOCOL.md): protocolo

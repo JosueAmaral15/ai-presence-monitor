@@ -56,6 +56,7 @@
 ## Controle
 
 - [Seguranca](security/SECURITY.md)
+- [Auditoria de licenca e titularidade](audits/TASK-055-license-audit.md)
 - [Rollback](rollback/ROLLBACK.md)
 - [Planejamentos](planning/)
 - [Auditorias](audits/)

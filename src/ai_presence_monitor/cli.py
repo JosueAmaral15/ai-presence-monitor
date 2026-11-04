@@ -39,6 +39,7 @@ from .codex_input import (
     resolve_native_destination,
     send_native_message,
 )
+from .codex_repository import CodexRepositoryError, inspect_codex_repository
 from .config import AppConfig, load_config
 from .continue_task import ContinueTaskError, execute_continue_task
 from .control import CONTROL_NAMES, ControlError, ControlStore
@@ -101,6 +102,7 @@ REPLY_OBSERVER_TEMPORARY_FAILURE = 75
 DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
     {
         "finish",
+        "inspect-codex-repository",
         "doctor",
         "disable-current-automation",
         "disable-current-prompt-rules",
@@ -1208,6 +1210,30 @@ def _probe_codex_app_server(args: argparse.Namespace) -> int:
     return 0
 
 
+def _inspect_codex_repository(args: argparse.Namespace) -> int:
+    try:
+        inventory = inspect_codex_repository(args.root)
+    except CodexRepositoryError as exc:
+        print(f"Codex repository inventory failed: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(inventory.as_dict(), ensure_ascii=True, indent=2))
+        return 0
+    print(f"Codex repository: {inventory.repository_name}")
+    for category in inventory.categories:
+        sync = "schema-review-only" if category.schema_review_candidate else "blocked"
+        entries = ",".join(category.top_level_entries)
+        print(
+            f"{category.name}: files={category.file_count} "
+            f"bytes={category.byte_count} sync={sync} roots={entries}"
+        )
+    print(
+        f"symlinks_skipped={inventory.symlink_count} "
+        f"unreadable_skipped={inventory.unreadable_count}"
+    )
+    return 0
+
+
 def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
     worker_id, _, _, _ = _identity(args, config)
     interval = (
@@ -1787,6 +1813,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     app_server_parser.set_defaults(
         func=lambda args, config: _probe_codex_app_server(args)
+    )
+
+    repository_parser = subparsers.add_parser(
+        "inspect-codex-repository",
+        help="Inventaria categorias de ~/.codex sem ler conteudo de conversas.",
+    )
+    repository_parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path.home() / ".codex",
+        help="Repositorio Codex a inspecionar. Padrao: ~/.codex.",
+    )
+    repository_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emite somente contagens e categorias em JSON.",
+    )
+    repository_parser.set_defaults(
+        func=lambda args, config: _inspect_codex_repository(args)
     )
 
     codex_limits_parser = subparsers.add_parser(
