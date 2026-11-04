@@ -21,9 +21,11 @@ from .codex_input import (
 )
 from .config import AppConfig, load_config
 from .control import (
+    DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
     DEFAULT_PROMPT_RULE_OCCURRENCES,
     DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
     DEFAULT_SCHEDULED_PROMPT_TEXT,
+    DEFAULT_WEEKLY_RECOVERY_TEXT,
     MAX_PROMPT_RULES,
     MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
     MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
@@ -31,6 +33,7 @@ from .control import (
     ControlSettings,
     ControlStore,
     PromptRule,
+    QuotaRecoveryRule,
 )
 from .desktop_notifications import DesktopNotification, DesktopNotificationObserver
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
@@ -38,6 +41,10 @@ from .prompt_rules import (
     configure_prompt_rule,
     process_prompt_rules,
     replace_prompt_rules,
+)
+from .quota_recovery import (
+    configure_quota_recovery_rule,
+    replace_quota_recovery_rules,
 )
 from .remote_questions import RemoteQuestionError, build_discord_client
 from .scheduled_prompt import (
@@ -74,6 +81,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     *,
     check_only: bool = False,
     chat_check_only: bool = False,
+    preferences_check_only: bool = False,
 ) -> int:
     ensure_runtime_enabled(
         experimental_windows_enabled=config.experimental_windows_enabled,
@@ -101,6 +109,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             QScrollArea,
             QSpinBox,
             QSystemTrayIcon,
+            QTabWidget,
             QToolButton,
             QVBoxLayout,
             QWidget,
@@ -115,7 +124,11 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
     app: Any = QApplication(sys.argv[:1]) if owned_app else existing_app
     app.setApplicationName("AI Presence Monitor")
     app.setQuitOnLastWindowClosed(False)
-    if not QSystemTrayIcon.isSystemTrayAvailable():
+    if (
+        not QSystemTrayIcon.isSystemTrayAvailable()
+        and not chat_check_only
+        and not preferences_check_only
+    ):
         if owned_app:
             app.quit()
         raise TrayUnavailableError(
@@ -345,7 +358,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             settings = load_settings(selected_profile(self.profile))
             self._original = settings
             self.setWindowTitle("AI Presence Monitor")
-            self.setMinimumWidth(480)
+            self.setMinimumSize(560, 620)
             layout = QVBoxLayout(self)
             title = QLabel("Automation controls")
             title.setStyleSheet("font-size: 16px; font-weight: 600;")
@@ -354,6 +367,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             profile_form = QFormLayout()
             profile_form.addRow("Project or agent", self.profile)
             layout.addLayout(profile_form)
+
+            self.tabs = QTabWidget()
+            layout.addWidget(self.tabs)
+            controls_tab = QWidget()
+            controls_layout = QVBoxLayout(controls_tab)
+            self.tabs.addTab(controls_tab, "Controls")
 
             self.automation = QCheckBox("Enable task automation")
             self.automation.setChecked(settings.task_automation_enabled)
@@ -372,7 +391,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 self.remote,
                 self.sync,
             ):
-                layout.addWidget(checkbox)
+                controls_layout.addWidget(checkbox)
 
             form = QFormLayout()
             self.thread_field = session_combo(
@@ -386,11 +405,16 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.auth_env = QLineEdit(settings.remote_auth_token_env or "")
             self.auth_env.setPlaceholderText("CODEX_REMOTE_AUTH_TOKEN")
             form.addRow("Token variable", self.auth_env)
-            layout.addLayout(form)
+            controls_layout.addLayout(form)
+            controls_layout.addStretch()
+
+            prompt_tab = QWidget()
+            prompt_layout = QVBoxLayout(prompt_tab)
+            self.tabs.addTab(prompt_tab, "Prompt rules")
 
             scheduled_title = QLabel("Prompt rules")
             scheduled_title.setStyleSheet("font-size: 14px; font-weight: 600;")
-            layout.addWidget(scheduled_title)
+            prompt_layout.addWidget(scheduled_title)
             self.rule_editors: list[PromptRuleEditor] = []
             self.rules_widget = QWidget()
             self.rules_layout = QVBoxLayout(self.rules_widget)
@@ -399,7 +423,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             rules_scroll.setWidgetResizable(True)
             rules_scroll.setMaximumHeight(420)
             rules_scroll.setWidget(self.rules_widget)
-            layout.addWidget(rules_scroll)
+            prompt_layout.addWidget(rules_scroll)
             add_row = QHBoxLayout()
             self.add_rule_button = QToolButton()
             self.add_rule_button.setText("+")
@@ -408,17 +432,74 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.add_rule_button.clicked.connect(lambda: self._add_rule())
             add_row.addWidget(self.add_rule_button)
             add_row.addStretch()
-            layout.addLayout(add_row)
-
-            self.profile.currentIndexChanged.connect(self._load_selected_profile)
-            self._rebuild_rules(settings)
+            prompt_layout.addLayout(add_row)
 
             note = QLabel(
                 "The usage gate stores only sanitized availability evidence, "
                 "never balances, account identifiers or raw rate-limit payloads."
             )
             note.setWordWrap(True)
-            layout.addWidget(note)
+            prompt_layout.addWidget(note)
+
+            recovery_tab = QWidget()
+            recovery_layout = QVBoxLayout(recovery_tab)
+            self.tabs.addTab(recovery_tab, "Usage recovery")
+            recovery_title = QLabel("Codex quota availability")
+            recovery_title.setStyleSheet("font-size: 14px; font-weight: 600;")
+            recovery_layout.addWidget(recovery_title)
+
+            five_rule = self._quota_rule(settings, "five_hour")
+            self.five_hour_recovery = QCheckBox(
+                "Notify the agent when the five-hour quota becomes available"
+            )
+            self.five_hour_recovery.setChecked(
+                five_rule.enabled if five_rule else False
+            )
+            recovery_layout.addWidget(self.five_hour_recovery)
+            five_form = QFormLayout()
+            self.five_hour_session = session_combo(
+                five_rule.thread_id if five_rule else settings.codex_thread_id,
+                selected_profile(self.profile),
+            )
+            five_form.addRow("Exact Codex session", self.five_hour_session)
+            self.five_hour_text = QLineEdit(
+                five_rule.text if five_rule else DEFAULT_FIVE_HOUR_RECOVERY_TEXT
+            )
+            self.five_hour_text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
+            five_form.addRow("Recovery message", self.five_hour_text)
+            recovery_layout.addLayout(five_form)
+
+            weekly_rule = self._quota_rule(settings, "weekly")
+            self.weekly_recovery = QCheckBox(
+                "Notify the agent when the weekly quota becomes available"
+            )
+            self.weekly_recovery.setChecked(
+                weekly_rule.enabled if weekly_rule else False
+            )
+            recovery_layout.addWidget(self.weekly_recovery)
+            weekly_form = QFormLayout()
+            self.weekly_session = session_combo(
+                weekly_rule.thread_id if weekly_rule else settings.codex_thread_id,
+                selected_profile(self.profile),
+            )
+            weekly_form.addRow("Exact Codex session", self.weekly_session)
+            self.weekly_text = QLineEdit(
+                weekly_rule.text if weekly_rule else DEFAULT_WEEKLY_RECOVERY_TEXT
+            )
+            self.weekly_text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
+            weekly_form.addRow("Recovery message", self.weekly_text)
+            recovery_layout.addLayout(weekly_form)
+            recovery_note = QLabel(
+                "A message is sent only after this monitor observes the selected "
+                "window exhausted and later available. Initial availability, "
+                "unknown evidence and ordinary inactivity do not trigger it."
+            )
+            recovery_note.setWordWrap(True)
+            recovery_layout.addWidget(recovery_note)
+            recovery_layout.addStretch()
+
+            self.profile.currentIndexChanged.connect(self._load_selected_profile)
+            self._rebuild_rules(settings)
             buttons = QDialogButtonBox(
                 QDialogButtonBox.StandardButton.Save
                 | QDialogButtonBox.StandardButton.Cancel
@@ -444,6 +525,44 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.endpoint.setText(settings.codex_remote or "")
             self.auth_env.setText(settings.remote_auth_token_env or "")
             self._rebuild_rules(settings)
+            five_rule = self._quota_rule(settings, "five_hour")
+            self.five_hour_recovery.setChecked(
+                five_rule.enabled if five_rule else False
+            )
+            populate_session_combo(
+                self.five_hour_session,
+                five_rule.thread_id if five_rule else settings.codex_thread_id,
+                profile_id,
+            )
+            self.five_hour_text.setText(
+                five_rule.text if five_rule else DEFAULT_FIVE_HOUR_RECOVERY_TEXT
+            )
+            weekly_rule = self._quota_rule(settings, "weekly")
+            self.weekly_recovery.setChecked(
+                weekly_rule.enabled if weekly_rule else False
+            )
+            populate_session_combo(
+                self.weekly_session,
+                weekly_rule.thread_id if weekly_rule else settings.codex_thread_id,
+                profile_id,
+            )
+            self.weekly_text.setText(
+                weekly_rule.text if weekly_rule else DEFAULT_WEEKLY_RECOVERY_TEXT
+            )
+
+        @staticmethod
+        def _quota_rule(
+            settings: ControlSettings,
+            window: str,
+        ) -> QuotaRecoveryRule | None:
+            return next(
+                (
+                    rule
+                    for rule in settings.quota_recovery_rules
+                    if rule.window == window
+                ),
+                None,
+            )
 
         def _rules_for_settings(
             self,
@@ -530,9 +649,28 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 thread_id=None,
                 require_red_inactivity=False,
             )
-            return replace_prompt_rules(
+            settings = replace_prompt_rules(
                 settings,
                 [editor.result_rule() for editor in self.rule_editors],
+            )
+            return replace_quota_recovery_rules(
+                settings,
+                [
+                    configure_quota_recovery_rule(
+                        self._quota_rule(self._original, "five_hour"),
+                        window="five_hour",
+                        enabled=self.five_hour_recovery.isChecked(),
+                        thread_id=selected_session(self.five_hour_session),
+                        text=self.five_hour_text.text(),
+                    ),
+                    configure_quota_recovery_rule(
+                        self._quota_rule(self._original, "weekly"),
+                        window="weekly",
+                        enabled=self.weekly_recovery.isChecked(),
+                        thread_id=selected_session(self.weekly_session),
+                        text=self.weekly_text.text(),
+                    ),
+                ],
             )
 
     class MessageDialog(QDialog):
@@ -808,6 +946,34 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             ),
         }
         return labels.get(rule.last_state, "Rule is disabled.")
+
+    if preferences_check_only:
+        preferences_dialog = PreferencesDialog()
+        preferences_dialog.show()
+        app.processEvents()
+        labels = tuple(
+            preferences_dialog.tabs.tabText(index)
+            for index in range(preferences_dialog.tabs.count())
+        )
+        if (
+            not preferences_dialog.isVisible()
+            or labels != ("Controls", "Prompt rules", "Usage recovery")
+            or preferences_dialog.five_hour_text.maxLength()
+            != MAX_SCHEDULED_PROMPT_TEXT_LENGTH
+        ):
+            preferences_dialog.close()
+            if owned_app:
+                app.quit()
+            raise TrayUnavailableError(
+                "a janela de preferencias nao passou na verificacao visual."
+            )
+        print(
+            "Preferencias construidas com Controls, Prompt rules e Usage recovery."
+        )
+        preferences_dialog.close()
+        if owned_app:
+            app.quit()
+        return 0
 
     if chat_check_only:
         dialog = MessageDialog()
@@ -1088,6 +1254,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--env-file")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--check-chat", action="store_true")
+    parser.add_argument("--check-preferences", action="store_true")
     return parser
 
 
@@ -1098,6 +1265,7 @@ def main(argv: list[str] | None = None) -> None:
             load_config(args.env_file),
             check_only=args.check,
             chat_check_only=args.check_chat,
+            preferences_check_only=args.check_preferences,
         )
     except (
         ControlError,

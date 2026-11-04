@@ -48,11 +48,18 @@ class FakeClient:
 class TrayMessageTests(unittest.TestCase):
     def test_tray_parser_supports_check_without_loading_qt(self) -> None:
         args = build_parser().parse_args(
-            ["--env-file", "/tmp/test.env", "--check", "--check-chat"]
+            [
+                "--env-file",
+                "/tmp/test.env",
+                "--check",
+                "--check-chat",
+                "--check-preferences",
+            ]
         )
         self.assertEqual(args.env_file, "/tmp/test.env")
         self.assertTrue(args.check)
         self.assertTrue(args.check_chat)
+        self.assertTrue(args.check_preferences)
 
     def test_local_message_ignores_remote_target(self) -> None:
         client = FakeClient()

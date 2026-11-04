@@ -153,6 +153,14 @@ systemctl --user daemon-reload
 systemctl --user enable --now ai-presence-prompt-rule-observer.service
 ```
 
+O mesmo servico processa a aba humana **Usage recovery**, mas ela e um
+mecanismo independente de Prompt Rules. Um AI-worker nao pode habilitar,
+rearmar nem redirecionar essas regras. O envio exige que a janela de 300 ou
+10.080 minutos tenha sido observada esgotada e depois disponivel, que
+`task-automation` continue habilitado e que a sessao exata ainda esteja
+configurada. Disponibilidade inicial, inatividade e estado desconhecido nao
+autorizam entrada. Falha ou incerteza nao deve ser repetida pelo agente.
+
 Para coletar evidencias locais no Linux:
 
 ```bash

@@ -2,6 +2,78 @@
 
 ## Em andamento
 
+### Task 058 - Observer independente de recuperacao de cotas Codex
+
+**Prioridade**: Critica
+**Status**: implementada e validada localmente; E2E real pendente para release
+**Plano**: `docs/planning/TASK-058-codex-quota-recovery-observer.md`
+**Objetivo**: avisar uma sessao Codex exata, mediante habilitacao humana por
+perfil, quando a janela de 5 horas ou a cota semanal passar de esgotada para
+disponivel, sem substituir nem depender de Prompt Rules.
+
+- [x] Persistir configuracao independente por projeto/agente.
+- [x] Expor checkboxes separados para janela de 5 horas e semanal.
+- [x] Exigir transicao comprovada `esgotada -> disponivel` em cada janela.
+- [x] Enviar mensagem explicita uma vez por ciclo de esgotamento.
+- [x] Manter estados incertos sem repeticao automatica.
+- [x] Validar isolamento, reinicio, transporte e regressao de Prompt Rules.
+
+**Evidencia local (2026-11-04)**: 378 testes passaram com cobertura global de
+86%; compilacao, Ruff, mypy, sintaxe shell, build de wheel/sdist e
+`git diff --check` passaram. O teste visual Qt isolado construiu as abas
+**Controls**, **Prompt rules** e **Usage recovery**. Fixtures provaram uma unica
+leitura de conta por ciclo, identificacao das janelas pela duracao, ausencia de
+envio na disponibilidade inicial, um envio por transicao, rearmamento por novo
+esgotamento, ausencia de retry incerto e isolamento persistente entre perfis.
+O E2E real sera executado somente quando uma cota efetivamente esgotada voltar a
+ficar disponivel; a validacao nao consumira tokens deliberadamente.
+
+### Task 057 - Avaliacao e pacote de skill para Agensi
+
+**Prioridade**: Media
+**Status**: avaliacao em andamento; nenhuma conta ou publicacao executada
+**Plano**: `docs/planning/TASK-057-agensi-skill-assessment.md`
+**Objetivo**: verificar a proposta comercial recebida e preparar, se aprovada,
+uma skill portavel que ensine agentes a operar uma instalacao existente do AI
+Presence Monitor sem incluir segredos nem substituir o runtime.
+
+- [x] Comparar a mensagem recebida com termos e documentacao publicos.
+- [ ] Definir o limite entre a skill de integracao e o produto executavel.
+- [ ] Preparar pacote local e executar validacoes de seguranca.
+- [ ] Submeter ou publicar somente mediante aprovacao externa especifica.
+
+### Task 056 - Sincronizacao segura de historico Codex entre computadores
+
+**Prioridade**: Alta
+**Status**: arquitetura e inventario pendentes; copia direta proibida
+**Plano**: `docs/planning/TASK-056-secure-codex-history-sync.md`
+**Objetivo**: permitir pareamento entre dispositivos e mesclagem automatica de
+historicos de conversa exportaveis, preservando proveniencia e sem copiar
+credenciais, configuracoes privadas, locks ou bancos ativos de `~/.codex`.
+
+- [ ] Inventariar formatos e classificar dados sincronizaveis e proibidos.
+- [ ] Definir identidade de dispositivo e pareamento autenticado de uso unico.
+- [ ] Implementar exportacao sanitizada e mesclagem append-only local.
+- [ ] Criptografar transporte e armazenamento fora do dispositivo de origem.
+- [ ] Validar conflitos, duplicatas, interrupcoes e dois computadores reais.
+- [ ] Nunca modificar uma pasta `.codex` ativa sem adaptador oficial validado.
+
+### Task 055 - Distribuicao publica e gerenciadores de pacotes
+
+**Prioridade**: Alta
+**Status**: preparacao em andamento; publicacao externa nao executada
+**Plano**: `docs/planning/TASK-055-public-package-distribution.md`
+**Objetivo**: transformar os artefatos Linux validados em distribuicoes
+publicas verificaveis, com licenca, metadados e canais adequados para GitHub,
+PyPI, Snap e APT/PPA.
+
+- [ ] Auditar titularidade, dependencias e licencas antes de escolher a licenca.
+- [ ] Remover marcadores de pacote privado somente apos a decisao juridica.
+- [ ] Reconstruir artefatos canonicos a partir do commit atual.
+- [ ] Preparar Snap com justificativa de confinamento e revisao manual.
+- [ ] Preparar PyPI e APT/PPA sem publicar ou reservar nomes implicitamente.
+- [ ] Publicar cada canal somente com aprovacao explicita no limite externo.
+
 ### Task 054 - Pacote Debian e matriz de compatibilidade Linux
 
 **Prioridade**: Alta

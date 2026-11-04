@@ -15,6 +15,7 @@ from pathlib import Path
 from . import __version__
 from .agent_chat import AgentChatError, publish_agent_message
 from .alarm import AlarmControlError, AlarmController
+from .automation_observer import observe_automations_once
 from .background_service import (
     BACKGROUND_COMPONENTS,
     BackgroundServiceError,
@@ -58,7 +59,6 @@ from .platform_integration import (
     get_platform_factory,
 )
 from .product_health import collect_doctor_report
-from .prompt_rule_observer import observe_prompt_rules_once
 from .prompt_rules import disable_all_prompt_rules
 from .protocols import (
     PROTOCOLS,
@@ -871,6 +871,7 @@ def _tray(args: argparse.Namespace, config: AppConfig) -> int:
             config,
             check_only=args.check,
             chat_check_only=args.check_chat,
+            preferences_check_only=args.check_preferences,
         )
     except TrayUnavailableError as exc:
         print(f"Bandeja indisponivel: {exc}", file=sys.stderr)
@@ -1294,19 +1295,29 @@ def _observe_prompt_rules(args: argparse.Namespace, config: AppConfig) -> int:
     control_store = ControlStore.from_config(config)
     presence_store = PresenceStore(config.db_path)
     while True:
-        result = observe_prompt_rules_once(
+        result = observe_automations_once(
             control_store=control_store,
             presence_store=presence_store,
             evidence_ttl_seconds=evidence_ttl,
             request_timeout=args.request_timeout,
             codex_executable=args.codex_executable,
         )
-        if result.targets:
-            states = ",".join(item.state for item in result.rule_results)
+        prompt_result = result.prompt_rules
+        quota_result = result.quota_recovery
+        if prompt_result.targets or quota_result.targets:
+            prompt_states = ",".join(
+                item.state for item in prompt_result.rule_results
+            ) or "none"
+            quota_states = ",".join(
+                f"{item.window}:{item.state}"
+                for item in quota_result.rule_results
+            ) or "none"
             print(
-                "prompt-rule-observer: "
-                f"targets={len(result.targets)} usage={result.observation_state} "
-                f"rules={states}",
+                "automation-observer: "
+                f"prompt_targets={len(prompt_result.targets)} "
+                f"quota_targets={len(quota_result.targets)} "
+                f"usage={prompt_result.observation_state or 'not-recorded'} "
+                f"prompt_rules={prompt_states} quota_recovery={quota_states}",
                 flush=True,
             )
         if args.once:
@@ -1816,8 +1827,8 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_rule_observer_parser = subparsers.add_parser(
         "observe-prompt-rules",
         help=(
-            "Observa disponibilidade de uso e executa prompt rules vencidas "
-            "mesmo quando o worker esta inativo."
+            "Observa disponibilidade de uso, prompt rules vencidas e regras "
+            "independentes de recuperacao de cotas."
         ),
     )
     prompt_rule_observer_parser.add_argument(
@@ -2185,6 +2196,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-chat",
         action="store_true",
         help="Constroi a janela de chat, valida seus controles e encerra.",
+    )
+    tray_parser.add_argument(
+        "--check-preferences",
+        action="store_true",
+        help="Constroi as preferencias, valida as tres abas e encerra.",
     )
     tray_parser.set_defaults(func=lambda args, config: _tray(args, config))
 

@@ -370,6 +370,17 @@ ficar inativo, permitindo aguardar uma janela de cinco horas ou semanal. No
 Linux, instale-o com `ai-presence install-background-service --component
 prompt-rule-observer`.
 
+A aba separada **Usage recovery** da bandeja trata avisos de restabelecimento
+de cota. Ela nao substitui Prompt Rules e nao possui atraso nem gatilho de
+inatividade. O usuario pode habilitar separadamente as janelas de cinco horas e
+semanal para um projeto/agente, selecionar a sessao Codex exata e editar a
+mensagem explicita. O observer envia uma unica vez somente depois de observar
+aquela janela esgotada e posteriormente disponivel. Disponibilidade inicial,
+janela desconhecida e inatividade comum nao disparam mensagem. Um novo
+esgotamento rearma outro ciclo; tentativa falha ou incerta nao e repetida no
+mesmo ciclo. O recurso reutiliza o servico `prompt-rule-observer`, permitindo
+que uma leitura sanitizada sirva aos dois mecanismos.
+
 O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
 sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar
 qualquer campo inicia um novo ciclo, zera tentativas e ocorrencias anteriores e

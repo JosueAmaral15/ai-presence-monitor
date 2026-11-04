@@ -58,6 +58,27 @@ a recent point-in-time account decision, not a reservation: availability may
 change between observation and dispatch. The exact-session correlation avoids
 cross-project evidence reuse but does not create an OS-level trust boundary.
 
+## Task 058 - Independent quota recovery observer
+
+- [x] Five-hour and weekly recovery are opt-in, disabled for legacy controls
+      and persisted independently per worker profile.
+- [x] Windows are selected by sanitized duration rather than primary/secondary
+      position.
+- [x] Dispatch requires a previously observed exhausted state followed by an
+      available state; initial availability and unknown data fail closed.
+- [x] State is claimed before native transport and one cycle cannot retry an
+      uncertain result.
+- [x] The observer never uses GUI input, Discord, synthetic activity, account
+      identity, balances or persisted percentage values.
+- [x] Prompt Rules retain their existing timers and usage-gate semantics.
+
+### Residual risk
+
+Codex may change its App Server field names or window durations. Such changes
+produce `unknown` and suppress dispatch until the adapter is reviewed. A local
+process running as the same user can still alter `control.json`, and a native
+queue start remains preliminary until later session evidence is recorded.
+
 ## Task 038 - AI-worker prompt-rule shutdown
 
 - [x] The command derives one current worker from cwd, configured scope and the

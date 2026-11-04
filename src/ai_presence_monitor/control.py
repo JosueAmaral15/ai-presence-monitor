@@ -19,6 +19,28 @@ MAX_PROMPT_RULES = 20
 MAX_PROMPT_RULE_ID_LENGTH = 128
 MAX_PROMPT_RULE_OCCURRENCES = 100
 DEFAULT_PROMPT_RULE_OCCURRENCES = 3
+DEFAULT_FIVE_HOUR_RECOVERY_TEXT = (
+    "The Codex five-hour usage quota is available again. Resume the accepted "
+    "task from the last confirmed activity, review the current repository "
+    "state, and continue from the documented next step."
+)
+DEFAULT_WEEKLY_RECOVERY_TEXT = (
+    "The Codex weekly usage quota is available again. Resume the accepted "
+    "task from the last confirmed activity, review the current repository "
+    "state, and continue from the documented next step."
+)
+QUOTA_RECOVERY_WINDOWS = frozenset({"five_hour", "weekly"})
+QUOTA_RECOVERY_STATES = frozenset(
+    {
+        "disabled",
+        "armed",
+        "waiting_for_availability",
+        "dispatching",
+        "dispatch_started",
+        "input_emitted",
+        "failed_or_uncertain",
+    }
+)
 PROMPT_RULE_TRIGGERS = frozenset({"after_delay", "red_inactivity"})
 PROMPT_RULE_STATES = frozenset(
     {
@@ -78,6 +100,18 @@ class PromptRule:
 
 
 @dataclass(frozen=True)
+class QuotaRecoveryRule:
+    window: str
+    enabled: bool = False
+    thread_id: str | None = None
+    text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
+    last_state: str = "disabled"
+    exhausted_observed_at: float | None = None
+    last_attempt_at: float | None = None
+    last_dispatch_at: float | None = None
+
+
+@dataclass(frozen=True)
 class ControlSettings:
     task_automation_enabled: bool = False
     desktop_notifications_enabled: bool = False
@@ -98,6 +132,7 @@ class ControlSettings:
     scheduled_prompt_last_state: str = "disabled"
     scheduled_prompt_last_attempt_at: float | None = None
     prompt_rules: tuple[PromptRule, ...] = ()
+    quota_recovery_rules: tuple[QuotaRecoveryRule, ...] = ()
 
     @classmethod
     def from_config(cls, config: AppConfig) -> ControlSettings:
@@ -347,6 +382,11 @@ class ControlStore:
                 "prompt_rules",
                 defaults.prompt_rules,
             ),
+            quota_recovery_rules=_quota_recovery_rules_value(
+                values,
+                "quota_recovery_rules",
+                defaults.quota_recovery_rules,
+            ),
         )
         _validate_settings(settings)
         return settings
@@ -402,6 +442,7 @@ def _profile_defaults(settings: ControlSettings) -> ControlSettings:
         scheduled_prompt_last_state="disabled",
         scheduled_prompt_last_attempt_at=None,
         prompt_rules=(),
+        quota_recovery_rules=(),
     )
 
 
@@ -625,11 +666,120 @@ def _prompt_rules_value(
     return tuple(rules)
 
 
+def _quota_recovery_rules_value(
+    values: dict[str, Any],
+    key: str,
+    default: tuple[QuotaRecoveryRule, ...],
+) -> tuple[QuotaRecoveryRule, ...]:
+    raw_rules = values.get(key, default)
+    if isinstance(raw_rules, tuple) and all(
+        isinstance(rule, QuotaRecoveryRule) for rule in raw_rules
+    ):
+        return raw_rules
+    if not isinstance(raw_rules, (list, tuple)):
+        raise ControlError(f"Controle {key!r} precisa ser uma lista.")
+    rules: list[QuotaRecoveryRule] = []
+    for index, raw_rule in enumerate(raw_rules):
+        if isinstance(raw_rule, QuotaRecoveryRule):
+            rules.append(raw_rule)
+            continue
+        if not isinstance(raw_rule, dict):
+            raise ControlError(
+                f"Regra de recuperacao de cota {index + 1} precisa ser um objeto."
+            )
+        rules.append(
+            QuotaRecoveryRule(
+                window=_choice_value(
+                    raw_rule,
+                    "window",
+                    "five_hour",
+                    choices=QUOTA_RECOVERY_WINDOWS,
+                ),
+                enabled=_bool_value(raw_rule, "enabled", False),
+                thread_id=_optional_string(raw_rule, "thread_id", None),
+                text=_required_string(
+                    raw_rule,
+                    "text",
+                    DEFAULT_SCHEDULED_PROMPT_TEXT,
+                    maximum_length=MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
+                ),
+                last_state=_choice_value(
+                    raw_rule,
+                    "last_state",
+                    "disabled",
+                    choices=QUOTA_RECOVERY_STATES,
+                ),
+                exhausted_observed_at=_optional_number(
+                    raw_rule,
+                    "exhausted_observed_at",
+                    None,
+                ),
+                last_attempt_at=_optional_number(
+                    raw_rule,
+                    "last_attempt_at",
+                    None,
+                ),
+                last_dispatch_at=_optional_number(
+                    raw_rule,
+                    "last_dispatch_at",
+                    None,
+                ),
+            )
+        )
+    return tuple(rules)
+
+
 def _validate_settings(settings: ControlSettings) -> None:
     if not isinstance(settings.desktop_notifications_enabled, bool):
         raise ControlError("Desktop notifications control must be boolean.")
     _validate_scheduled_prompt(settings)
     _validate_prompt_rules(settings)
+    _validate_quota_recovery_rules(settings)
+
+
+def _validate_quota_recovery_rules(settings: ControlSettings) -> None:
+    rules = settings.quota_recovery_rules
+    if not isinstance(rules, tuple) or not all(
+        isinstance(rule, QuotaRecoveryRule) for rule in rules
+    ):
+        raise ControlError(
+            "As regras de recuperacao de cota precisam ser uma tupla."
+        )
+    if len(rules) > len(QUOTA_RECOVERY_WINDOWS):
+        raise ControlError("Um perfil aceita uma regra por janela de cota.")
+    seen: set[str] = set()
+    for rule in rules:
+        if rule.window not in QUOTA_RECOVERY_WINDOWS or rule.window in seen:
+            raise ControlError("A janela da regra de recuperacao e invalida ou duplicada.")
+        seen.add(rule.window)
+        text = rule.text.strip()
+        if (
+            not text
+            or len(text) > MAX_SCHEDULED_PROMPT_TEXT_LENGTH
+            or any(character in text for character in ("\r", "\n", "\x00"))
+        ):
+            raise ControlError("O texto da recuperacao de cota e invalido.")
+        if rule.last_state not in QUOTA_RECOVERY_STATES:
+            raise ControlError("O estado da recuperacao de cota e invalido.")
+        for label, timestamp_value in (
+            ("esgotamento", rule.exhausted_observed_at),
+            ("ultima tentativa", rule.last_attempt_at),
+            ("ultimo envio", rule.last_dispatch_at),
+        ):
+            if timestamp_value is not None and (
+                isinstance(timestamp_value, bool)
+                or not isinstance(timestamp_value, (int, float))
+                or timestamp_value < 0
+            ):
+                raise ControlError(
+                    f"O campo {label} da recuperacao de cota e invalido."
+                )
+        if not rule.enabled:
+            continue
+        if not settings.native_input_enabled:
+            raise ControlError("Recuperacao de cota habilitada exige entrada nativa.")
+        if not rule.thread_id:
+            raise ControlError("Recuperacao de cota habilitada exige sessao Codex exata.")
 
 
 def _validate_prompt_rules(settings: ControlSettings) -> None:

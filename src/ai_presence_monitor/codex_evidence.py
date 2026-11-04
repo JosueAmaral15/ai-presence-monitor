@@ -128,13 +128,27 @@ def collect_codex_limit_observation(
         codex_executable=codex_executable,
         request_timeout=request_timeout,
     )
-    state, summary = classify_rate_limits(snapshot)
     timestamp = time.time() if observed_at is None else observed_at
+    return codex_limit_observation_from_snapshot(
+        snapshot,
+        ttl_seconds=ttl_seconds,
+        observed_at=timestamp,
+    )
+
+
+def codex_limit_observation_from_snapshot(
+    snapshot: RateLimitSnapshot,
+    *,
+    ttl_seconds: int,
+    observed_at: float,
+) -> CodexLimitObservation:
+    _require_positive_seconds(ttl_seconds, "limit evidence TTL")
+    state, summary = classify_rate_limits(snapshot)
     return CodexLimitObservation(
         state=state,
         summary=summary,
-        observed_at=timestamp,
-        expires_at=timestamp + ttl_seconds,
+        observed_at=observed_at,
+        expires_at=observed_at + ttl_seconds,
     )
 
 

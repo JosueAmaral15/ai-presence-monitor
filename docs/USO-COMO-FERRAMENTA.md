@@ -185,6 +185,41 @@ o monitor nao persiste percentuais, saldo, conta nem payload bruto. Ausencia,
 expiracao, estado desconhecido ou limite bloqueado mantem a regra em
 `waiting_for_usage`, sem envio nem consumo de ocorrencia.
 
+### Recuperacao independente de cotas
+
+A aba **Usage recovery** e separada de Prompt Rules. Para cada perfil, o
+usuario pode habilitar dois observers independentes:
+
+- **five-hour quota**: acompanha somente a janela informada pelo Codex com
+  duracao de 300 minutos;
+- **weekly quota**: acompanha somente a janela com duracao de 10.080 minutos.
+
+Cada checkbox possui sessao Codex exata e mensagem propria. A configuracao e o
+estado sobrevivem ao fechamento da bandeja e sao isolados por `worker_id`. O
+monitor nao presume que `primary` significa cinco horas: identifica cada
+janela por `windowDurationMins`, usa `usedPercent` apenas em memoria e nao o
+persiste no `control.json` ou no SQLite.
+
+Habilitar uma regra a coloca em `armed`. Ela nao envia enquanto a cota ja
+estiver disponivel. Primeiro precisa observar `usedPercent >= 100`, passando a
+`waiting_for_availability`; somente uma leitura posterior abaixo de 100 permite
+um despacho. O estado e gravado como `dispatching` antes de chamar `codex
+queue`, impedindo repeticao depois de queda ou reinicio. Falha ou incerteza
+fica em `failed_or_uncertain` ate um novo ciclo real de esgotamento.
+
+O recurso exige **Enable task automation**, **Enable native Codex input**, uma
+sessao exata e o mesmo componente continuo usado pelas regras condicionadas a
+uso:
+
+```bash
+ai-presence install-background-service --component prompt-rule-observer
+systemctl --user enable --now ai-presence-prompt-rule-observer.service
+```
+
+Inatividade, alerta vermelho, fim de expediente e `finish` nao sao evidencias
+de esgotamento. O observer consulta apenas os campos sanitizados do Codex App
+Server e nao usa mouse, teclado, Discord ou atividade sintetica.
+
 Quando esse checkbox estiver ativo, mantenha o producer correspondente em
 execucao para a sessao exata:
 

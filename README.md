@@ -706,6 +706,17 @@ worker becomes inactive, so a rule can wait across a five-hour or weekly
 reset. Install it on Linux with `ai-presence install-background-service
 --component prompt-rule-observer`.
 
+The tray has a separate **Usage recovery** tab for quota-reset notifications.
+It does not replace Prompt Rules and has no delay or inactivity trigger. The
+user can independently enable the five-hour and weekly windows for a project
+or agent, select an exact Codex session and edit the explicit recovery message.
+The observer sends once only after it has observed that exact window exhausted
+and later available. Initial availability, unknown window data and ordinary
+inactivity never dispatch. A later exhaustion rearms a new cycle; a failed or
+uncertain attempt is not retried in the same cycle. This uses the same installed
+`prompt-rule-observer` service so one sanitized App Server read can serve both
+features.
+
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous
 attempt state and counts the delay again. A red-inactivity rule that is already

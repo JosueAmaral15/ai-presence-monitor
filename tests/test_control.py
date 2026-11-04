@@ -11,11 +11,13 @@ from unittest.mock import patch
 from test_cli import make_config
 
 from ai_presence_monitor.control import (
+    DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
     DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
     ControlError,
     ControlSettings,
     ControlStore,
     PromptRule,
+    QuotaRecoveryRule,
 )
 
 
@@ -75,6 +77,16 @@ class ControlStoreTests(unittest.TestCase):
                         last_state="armed",
                     ),
                 ),
+                quota_recovery_rules=(
+                    QuotaRecoveryRule(
+                        window="five_hour",
+                        enabled=True,
+                        thread_id="thread-1",
+                        text=DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
+                        last_state="waiting_for_availability",
+                        exhausted_observed_at=1_800.0,
+                    ),
+                ),
             )
 
             store.save(settings)
@@ -107,6 +119,7 @@ class ControlStoreTests(unittest.TestCase):
             self.assertTrue(settings.task_automation_enabled)
             self.assertFalse(settings.desktop_notifications_enabled)
             self.assertFalse(settings.scheduled_prompt_enabled)
+            self.assertEqual(settings.quota_recovery_rules, ())
             self.assertEqual(
                 settings.scheduled_prompt_delay_minutes,
                 DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
@@ -214,6 +227,7 @@ class ControlStoreTests(unittest.TestCase):
             self.assertIsNone(profile.scheduled_prompt_id)
             self.assertEqual(profile.scheduled_prompt_last_state, "disabled")
             self.assertEqual(profile.prompt_rules, ())
+            self.assertEqual(profile.quota_recovery_rules, ())
 
     def test_invalid_profile_document_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
