@@ -53,7 +53,7 @@ claim GUI E2E evidence without a full guest operating system.
 ## Validation Evidence
 
 On 2026-11-04, the development candidate passed package verification and
-`lintian` with only the documented private-package override. Disposable real
+`lintian` with only the documented standalone-upstream-package override. Disposable real
 APT installs passed on Debian 12, Ubuntu 22.04 and Ubuntu 24.04, covering
 Python 3.11, 3.10 and 3.12 respectively. Each guest proved version reporting,
 schema-3 initialization and health, bounded doctor output, package removal and

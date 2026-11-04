@@ -138,7 +138,7 @@ e comprovar instalacao descartavel sem alterar o runtime atual do usuario.
 **Evidencia local (2026-11-04)**: 372 testes passaram em Python 3.10, 3.11 e
 3.12; cobertura global de 86%; compilacao, Ruff, mypy, sintaxe shell, build e
 `git diff --check` passaram. O verificador isolado e `lintian` passaram, este
-ultimo somente com o override documentado de pacote privado. Instalacao real
+ultimo somente com o override documentado de pacote upstream independente. Instalacao real
 por APT, CLI 0.13.0, schema 3, doctor e remocao sem residuos passaram nos
 containers Debian 12, Ubuntu 22.04 e Ubuntu 24.04. O runtime 0.12.0 instalado
 no host nao foi substituido.

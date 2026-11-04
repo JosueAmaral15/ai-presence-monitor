@@ -109,7 +109,7 @@ def build_debian_package(
         _write_file(doc_dir / "copyright", _copyright_text(), mode=0o644)
         _write_file(
             lintian_dir / PACKAGE_NAME,
-            "# Private package; it is not an initial upload to the Debian archive.\n"
+            "# Standalone upstream package; not an upload to the Debian archive.\n"
             f"{PACKAGE_NAME}: initial-upload-closes-no-bugs\n",
             mode=0o644,
         )
