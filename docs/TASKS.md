@@ -5,7 +5,7 @@
 ### Task 054 - Pacote Debian e matriz de compatibilidade Linux
 
 **Prioridade**: Alta
-**Status**: implementada e validada localmente; aguardando CI e promocao
+**Status**: concluida e validada; pronta para promocao
 **Plano**: `docs/planning/TASK-054-debian-package.md`
 **Objetivo**: distribuir um `.deb` verificavel para Debian, Ubuntu e Linux Mint
 e comprovar instalacao descartavel sem alterar o runtime atual do usuario.
@@ -16,15 +16,19 @@ e comprovar instalacao descartavel sem alterar o runtime atual do usuario.
 - [x] Validar com testes automatizados, `lintian` e smoke no Linux Mint.
 - [x] Instalar em containers Debian 12, Ubuntu 22.04 e Ubuntu 24.04.
 - [x] Registrar limites de containers, VMs Windows e validacao macOS.
-- [ ] Passar quality gate, matriz Python e CI antes da promocao.
+- [x] Passar quality gate, matriz Python e CI antes da promocao.
 
-**Evidencia local (2026-11-04)**: 371 testes passaram em Python 3.10, 3.11 e
+**Evidencia local (2026-11-04)**: 372 testes passaram em Python 3.10, 3.11 e
 3.12; cobertura global de 86%; compilacao, Ruff, mypy, sintaxe shell, build e
 `git diff --check` passaram. O verificador isolado e `lintian` passaram, este
 ultimo somente com o override documentado de pacote privado. Instalacao real
 por APT, CLI 0.13.0, schema 3, doctor e remocao sem residuos passaram nos
 containers Debian 12, Ubuntu 22.04 e Ubuntu 24.04. O runtime 0.12.0 instalado
 no host nao foi substituido.
+
+O bundle limpo final foi verificado e vinculado ao commit `96365c2`. O workflow
+remoto `Quality` tambem passou nos tres jobs Linux para esse commit (run
+`41865096674`) depois da recuperacao do incidente externo do GitHub Actions.
 
 ### Task 053 - Release Linux 0.12.0
 
