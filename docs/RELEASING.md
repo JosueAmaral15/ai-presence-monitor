@@ -29,6 +29,21 @@ This executes:
 5. offline verification in a fresh virtual environment and temporary home;
 6. executable mode and Bash syntax verification for `start-tray.sh`;
 7. two-project identity isolation.
+8. Debian package metadata, checksum, maintainer-script and isolated CLI/schema
+   verification.
+
+For a Linux candidate that includes the `.deb`, also run `lintian` and the
+disposable distribution matrix against the exact clean artifact:
+
+```bash
+deb="$PWD/dist/release-$version/ai-presence-monitor_${version}-1_all.deb"
+lintian --display-info --display-experimental "$deb"
+./scripts/test-deb-containers.sh "$deb"
+```
+
+The matrix must pass installation, CLI, schema, doctor and removal on Debian
+12, Ubuntu 22.04 and Ubuntu 24.04. It is not evidence for tray, user systemd,
+Codex GUI, X11/Wayland or suspend/resume behavior.
 
 The output directory must not already exist. This prevents stale artifacts
 from being mixed into a release bundle.
@@ -100,3 +115,7 @@ Starting with 0.10.4, the complete Linux bundle includes `start-tray.sh`. The
 verifier rejects a launcher that is missing, not owner-executable or invalid
 Bash. PySide6 remains an optional external dependency and is not vendored in
 the base bundle.
+
+Starting with 0.13.0, it also includes the `.deb`, its SHA-256 sidecar and
+`verify_deb.py`. The package is supplementary to the canonical complete
+archive and does not perform user configuration during installation.

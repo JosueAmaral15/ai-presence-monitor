@@ -74,22 +74,27 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md](docs/RESPOSTAS-REMOTAS-DISCORD-CODEX.md)
 - [docs/TRANSACTIONAL-UPGRADE.md](docs/TRANSACTIONAL-UPGRADE.md)
 - [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md)
+- [docs/INSTALL-DEB.md](docs/INSTALL-DEB.md)
 - [docs/SUPPORT.md](docs/SUPPORT.md)
 - [docs/RELEASING.md](docs/RELEASING.md)
 
-Na prerelease publica Linux 0.10.0, valide o sidecar do arquivo canonico, o
-bundle extraido e use o instalador incluido:
+Na candidata Linux 0.13.0, valide o sidecar do arquivo canonico, o bundle
+extraido e use o instalador incluido:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.13.0-py3-none-any.whl
 ai-presence --version
 ```
 
 O instalador cria um ambiente virtual dedicado por usuario, preserva uma
 configuracao privada existente e nao habilita silenciosamente servicos, hooks,
 bandeja ou permissoes de automacao. Consulte [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md).
+
+O bundle tambem inclui um pacote `.deb` para Debian 12, Ubuntu 22.04/24.04 e
+Linux Mint compativel. Consulte [docs/INSTALL-DEB.md](docs/INSTALL-DEB.md) antes
+de instalar com APT.
 
 Para uma futura atualizacao no Linux, valide primeiro os dois wheels
 locais sem alterar a instalacao:

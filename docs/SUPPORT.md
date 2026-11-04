@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.10.0 is a public Linux prerelease. It is suitable for
+AI Presence Monitor 0.13.0 is a Linux prerelease candidate. It is suitable for
 controlled local evaluation across multiple projects and Linux computers after
 the documented installation and verification gates pass. It is not a hosted
 service, public SaaS, package-index distribution, stable release or multi-tenant
@@ -14,8 +14,8 @@ security boundary.
 |---|---|
 | Operating system | Linux |
 | Python | CPython 3.10, 3.11 and 3.12 |
-| Package | Wheel installed in a dedicated per-user virtual environment |
-| Database | Local SQLite, schema version 1 |
+| Package | Dedicated per-user wheel or verified Debian package |
+| Database | Local SQLite, schema version 3 |
 | Background runtime | User systemd when available; direct CLI otherwise |
 | Codex activity | Installed hooks and explicit lifecycle commands |
 | Native Codex input | Codex CLI providing `codex queue` |
@@ -24,7 +24,9 @@ security boundary.
 | Tray | Optional PySide6 desktop extra |
 | GUI fallback | Optional X11 only; disabled by default |
 
-Linux Mint is the current real workstation baseline. Ubuntu-compatible hosted
+Linux Mint 21.3 is the current real workstation baseline. Debian 12, Ubuntu
+22.04 and Ubuntu 24.04 package installation, CLI, SQLite and removal are
+validated in disposable containers. Ubuntu-compatible hosted
 jobs are defined but are not considered passing while GitHub executes zero
 steps because of the account billing lock. Other Linux distributions are
 supported at the base CLI level when they provide a supported CPython, SQLite
@@ -36,9 +38,9 @@ audio behavior is best effort until validated there.
 - Windows runtime is preserved but disabled and unsupported for this release.
 - Wayland GUI mouse/keyboard fallback is unsupported. Native `codex queue`
   remains the preferred transport when available.
-- Python 3.9 and Python 3.13 or newer are outside the 0.10.0 support contract.
-- System-wide root installation, shared multi-user databases and containers
-  are not validated deployment targets.
+- Python 3.9 and Python 3.13 or newer are outside the 0.13.0 support contract.
+- Shared multi-user databases and containers are not supported deployment
+  targets; containers are package-compatibility test environments only.
 - Public Internet endpoints, inbound web servers and automatic package
   downloads are not part of the product.
 - A hook, transport state or timer does not prove useful AI work.

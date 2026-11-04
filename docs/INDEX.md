@@ -14,6 +14,7 @@
 - [Guia operacional do Windows](WINDOWS.md)
 - [Upgrade e rollback transacionais](TRANSACTIONAL-UPGRADE.md)
 - [Instalacao Linux e uso multiprojeto](INSTALL-LINUX.md)
+- [Pacote Debian, Ubuntu e Linux Mint](INSTALL-DEB.md)
 - [Suporte e compatibilidade](SUPPORT.md)
 
 ## Projeto
@@ -29,6 +30,7 @@
 - [Plano do E2E nativo Discord e release Linux](planning/TASK-021-native-discord-e2e-release.md)
 - [Plano da sincronizacao bidirecional do chat Discord](planning/TASK-052-bidirectional-discord-chat-sync.md)
 - [Plano da release Linux 0.12.0](planning/TASK-053-release-0120.md)
+- [Plano do pacote Debian e matriz Linux](planning/TASK-054-debian-package.md)
 - [Plano de diagnostico de causa por observers](planning/TASK-022-cause-aware-diagnostics.md)
 - [Plano do E2E de recovery e release 0.8.0](planning/TASK-023-recovery-e2e-release-080.md)
 - [Upgrade operacional 0.8.0 e proximos passos de produto](planning/TASK-024-operational-upgrade-productization.md)

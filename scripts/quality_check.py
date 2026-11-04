@@ -48,7 +48,9 @@ def main() -> int:
             "mypy",
             "src/ai_presence_monitor",
             "scripts/build_release.py",
+            "scripts/build_deb.py",
             "scripts/release_lib.py",
+            "scripts/verify_deb.py",
             "scripts/verify_release.py",
         ]
     )
@@ -62,6 +64,7 @@ def main() -> int:
             "scripts/quality-check.sh",
             "scripts/release-gate.sh",
             "scripts/test-python-matrix.sh",
+            "scripts/test-deb-containers.sh",
             "start-tray.sh",
         ],
         clean_pythonpath=True,

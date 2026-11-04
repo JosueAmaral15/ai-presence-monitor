@@ -163,6 +163,26 @@ published archive must be downloaded again and pass its sidecar, all internal
 checksums and the full isolated verifier. Supplementary individual assets are
 not a substitute for that canonical path.
 
+## Task 054 - Debian package
+
+- [x] The package is built from the exact release wheel and records its source
+      commit, dirty state, upstream version and wheel checksum.
+- [x] The offline verifier checks package metadata, checksums, file modes,
+      fixed command paths, maintainer script and isolated CLI/schema behavior.
+- [x] Installation performs no network operation, user configuration, service
+      activation, hook installation or automation authorization.
+- [x] The removal script is fixed to the package's Python namespace and removes
+      only generated `__pycache__` directories; it never accesses user state.
+- [x] Disposable Debian 12 and Ubuntu 22.04/24.04 installs prove package
+      installation, schema health and complete package-file removal.
+
+### Residual risk
+
+The `.deb` uses SHA-256 but is not signed by an APT repository key. Root trusts
+the locally supplied artifact at installation. Container evidence does not
+cover graphical tray behavior, desktop sessions, user systemd, Codex GUI or
+suspend/resume. Those remain full-VM or physical-host validation work.
+
 ## Task 025 - Product diagnostics
 
 - [x] `--version` uses the package constant and does not inspect distribution

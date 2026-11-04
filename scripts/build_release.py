@@ -11,6 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 try:
+    from .build_deb import build_debian_package
+except ImportError:
+    from build_deb import build_debian_package  # type: ignore[import-not-found,no-redef]  # noqa: I001
+
+try:
     from .release_lib import (
         NORMALIZED_PACKAGE_NAME,
         ReleaseError,
@@ -34,6 +39,7 @@ RELEASE_ASSETS = (
     PROJECT_ROOT / "scripts" / "install-linux.sh",
     PROJECT_ROOT / "scripts" / "upgrade-linux.sh",
     PROJECT_ROOT / "scripts" / "verify_release.py",
+    PROJECT_ROOT / "scripts" / "verify_deb.py",
     PROJECT_ROOT / "scripts" / "release_lib.py",
 )
 
@@ -84,8 +90,17 @@ def build_release(
                 f"Built wheel version mismatch: expected={version} actual={wheel_version}."
             )
 
+        deb, deb_sidecar = build_debian_package(
+            wheel,
+            build_dir,
+            source_commit=commit,
+            source_dirty=dirty,
+            source_date_epoch=int(source_date_epoch),
+            allow_dirty=allow_dirty,
+        )
+
         artifacts: list[Path] = []
-        for source in (wheel, sdist, *RELEASE_ASSETS):
+        for source in (wheel, sdist, deb, deb_sidecar, *RELEASE_ASSETS):
             if not source.is_file():
                 raise ReleaseError(f"Required release asset is missing: {source}.")
             target = bundle_dir / source.name

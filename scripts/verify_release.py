@@ -13,6 +13,11 @@ import zipfile
 from pathlib import Path
 
 try:
+    from .verify_deb import verify_debian_package
+except ImportError:
+    from verify_deb import verify_debian_package  # type: ignore[import-not-found,no-redef]  # noqa: I001
+
+try:
     from .release_lib import (
         NORMALIZED_PACKAGE_NAME,
         ReleaseError,
@@ -41,6 +46,7 @@ STATIC_ASSETS = {
     "install-linux.sh",
     "upgrade-linux.sh",
     "verify_release.py",
+    "verify_deb.py",
     "release_lib.py",
     "release-manifest.json",
 }
@@ -81,6 +87,16 @@ def verify_release(
     if wheel_version != version:
         raise ReleaseError("Wheel version does not match the release manifest.")
     _verify_wheel_modules(wheels[0])
+    debs = list(bundle.glob(f"ai-presence-monitor_{version}-*_all.deb"))
+    if len(debs) != 1:
+        raise ReleaseError("Release bundle must contain exactly one Debian package.")
+    verify_debian_package(
+        debs[0],
+        expected_version=version,
+        expected_commit=str(manifest.get("source_commit", "")),
+        smoke=install_smoke,
+        allow_dirty=allow_dirty,
+    )
     missing_static = STATIC_ASSETS - {path.name for path in bundle.iterdir()}
     if missing_static:
         raise ReleaseError(f"Release bundle is missing assets: {sorted(missing_static)}.")

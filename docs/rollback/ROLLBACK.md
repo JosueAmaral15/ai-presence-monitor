@@ -1,5 +1,22 @@
 # Rollback
 
+## Debian package 0.13.0
+
+Before replacing a working wheel installation, identify the active executable
+with `command -v ai-presence`. The `.deb` can coexist with a per-user wheel,
+and `/usr/bin/ai-presence` selects the package unambiguously.
+
+To remove only the system package:
+
+```bash
+sudo apt remove ai-presence-monitor
+```
+
+This preserves all user-owned configuration, databases, controls and service
+files. Disable hooks, autostart and user services explicitly before removal if
+they reference `/usr/bin/ai-presence`. The package removal script deletes only
+Python bytecode cache under its fixed system package namespace.
+
 ## Task 025 - Transactional package lifecycle
 
 Use only a `completed` manifest created by the installed runtime. Inspect first:

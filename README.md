@@ -112,14 +112,13 @@ is never described as proof that Codex interpreted a message.
 
 ## Installation
 
-AI Presence Monitor 0.10.0 is distributed as a public, checksummed Linux
-prerelease bundle. Verify the archive sidecar and extracted bundle before
-installation:
+AI Presence Monitor 0.13.0 is prepared as a checksummed Linux prerelease
+bundle. Verify the archive sidecar and extracted bundle before installation:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.13.0-py3-none-any.whl
 ai-presence --version
 ```
 
@@ -128,6 +127,18 @@ existing private configuration, initializes SQLite, and does not silently
 install services, hooks, tray startup, or automation permissions. See the
 [Linux installation guide](docs/INSTALL-LINUX.md) for prerequisites,
 multi-project use, optional components, and upgrade procedures.
+
+The same bundle includes an `Architecture: all` Debian package for Debian 12,
+Ubuntu 22.04/24.04 and compatible Linux Mint releases:
+
+```bash
+sha256sum -c ai-presence-monitor_0.13.0-1_all.deb.sha256
+sudo apt install ./ai-presence-monitor_0.13.0-1_all.deb
+/usr/bin/ai-presence --version
+```
+
+It does not create user configuration, enable services, install hooks or grant
+automation permissions. See the [Debian package guide](docs/INSTALL-DEB.md).
 
 Install PySide6 into the dedicated environment from a trusted source when the
 optional desktop controls are needed:

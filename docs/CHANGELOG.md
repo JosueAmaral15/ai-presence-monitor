@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased - v0.13.0
+
+- Added a checksummed Debian package for Debian, Ubuntu and Linux Mint with an
+  offline verifier and disposable compatibility tests.
+- Kept package installation non-interactive: user configuration, databases,
+  services, hooks and automation permissions remain explicit post-install
+  operations.
+- Added a narrowly scoped removal script that clears only package-owned Python
+  bytecode caches and preserves all user state.
+- Validated real APT install, schema health and clean removal in Debian 12,
+  Ubuntu 22.04 and Ubuntu 24.04 containers.
+
 ## 2026-11-04 - v0.12.0
 
 - Added bidirectional Discord mirroring for explicit agent-chat messages when
