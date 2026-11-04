@@ -95,7 +95,7 @@ def build_debian_package(
             _write_gzip(
                 man_dir / f"{command}.1.gz",
                 _manual_text(command),
-                mtime=source_date_epoch,
+                mtime=0,
             )
         shutil.copy2(PROJECT_ROOT / "start-tray.sh", product_dir / "start-tray.sh")
         (product_dir / "start-tray.sh").chmod(0o755)
@@ -116,7 +116,7 @@ def build_debian_package(
         _write_gzip(
             doc_dir / "changelog.Debian.gz",
             _changelog_text(debian_version, maintainer),
-            mtime=source_date_epoch,
+            mtime=0,
         )
         _write_file(
             doc_dir / "build-info.json",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import tempfile
 import unittest
 import zipfile
@@ -11,6 +12,7 @@ from scripts.build_deb import (
     _safe_wheel_member,
     _validate_maintainer,
     _wrapper_text,
+    _write_gzip,
 )
 from scripts.release_lib import ReleaseError
 
@@ -69,6 +71,16 @@ class DebianPackageTests(unittest.TestCase):
                 from scripts.build_deb import _extract_wheel
 
                 _extract_wheel(wheel, Path(temporary) / "target")
+
+    def test_gzip_header_has_no_build_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            archive = Path(temporary) / "manual.gz"
+
+            _write_gzip(archive, "content\n", mtime=0)
+
+            self.assertEqual(archive.read_bytes()[4:8], b"\x00\x00\x00\x00")
+            with gzip.open(archive, "rt", encoding="utf-8") as stream:
+                self.assertEqual(stream.read(), "content\n")
 
 
 if __name__ == "__main__":
