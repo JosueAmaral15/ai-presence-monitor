@@ -31,6 +31,8 @@ This executes:
 7. two-project identity isolation.
 8. Debian package metadata, checksum, maintainer-script and isolated CLI/schema
    verification.
+9. Apache-2.0 licence, third-party notices and reproducible alarm provenance
+   assets.
 
 For a Linux candidate that includes the `.deb`, also run `lintian` and the
 disposable distribution matrix against the exact clean artifact:
@@ -116,6 +118,7 @@ verifier rejects a launcher that is missing, not owner-executable or invalid
 Bash. PySide6 remains an optional external dependency and is not vendored in
 the base bundle.
 
-Starting with 0.13.0, it also includes the `.deb`, its SHA-256 sidecar and
-`verify_deb.py`. The package is supplementary to the canonical complete
+Starting with 0.13.0, it also includes the `.deb`, its SHA-256 sidecar,
+`verify_deb.py`, the Apache-2.0 licence, third-party notices and reproducible
+alarm provenance files. The package is supplementary to the canonical complete
 archive and does not perform user configuration during installation.

@@ -2,6 +2,29 @@
 
 ## Em andamento
 
+### Task 059 - Alarme reproduzivel e licenciamento publico
+
+**Prioridade**: Alta
+**Status**: implementada e validada localmente; CI remoto pendente
+**Plano**: `docs/planning/TASK-059-documented-alarm-asset.md`
+**Objetivo**: substituir o MP3 sem procedencia por um WAV original e
+reproduzivel, documentar sua origem e alinhar os metadados Apache-2.0 antes da
+distribuicao publica.
+
+- [x] Remover o MP3 sem origem do codigo-fonte atual.
+- [x] Gerar e documentar um WAV original sem amostras de terceiros.
+- [x] Provar reproducao byte a byte e SHA-256 por teste automatizado.
+- [x] Alinhar licenca do repositorio, pacote Python e pacote Debian.
+- [x] Incluir licenca, ativo e proveniencia no bundle Linux verificavel.
+- [ ] Executar gates locais e remotos antes da promocao.
+
+**Evidencia local (2026-11-04)**: 384 testes passaram com 86% de cobertura;
+compilacao, Ruff, mypy em 52 arquivos, sintaxe shell, wheel/sdist e
+`git diff --check` passaram. O gerador reproduziu o SHA-256 documentado e o
+verificador offline rejeita qualquer WAV diferente do resultado gerado. O
+wheel declarou `License-Expression: Apache-2.0` e incluiu `LICENSE` e
+`THIRD_PARTY_NOTICES.md`.
+
 ### Task 058 - Observer independente de recuperacao de cotas Codex
 
 **Prioridade**: Critica
@@ -76,25 +99,25 @@ invalida e fail-closed para formatos inesperados.
 ### Task 055 - Distribuicao publica e gerenciadores de pacotes
 
 **Prioridade**: Alta
-**Status**: auditoria concluida; origem/licenca do MP3 bloqueia relicenciamento
+**Status**: bloqueio de licenca resolvido; preparacao de canais pendente
 **Plano**: `docs/planning/TASK-055-public-package-distribution.md`
 **Objetivo**: transformar os artefatos Linux validados em distribuicoes
 publicas verificaveis, com licenca, metadados e canais adequados para GitHub,
 PyPI, Snap e APT/PPA.
 
 - [x] Auditar titularidade, dependencias e licencas antes de escolher a licenca.
-- [ ] Remover marcadores de pacote privado somente apos a decisao juridica.
+- [x] Remover marcadores de pacote privado apos a decisao de licenca.
 - [ ] Reconstruir artefatos canonicos a partir do commit atual.
 - [ ] Preparar Snap com justificativa de confinamento e revisao manual.
 - [ ] Preparar PyPI e APT/PPA sem publicar ou reservar nomes implicitamente.
 - [ ] Publicar cada canal somente com aprovacao explicita no limite externo.
 
-**Bloqueio documentado (2026-11-04)**:
-`docs/audits/TASK-055-license-audit.md` encontrou somente um autor Git e nenhuma
-dependencia vendorizada, mas `assets/alarm-four2.mp3` nao possui origem ou
-licenca registrada. O arquivo nao e usado nem entra no wheel. Antes de aplicar
-Apache-2.0, o titular deve comprovar direitos compativeis, autorizar a remocao
-do ativo inutilizado ou substitui-lo por som com proveniencia documentada.
+**Resolucao do bloqueio (2026-11-04)**:
+o titular autorizou remover `assets/alarm-four2.mp3`. O substituto e sintetizado
+por script rastreavel, possui autoria, parametros, Apache-2.0 e SHA-256
+documentados e passa por reproducao byte a byte. Python, Debian e bundle Linux
+agora usam metadados de licenca consistentes. Publicacao externa continua
+dependente de artefato limpo, gates e autorizacao especifica por canal.
 
 ### Task 054 - Pacote Debian e matriz de compatibilidade Linux
 

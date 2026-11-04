@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,11 @@ from scripts.release_lib import (
     sha256,
     wheel_metadata,
 )
-from scripts.verify_release import _validate_installed_doctor, _verify_linux_launcher
+from scripts.verify_release import (
+    _validate_installed_doctor,
+    _verify_linux_launcher,
+    _verify_reproducible_alarm,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -120,6 +125,25 @@ class ReleaseToolingTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ReleaseError, "bash"):
                 _verify_linux_launcher(launcher)
+
+    def test_release_verifies_reproducible_alarm(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp)
+            shutil.copy2(
+                PROJECT_ROOT / "scripts" / "generate_alarm_asset.py",
+                bundle / "generate_alarm_asset.py",
+            )
+            shutil.copy2(
+                PROJECT_ROOT / "assets" / "ai-presence-alarm.wav",
+                bundle / "ai-presence-alarm.wav",
+            )
+
+            _verify_reproducible_alarm(bundle)
+
+            with (bundle / "ai-presence-alarm.wav").open("ab") as stream:
+                stream.write(b"changed")
+            with self.assertRaisesRegex(ReleaseError, "not reproducible"):
+                _verify_reproducible_alarm(bundle)
 
     def test_release_doctor_ignores_host_dependent_errors(self) -> None:
         checks = [

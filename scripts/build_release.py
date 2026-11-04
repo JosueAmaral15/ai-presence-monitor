@@ -35,6 +35,11 @@ except ImportError:
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_ASSETS = (
     PROJECT_ROOT / ".env.example",
+    PROJECT_ROOT / "LICENSE",
+    PROJECT_ROOT / "THIRD_PARTY_NOTICES.md",
+    PROJECT_ROOT / "assets" / "ai-presence-alarm.wav",
+    PROJECT_ROOT / "scripts" / "generate_alarm_asset.py",
+    PROJECT_ROOT / "docs" / "audits" / "TASK-059-alarm-asset-provenance.md",
     PROJECT_ROOT / "start-tray.sh",
     PROJECT_ROOT / "scripts" / "install-linux.sh",
     PROJECT_ROOT / "scripts" / "upgrade-linux.sh",

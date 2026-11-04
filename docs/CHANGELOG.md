@@ -2,6 +2,13 @@
 
 ## Unreleased - v0.13.0
 
+- Replaced the untraceable optional MP3 with an original deterministic WAV,
+  its standard-library generator, recorded provenance and byte-for-byte test.
+- Licensed project-owned source and generated assets under Apache-2.0 and
+  aligned Python, Debian and Linux bundle metadata.
+- Added third-party notices for optional dependencies without vendoring or
+  relicensing them.
+
 - Added a checksummed Debian package for Debian, Ubuntu and Linux Mint with an
   offline verifier and disposable compatibility tests.
 - Kept package installation non-interactive: user configuration, databases,

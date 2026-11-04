@@ -821,3 +821,13 @@ experimental workflow:
 ```
 
 Current automated coverage is maintained above the configured 80% threshold.
+
+## Licence
+
+AI Presence Monitor is licensed under the Apache License 2.0. See
+[`LICENSE`](LICENSE). Optional dependencies retain their upstream licences;
+see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+The repository includes an original reproducible alarm WAV for explicit local
+configuration. Its generator, parameters and SHA-256 provenance are documented
+in [`assets/README.md`](assets/README.md).

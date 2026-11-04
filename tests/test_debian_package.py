@@ -8,6 +8,7 @@ from pathlib import Path
 
 from scripts.build_deb import (
     _control_text,
+    _copyright_text,
     _postrm_text,
     _safe_wheel_member,
     _validate_maintainer,
@@ -25,6 +26,13 @@ class DebianPackageTests(unittest.TestCase):
         self.assertIn("Version: 1.2.3-1", control)
         self.assertIn("Architecture: all", control)
         self.assertIn("python3 (>= 3.10), python3 (<< 3.13)", control)
+
+    def test_copyright_declares_apache_license(self) -> None:
+        copyright_text = _copyright_text()
+
+        self.assertIn("License: Apache-2.0", copyright_text)
+        self.assertIn("/usr/share/common-licenses/Apache-2.0", copyright_text)
+        self.assertNotIn("Proprietary", copyright_text)
 
     def test_maintainer_rejects_control_injection(self) -> None:
         with self.assertRaisesRegex(ReleaseError, "maintainer"):

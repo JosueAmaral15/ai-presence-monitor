@@ -8,12 +8,11 @@ repository or Ubuntu PPA.
 
 ## Current boundary
 
-The repository is public, but its package metadata still marks it as private,
-the Debian package identifies it as proprietary and no root licence file is
-present. Public source availability does not itself grant redistribution
-rights. No upload, package-name reservation, store registration or visibility
-change belongs to this task without a separate approval at that external
-boundary.
+The repository is public and project-owned source is licensed under
+Apache-2.0. Python and Debian package metadata use the same licence, and the
+previous untraceable MP3 has been replaced by an original reproducible WAV.
+No upload, package-name reservation, store registration or visibility change
+belongs to this task without a separate approval at that external boundary.
 
 ## Plan
 
@@ -38,4 +37,3 @@ boundary.
 - quality gate, Python matrix and clean-install tests pass;
 - generated artifacts contain `.env.example` but no `.env`, token or webhook;
 - each external upload has explicit approval and is verified after publication.
-

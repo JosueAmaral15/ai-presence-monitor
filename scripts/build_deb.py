@@ -294,9 +294,9 @@ Source: https://github.com/JosueAmaral15/ai-presence-monitor
 
 Files: *
 Copyright: 2026 Josue Amaral
-License: Proprietary
- This private package may be used and redistributed only with permission from
- the copyright holder. No public open-source license is granted by this file.
+License: Apache-2.0
+ On Debian systems, the complete text of the Apache License, Version 2.0 is
+ available at /usr/share/common-licenses/Apache-2.0.
 """
 
 

@@ -49,6 +49,7 @@ def main() -> int:
             "src/ai_presence_monitor",
             "scripts/build_release.py",
             "scripts/build_deb.py",
+            "scripts/generate_alarm_asset.py",
             "scripts/release_lib.py",
             "scripts/verify_deb.py",
             "scripts/verify_release.py",

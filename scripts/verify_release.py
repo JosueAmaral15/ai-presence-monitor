@@ -42,6 +42,11 @@ REQUIRED_WHEEL_MODULES = {
 }
 STATIC_ASSETS = {
     ".env.example",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "ai-presence-alarm.wav",
+    "generate_alarm_asset.py",
+    "TASK-059-alarm-asset-provenance.md",
     "start-tray.sh",
     "install-linux.sh",
     "upgrade-linux.sh",
@@ -100,6 +105,7 @@ def verify_release(
     missing_static = STATIC_ASSETS - {path.name for path in bundle.iterdir()}
     if missing_static:
         raise ReleaseError(f"Release bundle is missing assets: {sorted(missing_static)}.")
+    _verify_reproducible_alarm(bundle)
     _verify_linux_launcher(bundle / "start-tray.sh")
     if manifest.get("source_dirty") is not False and not allow_dirty:
         raise ReleaseError("Release manifest must come from a clean source commit.")
@@ -117,6 +123,22 @@ def _verify_linux_launcher(launcher: Path) -> None:
         ["bash", "-n", str(launcher)],
         env={"PATH": os.environ.get("PATH", os.defpath)},
     )
+
+
+def _verify_reproducible_alarm(bundle: Path) -> None:
+    generator = bundle / "generate_alarm_asset.py"
+    distributed = bundle / "ai-presence-alarm.wav"
+    with tempfile.TemporaryDirectory(prefix="ai-presence-alarm-") as temporary:
+        generated = Path(temporary) / "alarm.wav"
+        _run(
+            [sys.executable, str(generator), "--output", str(generated)],
+            env={
+                "PATH": os.environ.get("PATH", os.defpath),
+                "PYTHONNOUSERSITE": "1",
+            },
+        )
+        if generated.read_bytes() != distributed.read_bytes():
+            raise ReleaseError("Alarm asset is not reproducible from its generator.")
 
 
 def _installed_smoke(wheel: Path, version: str) -> None:
