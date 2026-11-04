@@ -45,7 +45,12 @@ if systemctl --user is-active --quiet "$unit_name"; then
     exit 0
 fi
 
-if pgrep -u "$(id -u)" -f "$ai_presence_bin .* tray$" >/dev/null 2>&1; then
+ai_presence_real="$(realpath -e -- "$ai_presence_bin")" \
+    || fail "Installed ai-presence command could not be resolved."
+
+if pgrep -u "$(id -u)" -f "$ai_presence_bin .* tray$" >/dev/null 2>&1 \
+    || { [[ "$ai_presence_real" != "$ai_presence_bin" ]] \
+        && pgrep -u "$(id -u)" -f "$ai_presence_real .* tray$" >/dev/null 2>&1; }; then
     printf 'AI Presence Monitor tray is already running outside the launcher unit.\n'
     notify_user "AI Presence Monitor" "The system tray icon is already running."
     exit 0

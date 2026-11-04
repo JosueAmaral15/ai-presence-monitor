@@ -40,6 +40,22 @@ class StartTrayLauncherTests(unittest.TestCase):
             self.assertIn("Tray prerequisites are unavailable", result.stderr)
             self.assertFalse((root / "systemd-run.calls").exists())
 
+    def test_detects_existing_tray_started_through_resolved_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            environment = self._fake_environment(root)
+            resolved = root / "ai-presence"
+            alias = root / "ai-presence-alias"
+            alias.symlink_to(resolved)
+            environment["AI_PRESENCE_BIN"] = str(alias)
+            environment["FAKE_RUNNING_COMMAND"] = str(resolved)
+
+            result = self._run(environment)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("already running outside", result.stdout)
+            self.assertFalse((root / "systemd-run.calls").exists())
+
     def test_launcher_is_executable(self) -> None:
         self.assertTrue(os.access(LAUNCHER, os.X_OK))
 
@@ -89,7 +105,15 @@ printf '%s\n' "$*" >> "$FAKE_CALLS"
 touch "$FAKE_STATE"
 """,
         )
-        self._write_executable(fake_bin / "pgrep", "#!/usr/bin/env bash\nexit 1\n")
+        self._write_executable(
+            fake_bin / "pgrep",
+            """#!/usr/bin/env bash
+if [[ -n "${FAKE_RUNNING_COMMAND:-}" && "$*" == *"$FAKE_RUNNING_COMMAND"* ]]; then
+    exit 0
+fi
+exit 1
+""",
+        )
         self._write_executable(fake_bin / "notify-send", "#!/usr/bin/env bash\nexit 0\n")
 
         environment = os.environ.copy()

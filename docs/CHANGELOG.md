@@ -15,6 +15,9 @@
   answer text.
 - Exposed Discord mirror status in the tray, message listings and conversation
   exports, including rejected and uncertain writes without automatic retry.
+- Prevented duplicate Linux tray instances when the launcher command and an
+  existing process refer to the same installed executable through different
+  symlink paths.
 
 ## 2026-11-03 - v0.11.3
 
