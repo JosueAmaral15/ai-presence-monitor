@@ -185,6 +185,12 @@ o monitor nao persiste percentuais, saldo, conta nem payload bruto. Ausencia,
 expiracao, estado desconhecido ou limite bloqueado mantem a regra em
 `waiting_for_usage`, sem envio nem consumo de ocorrencia.
 
+O `prompt-rule-observer` e o unico proprietario das regras marcadas com esse
+checkbox. Ele tambem avanca o gatilho `red_inactivity` de
+`waiting_for_event` para um prazo concreto, sem ler a conta antes do
+vencimento. A bandeja processa somente regras sem gate de uso; essa separacao
+evita despacho concorrente entre GUI e servico.
+
 ### Recuperacao independente de cotas
 
 A aba **Usage recovery** e separada de Prompt Rules. Para cada perfil, o

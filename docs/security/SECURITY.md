@@ -1,5 +1,24 @@
 # Security Checklist
 
+## Task 060 - Usage-gated red Prompt Rule ownership
+
+- [x] The background observer advances only rules that require Codex usage;
+      non-usage rules remain tray-owned to avoid competing dispatchers.
+- [x] Canonical red timing is evaluated without an account read before the
+      configured post-red delay becomes due.
+- [x] Account evidence still requires the exact worker/session, post-due
+      observation time and valid TTL.
+- [x] Missing, inactive or malformed workers fail closed without synthetic red
+      activity or input.
+- [x] Claim-before-dispatch and no-retry-on-uncertainty remain unchanged.
+
+### Residual risk
+
+The continuous behavior depends on the installed prompt-rule observer using
+the same database and control file as the tray. A process running as the same
+local user can alter those files, and a started queue transport remains
+preliminary until later exact-session evidence is recorded.
+
 ## Task 052 - Bidirectional Discord chat synchronization
 
 - [x] Local persistence occurs before any Discord network request.

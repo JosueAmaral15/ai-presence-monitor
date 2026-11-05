@@ -2,10 +2,40 @@
 
 ## Em andamento
 
+### Task 060 - Prompt Rule presa aguardando inatividade vermelha
+
+**Prioridade**: Critica
+**Status**: corrigida e validada localmente; E2E no runtime real pendente
+**Plano**: `docs/planning/TASK-060-red-prompt-rule-stall.md`
+**Objetivo**: impedir que uma regra habilitada com gatilho vermelho permaneça
+indefinidamente em `Waiting for canonical red inactivity, then the configured
+delay.` depois que a inatividade vermelha canônica já ocorreu.
+
+- [x] Reproduzir com estado persistido e relógio do protocolo correspondente.
+- [x] Distinguir falha de identidade, worker inativo, evento vermelho ausente e
+  scheduler sem proprietário contínuo.
+- [x] Fazer o observer contínuo avançar regras vermelhas sem depender da GUI.
+- [x] Preservar gate de tokens, atraso posterior ao vermelho e no-retry incerto.
+- [x] Validar tray fechada, Protocolo 1/2 e isolamento entre perfis.
+- [ ] Executar um E2E real isolado somente após testes determinísticos.
+
+**Causa raiz**: a bandeja excluía deliberadamente regras condicionadas ao uso,
+enquanto o observer contínuo só selecionava essas regras depois que
+`next_due_at` já estivesse preenchido. Assim, nenhum dos dois executores
+processava a transição inicial do vermelho canônico para o atraso configurado.
+
+**Evidência local (2026-11-04)**: o observer agora avança somente as regras
+condicionadas ao uso, sem consultar a conta antes do vencimento. Testes
+determinísticos cobrem Protocolos 1 e 2, bandeja fechada, ausência de leitura
+prematura da conta, disparo único no vencimento e preservação da propriedade da
+bandeja sobre regras sem gate de uso. O gate completo passou com 386 testes,
+86% de cobertura, Ruff, mypy em 52 arquivos, sintaxe shell, wheel/sdist e
+`git diff --check`.
+
 ### Task 059 - Alarme reproduzivel e licenciamento publico
 
 **Prioridade**: Alta
-**Status**: implementada e validada localmente; CI remoto pendente
+**Status**: implementada; gates locais e CI remoto aprovados
 **Plano**: `docs/planning/TASK-059-documented-alarm-asset.md`
 **Objetivo**: substituir o MP3 sem procedencia por um WAV original e
 reproduzivel, documentar sua origem e alinhar os metadados Apache-2.0 antes da
@@ -16,7 +46,7 @@ distribuicao publica.
 - [x] Provar reproducao byte a byte e SHA-256 por teste automatizado.
 - [x] Alinhar licenca do repositorio, pacote Python e pacote Debian.
 - [x] Incluir licenca, ativo e proveniencia no bundle Linux verificavel.
-- [ ] Executar gates locais e remotos antes da promocao.
+- [x] Executar gates locais e remotos antes da promocao.
 
 **Evidencia local (2026-11-04)**: 384 testes passaram com 86% de cobertura;
 compilacao, Ruff, mypy em 52 arquivos, sintaxe shell, wheel/sdist e
@@ -24,6 +54,9 @@ compilacao, Ruff, mypy em 52 arquivos, sintaxe shell, wheel/sdist e
 verificador offline rejeita qualquer WAV diferente do resultado gerado. O
 wheel declarou `License-Expression: Apache-2.0` e incluiu `LICENSE` e
 `THIRD_PARTY_NOTICES.md`.
+
+**Evidência remota (2026-11-04)**: workflow `Quality` aprovado no commit
+`8ff8e6e3f979ae59fe4c217db95591fec108f5ba`.
 
 ### Task 058 - Observer independente de recuperacao de cotas Codex
 

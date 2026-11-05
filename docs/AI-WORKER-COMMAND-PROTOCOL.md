@@ -145,6 +145,11 @@ sessao, com TTL valido e observado depois do vencimento. O AI-worker nao deve
 fabricar evidencia, remover o gate nem substituir estado ausente ou
 desconhecido por disponibilidade presumida.
 
+Para `red_inactivity`, o mesmo servico observa o relogio canonico enquanto o
+worker estiver ativo, cria o prazo depois do vermelho e continua sem consultar
+a conta ate esse prazo vencer. `finish` antes do vermelho mantem a regra
+aguardando, porque um worker `idle` nao produz inatividade vermelha canonica.
+
 Instalacao Linux feita pelo operador humano:
 
 ```bash

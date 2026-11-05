@@ -237,14 +237,18 @@ Ela nao salva percentuais, saldo, identidade da conta ou payload bruto.
 
 Evidencia ausente, expirada, desconhecida ou bloqueada produz
 `waiting_for_usage`; a regra continua habilitada, preserva o vencimento e nao
-consome uma ocorrencia. O observer deve permanecer ativo para aquela sessao:
+consome uma ocorrencia. O servico dedicado deve permanecer ativo:
 
 ```bash
-ai-presence observe-codex-limits \
-  --project /caminho/absoluto/do/projeto \
-  --session SESSAO_EXATA \
-  --watch
+ai-presence install-background-service --component prompt-rule-observer
+systemctl --user enable --now ai-presence-prompt-rule-observer.service
 ```
+
+Esse servico possui todas as fases de regras com **Require available Codex
+usage**. Para um gatilho vermelho, ele primeiro observa o relogio canonico e
+grava o prazo posterior ao vermelho sem consultar a conta. Somente quando o
+prazo vence ele le a disponibilidade e avalia a segunda condicao. A bandeja
+nao processa essas regras, evitando dois proprietarios do mesmo despacho.
 
 Uma regra sem repeticao e desarmada antes de uma unica tentativa. Uma regra
 repetitiva usa limite padrao de tres envios e limite absoluto de 100. Depois de
@@ -261,11 +265,13 @@ antes de criar o processo destacado. Assim, encerramento da bandeja, falha ou
 resultado incerto nao repetem a mensagem. `dispatch_started` nao prova que o
 Codex processou o texto; aguarde um hook posterior da mesma sessao.
 
-A bandeja precisa estar em execucao. Se o computador suspender ou a bandeja
-estiver fechada no vencimento, uma tentativa ainda armada sera processada uma
-vez na proxima verificacao apos retomada/inicializacao. Nao use o campo para
-senhas, tokens ou segredos, pois o texto e armazenado no arquivo privado de
-controle e enviado como argumento local do Codex CLI.
+Para regras sem gate de uso, a bandeja precisa estar em execucao. Se o
+computador suspender ou a bandeja estiver fechada no vencimento, uma tentativa
+ainda armada sera processada uma vez na proxima verificacao apos
+retomada/inicializacao. Regras com gate de uso pertencem ao servico dedicado e
+continuam progredindo com a bandeja fechada. Nao use o campo para senhas,
+tokens ou segredos, pois o texto e armazenado no arquivo privado de controle e
+enviado como argumento local do Codex CLI.
 
 ## Controle Equivalente pela CLI
 

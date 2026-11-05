@@ -8,6 +8,9 @@
   aligned Python, Debian and Linux bundle metadata.
 - Added third-party notices for optional dependencies without vendoring or
   relicensing them.
+- Fixed usage-gated red-inactivity Prompt Rules that could remain indefinitely
+  in `waiting_for_event`: the background observer now owns their timing phase
+  and defers the Codex account read until the post-red delay is due.
 
 - Added a checksummed Debian package for Debian, Ubuntu and Linux Mint with an
   offline verifier and disposable compatibility tests.
