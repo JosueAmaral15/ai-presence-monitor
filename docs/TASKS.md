@@ -2,10 +2,36 @@
 
 ## Em andamento
 
+### Task 061 - Confirmacao posterior por lifecycle hook do Codex
+
+**Prioridade**: Alta
+**Status**: bloqueio externo reproduzido na sessao corrente
+**Plano**: `docs/planning/TASK-061-codex-hook-confirmation.md`
+**Objetivo**: garantir que uma entrega nativa confirmada visualmente tambem
+produza a evidencia posterior de atividade exigida pelo monitor, sem fabricar
+`touch` ou executar manualmente um hook real.
+
+- [x] Confirmar que a configuracao instalada usa eventos e matchers suportados.
+- [x] Validar o comando do hook em dry-run, sem gravar atividade.
+- [ ] Recarregar ou iniciar uma sessao Codex que tenha revisado e confiado nos
+  hooks atuais.
+- [ ] Observar `UserPromptSubmit` e pelo menos um evento posterior da mesma
+  sessao no banco canonico.
+- [ ] Reavaliar o gate de promocao somente depois dessa evidencia.
+
+**Evidencia (2026-11-05)**: o marcador exclusivo da Prompt Rule chegou a
+sessao correta e iniciou um novo turno, mas nenhum lifecycle hook posterior foi
+persistido. `~/.codex/hooks.json` contem os cinco eventos esperados; o matcher
+`*` e suportado pela documentacao oficial atual; o executavel instalado
+processou um payload equivalente com `--dry-run --verbose`. A ausencia esta,
+portanto, no carregamento, confianca ou execucao de hooks pela sessao Codex, e
+nao no transporte da Prompt Rule.
+
 ### Task 060 - Prompt Rule presa aguardando inatividade vermelha
 
 **Prioridade**: Critica
-**Status**: corrigida e validada localmente; E2E no runtime real pendente
+**Status**: corrigida; runtime e entrega exata validados, confirmacao por hook
+acompanhada na Task 061
 **Plano**: `docs/planning/TASK-060-red-prompt-rule-stall.md`
 **Objetivo**: impedir que uma regra habilitada com gatilho vermelho permaneça
 indefinidamente em `Waiting for canonical red inactivity, then the configured
@@ -17,7 +43,8 @@ delay.` depois que a inatividade vermelha canônica já ocorreu.
 - [x] Fazer o observer contínuo avançar regras vermelhas sem depender da GUI.
 - [x] Preservar gate de tokens, atraso posterior ao vermelho e no-retry incerto.
 - [x] Validar tray fechada, Protocolo 1/2 e isolamento entre perfis.
-- [ ] Executar um E2E real isolado somente após testes determinísticos.
+- [ ] Concluir o E2E real isolado: transporte exato validado; evidencia
+  posterior por hook pendente na Task 061.
 
 **Causa raiz**: a bandeja excluía deliberadamente regras condicionadas ao uso,
 enquanto o observer contínuo só selecionava essas regras depois que
@@ -31,6 +58,16 @@ prematura da conta, disparo único no vencimento e preservação da propriedade 
 bandeja sobre regras sem gate de uso. O gate completo passou com 386 testes,
 86% de cobertura, Ruff, mypy em 52 arquivos, sintaxe shell, wheel/sdist e
 `git diff --check`.
+
+**Evidência real (2026-11-05)**: o upgrade transacional instalou `0.13.0`,
+preservou rollback e manteve schema 3, hooks, monitor, reply observer e prompt
+rule observer saudaveis segundo `doctor`. Uma regra temporaria isolada no
+Protocolo 2 permaneceu em `waiting_for_event`, avancou para `waiting` somente
+depois de 15 minutos reais de inatividade vermelha, respeitou mais um minuto de
+atraso e registrou uma unica ocorrencia `dispatch_started`. O marcador
+exclusivo retornou como a proxima mensagem da sessao Codex exata. Nao houve
+reenvio. A evidencia posterior por lifecycle hook nao apareceu e foi separada
+na Task 061, sem reclassificar `dispatch_started` como confirmacao do hook.
 
 ### Task 059 - Alarme reproduzivel e licenciamento publico
 

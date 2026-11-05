@@ -74,9 +74,25 @@ post-red delay.
 - The full local quality gate passed with 386 tests and 86% coverage, Ruff,
   mypy, shell syntax validation, wheel/sdist build and `git diff --check`.
 
-## Remaining Release Evidence
+## Real Runtime Evidence
 
-Install the candidate runtime transactionally, restart the observer and run an
-isolated unique-marker E2E for the exact configured profile. This external
-input operation requires explicit one-invocation authorization and must not be
-inferred from a persistent automation setting.
+On 2026-11-05, the authorized transactional upgrade completed from `0.12.0`
+to `0.13.0`. Schema 3 remained current and integral, and `doctor` reported the
+monitor, reply observer, prompt-rule observer, hooks and native queue healthy.
+The rollback manifest was retained.
+
+An isolated Protocol 2 profile and temporary control store then exercised the
+real presence database, account observation and native Codex queue without
+changing any personal Prompt Rules. The rule:
+
+1. remained `waiting_for_event` before canonical red inactivity;
+2. changed to `waiting` and persisted its due time after 15 real minutes;
+3. observed the configured additional one-minute delay;
+4. entered `dispatch_started` once, with one occurrence; and
+5. delivered its unique marker as the next prompt in the exact Codex session.
+
+The marker was not resent. A later lifecycle-hook event was not persisted by
+the current Codex session, so monitor-side confirmation remains explicitly
+separate in Task 061. This does not undo the observed Prompt Rule state-machine
+and exact-session delivery evidence, but it prevents claiming hook-confirmed
+processing.
