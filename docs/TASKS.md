@@ -25,7 +25,11 @@ persistido. `~/.codex/hooks.json` contem os cinco eventos esperados; o matcher
 `*` e suportado pela documentacao oficial atual; o executavel instalado
 processou um payload equivalente com `--dry-run --verbose`. A ausencia esta,
 portanto, no carregamento, confianca ou execucao de hooks pela sessao Codex, e
-nao no transporte da Prompt Rule.
+nao no transporte da Prompt Rule. Como risco correlato, `codex doctor` reportou
+pouco espaco em disco e falha de integridade em `~/.codex/logs_2.sqlite`; o
+`PRAGMA quick_check` confirmou corrupcao estrutural. Isso ainda nao foi
+estabelecido como causa dos hooks e o banco nao deve ser removido sem backup e
+um plano de recuperacao separado.
 
 ### Task 060 - Prompt Rule presa aguardando inatividade vermelha
 

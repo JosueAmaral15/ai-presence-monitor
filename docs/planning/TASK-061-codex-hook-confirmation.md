@@ -21,20 +21,27 @@ first must not be promoted to `delivery_confirmed` when the second is absent.
   and derived the expected project worker without writing to the database.
 - No post-dispatch event for the exact session appeared in the canonical
   database during the active turn.
+- `codex doctor` independently reported insufficient free space, missing or
+  unusable rollout references and a failed integrity check for
+  `~/.codex/logs_2.sqlite`. A read-only SQLite `quick_check` confirmed corrupt
+  pages and an inconsistent index. This is a correlated runtime risk, not yet
+  a proven cause of the missing hook.
 
 ## Action Plan
 
 1. Review and trust the current user-level hook definition in Codex Desktop.
-2. Reload the Codex runtime or start a fresh session so hooks are loaded from
+2. Back up and diagnose the Codex state database and recover adequate free
+   disk space without deleting rollout or conversation evidence.
+3. Reload the Codex runtime or start a fresh session so hooks are loaded from
    the current configuration.
-3. Perform a harmless tool action and require real `UserPromptSubmit`,
+4. Perform a harmless tool action and require real `UserPromptSubmit`,
    `PreToolUse` and `PostToolUse` evidence from the same session.
-4. Confirm that the hook event changes monitor activity and can confirm a
+5. Confirm that the hook event changes monitor activity and can confirm a
    pending exact-session native delivery.
-5. Add a product-health distinction between "hook files installed" and
+6. Add a product-health distinction between "hook files installed" and
    "recent lifecycle event observed" if the runtime cannot expose hook trust
    or loaded state directly.
-6. Run focused and full quality gates, then reassess release promotion.
+7. Run focused and full quality gates, then reassess release promotion.
 
 ## Safety Constraints
 
@@ -42,6 +49,8 @@ first must not be promoted to `delivery_confirmed` when the second is absent.
 - Do not use `touch` as a substitute for lifecycle evidence.
 - Do not resend the unique Prompt Rule marker.
 - Do not bypass hook trust silently.
+- Do not delete, replace or mutate the corrupt Codex state database before a
+  backup and recovery plan are reviewed.
 - Do not expose prompt text, account tokens, environment values or full session
   identifiers in committed evidence.
 
