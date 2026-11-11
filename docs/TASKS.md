@@ -1,6 +1,27 @@
 # Tasks - AI Presence Monitor
 
-## Em andamento
+## Estado atual e tarefas recentes
+
+### Task 062 - Backlog sem pre-requisitos e skill pack Agensi
+
+**Prioridade**: Media
+**Status**: concluida localmente; nenhuma publicacao externa executada
+**Plano**: `docs/planning/TASK-062-low-prerequisite-backlog.md`
+**Objetivo**: concluir trabalho independente de sessoes novas, esgotamento real
+de cotas, segundo computador ou credenciais de marketplace, corrigindo a
+evidencia atual e preparando um pacote de skills estritamente textual.
+
+- [x] Separar os limites externos que nao podem ser simulados.
+- [x] Atualizar a evidencia de integridade do banco Codex sem muta-lo.
+- [x] Separar lifecycle, human loop e continuacao protegida em skills focadas.
+- [x] Validar estrutura, seguranca, conteudo e diff do pacote.
+
+**Evidencia local (2026-11-11)**: os tres `SKILL.md` passaram no
+`quick_validate.py`; um ZIP temporario com README, tres skills e uma referencia
+compartilhada passou no teste de integridade. Todos os cinco arquivos do pacote
+sao texto puro e a varredura nao encontrou caminho pessoal, credencial,
+webhook, comando perigoso ou frase de prompt injection. A ficha comercial foi
+mantida fora do pacote para preservar o frontmatter portavel.
 
 ### Task 061 - Confirmacao posterior por lifecycle hook do Codex
 
@@ -19,17 +40,18 @@ produza a evidencia posterior de atividade exigida pelo monitor, sem fabricar
   sessao no banco canonico.
 - [ ] Reavaliar o gate de promocao somente depois dessa evidencia.
 
-**Evidencia (2026-11-05)**: o marcador exclusivo da Prompt Rule chegou a
-sessao correta e iniciou um novo turno, mas nenhum lifecycle hook posterior foi
-persistido. `~/.codex/hooks.json` contem os cinco eventos esperados; o matcher
-`*` e suportado pela documentacao oficial atual; o executavel instalado
+**Evidencia (2026-11-05 e 2026-11-11)**: o marcador exclusivo da Prompt Rule
+chegou a sessao correta e iniciou um novo turno, mas nenhum lifecycle hook
+posterior foi persistido. `~/.codex/hooks.json` contem os cinco eventos
+esperados; o matcher `*` e suportado pela documentacao oficial atual; o executavel instalado
 processou um payload equivalente com `--dry-run --verbose`. A ausencia esta,
 portanto, no carregamento, confianca ou execucao de hooks pela sessao Codex, e
-nao no transporte da Prompt Rule. Como risco correlato, `codex doctor` reportou
-pouco espaco em disco e falha de integridade em `~/.codex/logs_2.sqlite`; o
-`PRAGMA quick_check` confirmou corrupcao estrutural. Isso ainda nao foi
-estabelecido como causa dos hooks e o banco nao deve ser removido sem backup e
-um plano de recuperacao separado.
+nao no transporte da Prompt Rule. Em 2026-11-05, `codex doctor` e um
+`PRAGMA quick_check` somente leitura reportaram corrupcao estrutural em
+`~/.codex/logs_2.sqlite`. Em 2026-11-11, o mesmo `quick_check` somente leitura
+retornou `ok` enquanto processos Codex mantinham o banco e WAL/SHM abertos.
+Logo, a falha historica nao deve ser descrita como corrupcao atual nem motivar
+reparo destrutivo; pouco espaco em disco continua sendo um risco correlato.
 
 ### Task 060 - Prompt Rule presa aguardando inatividade vermelha
 
@@ -128,7 +150,7 @@ ficar disponivel; a validacao nao consumira tokens deliberadamente.
 ### Task 057 - Avaliacao e pacote de skill para Agensi
 
 **Prioridade**: Media
-**Status**: pacote local validado; nenhuma conta ou publicacao executada
+**Status**: skill pack local validado; nenhuma conta ou publicacao executada
 **Plano**: `docs/planning/TASK-057-agensi-skill-assessment.md`
 **Objetivo**: verificar a proposta comercial recebida e preparar, se aprovada,
 uma skill portavel que ensine agentes a operar uma instalacao existente do AI
@@ -137,14 +159,17 @@ Presence Monitor sem incluir segredos nem substituir o runtime.
 - [x] Comparar a mensagem recebida com termos e documentacao publicos.
 - [x] Definir o limite entre a skill de integracao e o produto executavel.
 - [x] Preparar pacote local e executar validacoes de seguranca.
+- [x] Separar lifecycle, human loop e continuacao protegida em tres skills.
+- [x] Preparar ficha de listagem fora do ZIP portavel.
 - [ ] Submeter ou publicar somente mediante aprovacao externa especifica.
 
-**Evidencia local (2026-11-04)**: o candidato em
-`marketplace/agensi/ai-presence-monitor/` passou no `quick_validate.py` do
-Codex. O ZIP local contem apenas `SKILL.md` e uma referencia Markdown, sem
-executavel, segredo, caminho pessoal ou leitor de ambiente. A ficha usa somente
-frontmatter portavel (`name` e `description`); metadados comerciais especificos
-da Agensi serao preenchidos fora do pacote se houver autorizacao de submissao.
+**Evidencia local (2026-11-11)**: o candidato em
+`marketplace/agensi/ai-presence-monitor/` contem tres skills, README e uma
+referencia compartilhada. Cada skill passou no `quick_validate.py` do Codex; o
+ZIP temporario passou no teste de integridade e contem somente texto, sem
+executavel, segredo, caminho pessoal ou leitor de ambiente. O frontmatter
+portavel permanece limitado a `name` e `description`; a ficha comercial esta
+em `marketplace/agensi/LISTING-DRAFT.md`, fora do pacote.
 
 ### Task 056 - Sincronizacao segura de historico Codex entre computadores
 
@@ -503,9 +528,8 @@ depois de uma janela de cinco horas ou semanal.
 ### Task 040 - Condicao de disponibilidade de uso nas prompt rules
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.6 aprovado e promovido para `origin/develop`;
-runtime instalado permanece em 0.10.5 e `main` em 0.10.4 aguardando decisoes
-separadas
+**Status**: concluida; a promocao historica foi incorporada por releases
+posteriores ate 0.13.0
 **Objetivo**: permitir que cada regra exija disponibilidade agregada de uso do
 Codex, alem do gatilho temporal ou vermelho, sem presumir saldo nem misturar
 evidencia entre workers ou sessoes.
@@ -523,16 +547,15 @@ evidencia entre workers ou sessoes.
 - [x] Construir e verificar o candidato 0.10.6 no commit `2651bdd`.
 - [x] Passar E2E isolado instalado diretamente do wheel 0.10.6.
 - [x] Registrar evidencia, publicar branch e promover para `develop`.
-- [ ] Obter autorizacao separada para upgrade 0.10.6 e promocao para `main`.
+- [x] Incorporar upgrade e promocao por release posterior validada.
 
 **Plano**: `docs/planning/TASK-040-prompt-rule-usage-gate.md`.
 
 ### Task 038 - Desativacao de prompt rules pelo AI-worker
 
 **Prioridade**: Alta
-**Status**: candidato 0.10.5 aprovado e promovido para `develop`; runtime
-instalado esta em 0.10.5; `main` permanece em 0.10.4 aguardando
-decisao separada de promocao
+**Status**: concluida; a promocao historica foi incorporada por releases
+posteriores ate 0.13.0
 **Objetivo**: permitir que uma IA desabilite todas as regras de prompt somente
 do proprio worker derivado, sem desligar a automacao geral nem afetar perfis de
 outros projetos.
@@ -549,15 +572,15 @@ outros projetos.
 - [x] Promover a implementacao validada para `origin/develop`.
 - [x] Registrar a CI hospedada zero-step por billing como nao aprovada.
 - [x] Obter autorizacao e aplicar upgrade transacional do runtime para 0.10.5.
-- [ ] Obter decisao separada para promocao de `develop` para `main`.
+- [x] Incorporar promocao por release posterior validada.
 
 **Plano**: `docs/planning/TASK-038-disable-current-prompt-rules.md`.
 
 ### Task 031 - Recuperacao do observer Discord e CI hospedada
 
 **Prioridade**: Critica
-**Status**: observer recuperado desde 0.10.2 e runtime atual 0.10.5; CI
-hospedada pendente por bloqueio externo da conta GitHub
+**Status**: concluida; observer recuperado e a evidencia hospedada foi obtida
+por releases posteriores
 **Objetivo**: impedir que bloqueios SQLite e falhas transitórias de rede
 derrubem o observer, validar sua recuperacao real sem duplicar input e restaurar
 evidencia hospedada da matriz Linux.
@@ -574,8 +597,8 @@ evidencia hospedada da matriz Linux.
 - [x] Confirmar observer ativo, polling estavel e doctor sem erro.
 - [x] Classificar desconexao remota/reset de conexao como falha transitoria.
 - [x] Instalar 0.10.2 e repetir recuperacao sustentada do observer.
-- [ ] Desbloquear a conta GitHub quando o proprietario puder e obter um run
-      hospedado Linux aprovado.
+- [x] Obter run hospedado Linux aprovado em release posterior, sem reabrir o
+      incidente historico de billing.
 
 **Plano**: `docs/planning/TASK-031-observer-ci-recovery.md`.
 

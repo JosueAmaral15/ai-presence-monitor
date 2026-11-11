@@ -21,17 +21,22 @@ first must not be promoted to `delivery_confirmed` when the second is absent.
   and derived the expected project worker without writing to the database.
 - No post-dispatch event for the exact session appeared in the canonical
   database during the active turn.
-- `codex doctor` independently reported insufficient free space, missing or
-  unusable rollout references and a failed integrity check for
-  `~/.codex/logs_2.sqlite`. A read-only SQLite `quick_check` confirmed corrupt
-  pages and an inconsistent index. This is a correlated runtime risk, not yet
-  a proven cause of the missing hook.
+- On 2026-11-05, `codex doctor` independently reported insufficient free space,
+  missing or unusable rollout references and a failed integrity check for
+  `~/.codex/logs_2.sqlite`. A read-only SQLite `quick_check` then reported
+  corrupt pages and an inconsistent index. On 2026-11-11, a new read-only
+  `PRAGMA quick_check` returned `ok` while active Codex processes owned the
+  database and its WAL/SHM files. The earlier incident remains relevant, but
+  the database is not currently established as corrupt and was not repaired or
+  mutated during this investigation. Low free disk space remains a runtime
+  risk and neither observation proves the cause of the missing hook.
 
 ## Action Plan
 
 1. Review and trust the current user-level hook definition in Codex Desktop.
-2. Back up and diagnose the Codex state database and recover adequate free
-   disk space without deleting rollout or conversation evidence.
+2. Preserve a backup-first recovery plan and recover adequate free disk space
+   without deleting rollout or conversation evidence; repeat read-only health
+   checks only if symptoms recur.
 3. Reload the Codex runtime or start a fresh session so hooks are loaded from
    the current configuration.
 4. Perform a harmless tool action and require real `UserPromptSubmit`,
@@ -49,8 +54,9 @@ first must not be promoted to `delivery_confirmed` when the second is absent.
 - Do not use `touch` as a substitute for lifecycle evidence.
 - Do not resend the unique Prompt Rule marker.
 - Do not bypass hook trust silently.
-- Do not delete, replace or mutate the corrupt Codex state database before a
-  backup and recovery plan are reviewed.
+- Do not delete, replace or mutate the Codex state database based on the
+  historical incident. Require a backup and reviewed recovery plan if current
+  read-only evidence reports corruption again.
 - Do not expose prompt text, account tokens, environment values or full session
   identifiers in committed evidence.
 
