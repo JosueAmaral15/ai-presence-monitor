@@ -351,11 +351,14 @@ redacao opcional do conteudo.
 A bandeja oferece regras persistentes de prompt por projeto/agente. O usuario
 pode adicionar varias regras e configurar, em cada uma, sessao exata, gatilho,
 atraso, texto, repeticao, intervalo e quantidade maxima de envios. O gatilho
-pode contar desde a ativacao ou desde o vermelho canonico: 30 minutos no
-Protocolo 1 e 15 minutos no Protocolo 2. Regras one-shot sao desarmadas antes do
+pode contar desde a ativacao ou desde o ponto de duracao vermelha: 30 minutos
+no Protocolo 1 e 15 minutos no Protocolo 2. Um `finish` real reinicia esse
+relogio, mas nao cancela uma regra explicitamente armada. Regras one-shot sao desarmadas antes do
 transporte. Uma regra repetitiva somente rearma depois de um hook posterior da
 mesma sessao, e falha ou incerteza a desabilita. Checkboxes, campos e estado de
-execucao sobrevivem ao fechamento e reabertura da bandeja.
+execucao sobrevivem ao fechamento e reabertura da bandeja. O observer em
+segundo plano e o unico scheduler das regras modernas; a bandeja pode ser
+fechada depois de salvar.
 
 Cada regra tambem pode exigir disponibilidade de uso do Codex. Essa segunda
 condicao aceita somente evidencia sanitizada `usage_available`, ainda valida,
@@ -363,15 +366,16 @@ do mesmo worker e da mesma sessao, observada depois do vencimento da regra. O
 resultado agregado acompanha as janelas de cinco horas, semanal, plano ou
 creditos que forem aplicaveis sem salvar saldos nem payloads brutos. Evidencia
 ausente, expirada, desconhecida ou bloqueada mantem a regra armada em
-`waiting_for_usage`, sem consumir uma ocorrencia. Ao habilitar a condicao,
-mantenha o servico dedicado `ai-presence observe-prompt-rules` ativo. Ele fica
-ocioso sem regra condicionada a uso vencida e continua mesmo depois de o worker
-ficar inativo, permitindo aguardar uma janela de cinco horas ou semanal. No
+`waiting_for_usage`, sem consumir uma ocorrencia. Mantenha o servico dedicado
+`ai-presence observe-prompt-rules` ativo. Timers locais sao avaliados sem
+consultar a conta; a leitura mais lenta de tokens ocorre apenas para regra
+condicionada ja vencida ou recuperacao habilitada. O observer continua mesmo
+depois de o worker ficar inativo. No
 Linux, instale-o com `ai-presence install-background-service --component
 prompt-rule-observer`.
 
-A aba separada **Usage recovery** da bandeja trata avisos de restabelecimento
-de cota. Ela nao substitui Prompt Rules e nao possui atraso nem gatilho de
+A aba separada **Token recovery** da bandeja envia prompts quando tokens voltam
+a ficar disponiveis. Ela nao substitui Prompt Rules e nao possui atraso nem gatilho de
 inatividade. O usuario pode habilitar separadamente as janelas de cinco horas e
 semanal para um projeto/agente, selecionar a sessao Codex exata e editar a
 mensagem explicita. O observer envia uma unica vez somente depois de observar

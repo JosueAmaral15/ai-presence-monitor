@@ -244,14 +244,23 @@
   armamento, sem reaproveitar o instante vermelho anterior.
 - Atividade valida antes do primeiro envio deve cancelar o vencimento vermelho
   pendente e exigir que o worker alcance o limiar novamente.
-- Worker ausente, idle, protocolo desconhecido ou relogio ausente nao deve
-  liberar o envio.
+- Worker ausente, protocolo desconhecido ou relogio ausente nao deve liberar o
+  envio. Um worker `idle` pode avancar somente uma regra ja armada, usando o
+  ultimo relogio real; `finish` atualiza esse relogio antes de deixa-lo idle.
+- O observer em segundo plano deve ser o unico scheduler de todas as Prompt
+  Rules modernas. A bandeja apenas edita e exibe seu estado.
+- Timers locais devem ser avaliados sem consultar a conta; leituras de tokens
+  devem permanecer em cadencia separada e mais lenta.
 - A condicao opcional de uso deve aceitar somente `usage_available` sanitizado,
   valido, do mesmo worker e sessao e observado depois do vencimento da regra.
 - Evidencia de uso ausente, expirada, desconhecida ou bloqueada deve falhar
   fechada sem desabilitar a regra, consumir ocorrencia ou iniciar transporte.
 - O gate deve usar a decisao agregada do Codex, sem persistir saldos,
   percentuais, identidade da conta ou payload bruto de limites.
+- A secao independente **Token recovery** deve oferecer checkboxes separados
+  para as janelas de cinco horas e semanal, sessao exata e mensagem propria.
+- Token recovery deve despachar apenas depois de observar a transicao
+  `exhausted -> available`; disponibilidade inicial nao autoriza envio.
 
 ## Bandeja e Controle de Entrada
 

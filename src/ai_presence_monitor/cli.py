@@ -788,6 +788,19 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
     settings_payload["enabled_prompt_rule_count"] = sum(
         1 for rule in prompt_rules if rule.enabled
     )
+    quota_recovery_rules = settings_payload.pop("quota_recovery_rules")
+    settings_payload["quota_recovery_rule_count"] = len(quota_recovery_rules)
+    settings_payload["enabled_quota_recovery_rule_count"] = sum(
+        1 for rule in quota_recovery_rules if rule.enabled
+    )
+    settings_payload["quota_recovery_states"] = [
+        {
+            "window": rule.window,
+            "enabled": rule.enabled,
+            "state": rule.last_state,
+        }
+        for rule in quota_recovery_rules
+    ]
     payload = {
         "control_path": str(store.path),
         "profile_id": profile_id,
@@ -1303,34 +1316,52 @@ def _observe_codex_limits(args: argparse.Namespace, config: AppConfig) -> int:
 
 
 def _observe_prompt_rules(args: argparse.Namespace, config: AppConfig) -> int:
-    interval = (
+    usage_interval = (
         args.interval
         if args.interval is not None
         else config.codex_limit_poll_interval_seconds
+    )
+    local_interval = (
+        args.local_interval
+        if args.local_interval is not None
+        else config.monitor_interval_seconds
     )
     evidence_ttl = (
         args.evidence_ttl
         if args.evidence_ttl is not None
         else config.codex_limit_evidence_ttl_seconds
     )
-    if interval <= 0:
-        raise ValueError("Prompt-rule observer interval must be greater than zero.")
+    if usage_interval <= 0:
+        raise ValueError("Usage observer interval must be greater than zero.")
+    if local_interval <= 0:
+        raise ValueError("Local prompt-rule interval must be greater than zero.")
     if evidence_ttl <= 0:
         raise ValueError("Codex limit evidence TTL must be greater than zero.")
 
     control_store = ControlStore.from_config(config)
     presence_store = PresenceStore(config.db_path)
+    next_usage_poll_at = 0.0
     while True:
+        checked_at = time.time()
+        observe_usage = args.once or checked_at >= next_usage_poll_at
         result = observe_automations_once(
             control_store=control_store,
             presence_store=presence_store,
             evidence_ttl_seconds=evidence_ttl,
             request_timeout=args.request_timeout,
             codex_executable=args.codex_executable,
+            now=checked_at,
+            observe_usage=observe_usage,
         )
+        if observe_usage:
+            next_usage_poll_at = checked_at + usage_interval
         prompt_result = result.prompt_rules
         quota_result = result.quota_recovery
-        if prompt_result.targets or quota_result.targets:
+        if (
+            prompt_result.rule_results
+            or prompt_result.targets
+            or quota_result.targets
+        ):
             prompt_states = ",".join(
                 item.state for item in prompt_result.rule_results
             ) or "none"
@@ -1348,7 +1379,8 @@ def _observe_prompt_rules(args: argparse.Namespace, config: AppConfig) -> int:
             )
         if args.once:
             return 0
-        time.sleep(interval)
+        until_usage = max(0.1, next_usage_poll_at - time.time())
+        time.sleep(min(local_interval, until_usage))
 
 
 def _observe_linux_state(args: argparse.Namespace, config: AppConfig) -> int:
@@ -1884,7 +1916,15 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_rule_observer_parser.add_argument(
         "--interval",
         type=int,
-        help="Intervalo do observer em segundos.",
+        help="Intervalo da leitura de tokens em segundos.",
+    )
+    prompt_rule_observer_parser.add_argument(
+        "--local-interval",
+        type=int,
+        help=(
+            "Intervalo local para timers de Prompt Rules. "
+            "Padrao: PRESENCE_MONITOR_INTERVAL_SECONDS."
+        ),
     )
     prompt_rule_observer_parser.add_argument(
         "--evidence-ttl",

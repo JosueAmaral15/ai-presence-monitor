@@ -1,6 +1,6 @@
 [project]
 name = "ai-presence-monitor"
-version = "0.13.0"
+version = "0.13.1"
 description = "Local AI-worker presence monitor with alerts and guarded automation."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"

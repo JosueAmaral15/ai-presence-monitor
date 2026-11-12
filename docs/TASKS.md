@@ -2,6 +2,41 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 063 - Confiabilidade das Prompt Rules e observer de tokens explicito
+
+**Prioridade**: Critica
+**Status**: implementada e validada localmente; upgrade real e E2E externo pendentes
+**Plano**: `docs/planning/TASK-063-prompt-observer-reliability.md`
+**Objetivo**: impedir regras vermelhas habilitadas de permanecerem sem prazo
+quando a bandeja fecha ou o worker termina, e tornar a retomada por tokens uma
+funcionalidade observer explicita e independente.
+
+- [x] Reproduzir o estado persistido `waiting_for_event` sem `next_due_at`.
+- [x] Identificar ownership dividido entre bandeja e observer.
+- [x] Tornar o observer proprietario de todas as Prompt Rules modernas.
+- [x] Separar polling local de timers do polling de disponibilidade de tokens.
+- [x] Continuar a contagem vermelha autorizada a partir da ultima atividade
+  real mesmo depois de `finish`.
+- [x] Expor **Token recovery** explicitamente na GUI e no status sanitizado.
+- [x] Cobrir atraso de 271 minutos, worker idle, tray fechada e no-retry.
+- [x] Validar runtime candidato sem realizar envio real nao autorizado.
+
+**Causa raiz**: a bandeja era proprietaria das regras comuns, enquanto o
+servico em segundo plano processava apenas regras condicionadas a tokens. Com a
+bandeja fechada, regras comuns paravam. Alem disso, uma regra vermelha armada
+deixava de calcular o evento quando o worker passava para `idle`, e o intervalo
+de cinco minutos do polling de tokens tambem atrasava timers locais.
+
+**Evidencia local (2026-11-12)**: o observer em segundo plano tornou-se o unico
+agendador de Prompt Rules modernas; timers locais usam cadencia independente e
+nao leem a conta Codex. Um teste deterministico cobre `finish`, 15 minutos de
+inatividade vermelha, mais 271 minutos de atraso e um unico disparo. O gate
+completo passou com 389 testes, 86% de cobertura, Ruff, mypy em 52 arquivos,
+sintaxe shell, wheel/sdist e `git diff --check`. O wheel `0.13.1` foi instalado
+em ambiente isolado, reportou a versao correta e passou em `tray --check`; o
+upgrade transacional instalado reportou `would_upgrade` em `--dry-run`. Nenhum
+prompt real foi enviado e nenhum servico instalado foi reiniciado.
+
 ### Task 062 - Backlog sem pre-requisitos e skill pack Agensi
 
 **Prioridade**: Media
@@ -140,7 +175,7 @@ disponivel, sem substituir nem depender de Prompt Rules.
 **Evidencia local (2026-11-04)**: 381 testes passaram com cobertura global de
 86%; compilacao, Ruff, mypy, sintaxe shell, build de wheel/sdist e
 `git diff --check` passaram. O teste visual Qt isolado construiu as abas
-**Controls**, **Prompt rules** e **Usage recovery**. Fixtures provaram uma unica
+**Controls**, **Prompt rules** e **Token recovery**. Fixtures provaram uma unica
 leitura de conta por ciclo, identificacao das janelas pela duracao, ausencia de
 envio na disponibilidade inicial, um envio por transicao, rearmamento por novo
 esgotamento, ausencia de retry incerto e isolamento persistente entre perfis.

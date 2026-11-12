@@ -40,7 +40,7 @@ presence activity. A later hook remains the evidence that the session acted.
 ## Plan
 
 1. Add backward-compatible persisted quota recovery settings to `control.json`.
-2. Add a separate **Usage recovery** section to the tray preferences.
+2. Add a separate **Token recovery** section to the tray preferences.
 3. Implement deterministic per-window classification and transition handling.
 4. Extend the durable observer service to poll when either recovery rule or a
    due usage-gated Prompt Rule needs evidence.

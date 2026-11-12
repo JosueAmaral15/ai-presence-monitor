@@ -185,15 +185,15 @@ o monitor nao persiste percentuais, saldo, conta nem payload bruto. Ausencia,
 expiracao, estado desconhecido ou limite bloqueado mantem a regra em
 `waiting_for_usage`, sem envio nem consumo de ocorrencia.
 
-O `prompt-rule-observer` e o unico proprietario das regras marcadas com esse
-checkbox. Ele tambem avanca o gatilho `red_inactivity` de
-`waiting_for_event` para um prazo concreto, sem ler a conta antes do
-vencimento. A bandeja processa somente regras sem gate de uso; essa separacao
-evita despacho concorrente entre GUI e servico.
+O `prompt-rule-observer` e o unico proprietario de todas as Prompt Rules
+modernas. Ele avalia timers locais no intervalo do monitor, sem ler a conta, e
+consulta tokens no intervalo mais lento somente quando uma regra condicionada
+esta vencida ou uma recuperacao esta habilitada. A bandeja apenas edita e exibe
+as regras, evitando despacho concorrente entre GUI e servico.
 
-### Recuperacao independente de cotas
+### Recuperacao independente de tokens
 
-A aba **Usage recovery** e separada de Prompt Rules. Para cada perfil, o
+A aba **Token recovery** e separada de Prompt Rules. Para cada perfil, o
 usuario pode habilitar dois observers independentes:
 
 - **five-hour quota**: acompanha somente a janela informada pelo Codex com
@@ -226,18 +226,12 @@ Inatividade, alerta vermelho, fim de expediente e `finish` nao sao evidencias
 de esgotamento. O observer consulta apenas os campos sanitizados do Codex App
 Server e nao usa mouse, teclado, Discord ou atividade sintetica.
 
-Quando esse checkbox estiver ativo, mantenha o producer correspondente em
-execucao para a sessao exata:
+`ai-presence control show --json` informa somente janela, habilitacao e estado
+do observer. Sessao exata e texto da mensagem nao aparecem nesse relatorio.
 
-```bash
-ai-presence observe-codex-limits \
-  --project /caminho/absoluto/do/projeto \
-  --session SESSAO_EXATA \
-  --watch
-```
-
-O gatilho pode contar desde a ativacao ou desde o vermelho canonico, seguido pelo
-atraso configurado. Repeticao exige intervalo e limite de ocorrencias, com
+O gatilho pode contar desde a ativacao ou desde o ponto de duracao vermelha,
+seguido pelo atraso configurado. Um `finish` real reinicia o relogio monitorado,
+mas nao cancela uma regra explicitamente armada. Repeticao exige intervalo e limite de ocorrencias, com
 default seguro de tres envios e limite absoluto de 100. Depois de cada envio, a
 regra aguarda um hook posterior da mesma sessao antes de contar o proximo
 intervalo. Falha ou resultado incerto desabilita a regra. Se a regra for

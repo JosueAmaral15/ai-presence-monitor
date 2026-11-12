@@ -217,16 +217,17 @@ vencimento. Se o worker ja estiver vermelho, o novo atraso comeca no instante
 do rearmamento, sem reutilizar o inicio do episodio antigo. Atividade valida
 antes do primeiro envio cancela esse vencimento e exige um novo vermelho.
 
-No gatilho vermelho, o atraso comeca depois que o worker ativo atinge:
+No gatilho vermelho, o atraso comeca depois que o relogio real atinge:
 
 | Protocolo | Relogio | Vermelho |
 |---|---|---|
 | Protocolo 1 | `last_signal_at` | 30 minutos |
 | Protocolo 2 | `last_activity_at` | 15 minutos |
 
-Um worker ausente, finalizado (`idle`) ou com protocolo/relogio invalido
-permanece aguardando e nao libera input. O gate consulta o relogio canonico de
-inatividade, nao o ultimo alerta enviado ao Discord.
+Um worker ausente ou com protocolo/relogio invalido permanece aguardando. Um
+`finish` atualiza o relogio e suprime os alertas do worker `idle`, mas nao
+cancela uma regra explicitamente armada; a duracao vermelha e o atraso seguem
+a partir desse ultimo evento real.
 
 O gate de uso e uma segunda condicao independente. Quando habilitado, uma
 regra vencida aceita somente a evidencia `usage_available` mais recente do
@@ -244,11 +245,11 @@ ai-presence install-background-service --component prompt-rule-observer
 systemctl --user enable --now ai-presence-prompt-rule-observer.service
 ```
 
-Esse servico possui todas as fases de regras com **Require available Codex
-usage**. Para um gatilho vermelho, ele primeiro observa o relogio canonico e
-grava o prazo posterior ao vermelho sem consultar a conta. Somente quando o
-prazo vence ele le a disponibilidade e avalia a segunda condicao. A bandeja
-nao processa essas regras, evitando dois proprietarios do mesmo despacho.
+Esse servico possui todas as fases das Prompt Rules modernas. Para um gatilho
+vermelho, ele primeiro observa o relogio real e grava o prazo posterior a
+duracao vermelha sem consultar a conta. Somente quando uma regra condicionada
+vence ele le a disponibilidade e avalia a segunda condicao. A bandeja nao
+despacha essas regras, evitando dois proprietarios do mesmo envio.
 
 Uma regra sem repeticao e desarmada antes de uma unica tentativa. Uma regra
 repetitiva usa limite padrao de tres envios e limite absoluto de 100. Depois de
@@ -265,11 +266,9 @@ antes de criar o processo destacado. Assim, encerramento da bandeja, falha ou
 resultado incerto nao repetem a mensagem. `dispatch_started` nao prova que o
 Codex processou o texto; aguarde um hook posterior da mesma sessao.
 
-Para regras sem gate de uso, a bandeja precisa estar em execucao. Se o
-computador suspender ou a bandeja estiver fechada no vencimento, uma tentativa
-ainda armada sera processada uma vez na proxima verificacao apos
-retomada/inicializacao. Regras com gate de uso pertencem ao servico dedicado e
-continuam progredindo com a bandeja fechada. Nao use o campo para senhas,
+O observer dedicado processa regras com ou sem gate de uso mesmo com a bandeja
+fechada. Se o computador suspender, uma tentativa ainda armada sera processada
+uma vez na proxima verificacao apos a retomada. Nao use o campo para senhas,
 tokens ou segredos, pois o texto e armazenado no arquivo privado de controle e
 enviado como argumento local do Codex CLI.
 

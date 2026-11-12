@@ -42,7 +42,7 @@ class FakeClient:
 
 
 class AutomationObserverTests(unittest.TestCase):
-    def test_non_usage_rule_remains_owned_by_tray_scheduler(self) -> None:
+    def test_non_usage_rule_is_owned_by_observer_without_account_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             controls = ControlStore(root / "control.json", ControlSettings())
@@ -53,7 +53,7 @@ class AutomationObserverTests(unittest.TestCase):
                 thread_id="session-tray",
                 trigger="after_delay",
                 delay_minutes=1,
-                text="tray only",
+                text="observer owned",
                 require_usage_available=False,
                 repeat_enabled=False,
                 repeat_interval_minutes=1,
@@ -78,11 +78,58 @@ class AutomationObserverTests(unittest.TestCase):
                 now=1_060.0,
                 reader=lambda **_: self.fail("account reader must not run"),
                 client=client,  # type: ignore[arg-type]
+                observe_usage=False,
             )
 
-            self.assertEqual(result.prompt_rules.rule_results, ())
-            self.assertEqual(client.calls, [])
-            self.assertTrue(controls.load("worker-tray").prompt_rules[0].enabled)
+            self.assertEqual(
+                result.prompt_rules.rule_results[0].state,
+                "dispatch_started",
+            )
+            self.assertEqual(client.calls, [("session-tray", "observer owned")])
+            self.assertFalse(controls.load("worker-tray").prompt_rules[0].enabled)
+
+    def test_local_cycle_defers_token_recovery_account_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            controls = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            presence.record_event(
+                worker_id="worker-token",
+                computer="computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+            quota = configure_quota_recovery_rule(
+                None,
+                window="weekly",
+                enabled=True,
+                thread_id="session-token",
+                text="resume after tokens recover",
+            )
+            controls.save(
+                replace_quota_recovery_rules(
+                    ControlSettings(
+                        task_automation_enabled=True,
+                        native_input_enabled=True,
+                    ),
+                    [quota],
+                ),
+                "worker-token",
+            )
+
+            result = observe_automations_once(
+                control_store=controls,
+                presence_store=presence,
+                evidence_ttl_seconds=600,
+                now=1_060.0,
+                reader=lambda **_: self.fail("account reader must not run"),
+                client=FakeClient(),  # type: ignore[arg-type]
+                observe_usage=False,
+            )
+
+            self.assertEqual(result.quota_recovery.targets, ())
+            self.assertEqual(result.quota_recovery.rule_results, ())
 
     def test_usage_gated_red_rule_advances_without_tray(self) -> None:
         for protocol, red_at in (("protocol1", 2_800.0), ("protocol2", 1_900.0)):

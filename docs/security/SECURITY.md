@@ -1,5 +1,29 @@
 # Security Checklist
 
+## Task 063 - Prompt observer ownership and token recovery
+
+- [x] The background observer is the only dispatcher for modern Prompt Rules;
+      the tray edits and displays them without running a competing scheduler.
+- [x] Local timer cycles perform no Codex account read.
+- [x] Token reads remain on a separate slower cadence and one sanitized
+      snapshot is shared by due usage-gated rules and token recovery.
+- [x] An idle worker can advance only an already armed red-duration rule from
+      its last real protocol clock; missing workers and clocks fail closed.
+- [x] `finish` is a real activity event and therefore restarts the red-duration
+      clock instead of causing immediate dispatch.
+- [x] Token recovery still requires an observed exhausted-to-available
+      transition, exact session, task automation and native input.
+- [x] CLI status omits token-recovery prompt text and session identifiers.
+- [x] Claim-before-dispatch, no retry after uncertainty and later exact-session
+      evidence remain unchanged.
+
+### Residual risk
+
+The observer runs as the same local user as the tray and control file. Suspend,
+service downtime or account-read failure can delay evaluation until the next
+healthy cycle. Transport start remains preliminary and does not prove that the
+target session processed the prompt.
+
 ## Task 060 - Usage-gated red Prompt Rule ownership
 
 - [x] The background observer advances only rules that require Codex usage;
