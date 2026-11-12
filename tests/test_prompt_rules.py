@@ -643,6 +643,79 @@ class PromptRuleTests(unittest.TestCase):
                 self.assertEqual(sent.state, "dispatch_started")
                 self.assertEqual(len(client.calls), 1)
 
+    def test_protocol2_idle_worker_dispatches_271_minutes_after_red_duration(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            with patch("ai_presence_monitor.store.time.time", return_value=1_000.0):
+                presence.record_event(
+                    worker_id="worker-idle",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    event_type="start",
+                    task="task",
+                )
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-idle",
+                trigger="red_inactivity",
+                delay_minutes=271,
+                text="continue after idle delay",
+                repeat_enabled=False,
+                repeat_interval_minutes=271,
+                now=1_050.0,
+                rule_id="reported-271-minute-rule",
+            )
+            control.save(configured_settings(rule), "worker-idle")
+            with patch("ai_presence_monitor.store.time.time", return_value=1_100.0):
+                presence.record_event(
+                    worker_id="worker-idle",
+                    computer="computer",
+                    ia_name="codex",
+                    protocol="protocol2",
+                    event_type="finish",
+                    task="task",
+                )
+            client = FakeClient()
+            red_at = 1_100.0 + 15 * 60
+            due_at = red_at + 271 * 60
+
+            before_red = process_prompt_rules(
+                store=control,
+                profile_id="worker-idle",
+                presence_store=presence,
+                now=red_at - 1,
+                client=client,  # type: ignore[arg-type]
+            )
+            waiting = process_prompt_rules(
+                store=control,
+                profile_id="worker-idle",
+                presence_store=presence,
+                now=red_at,
+                client=client,  # type: ignore[arg-type]
+            )
+            sent = process_prompt_rules(
+                store=control,
+                profile_id="worker-idle",
+                presence_store=presence,
+                now=due_at,
+                client=client,  # type: ignore[arg-type]
+            )
+
+            self.assertEqual(before_red.state, "waiting_for_event")
+            self.assertEqual(waiting.state, "waiting")
+            self.assertEqual(waiting.due_at, due_at)
+            self.assertEqual(sent.state, "dispatch_started")
+            self.assertEqual(
+                client.calls,
+                [("session-idle", "continue after idle delay")],
+            )
+
     def test_failure_disables_rule_and_multiple_rules_dispatch_one_per_poll(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

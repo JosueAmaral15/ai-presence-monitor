@@ -39,7 +39,6 @@ from .desktop_notifications import DesktopNotification, DesktopNotificationObser
 from .platform_integration import UnsupportedPlatformError, ensure_runtime_enabled
 from .prompt_rules import (
     configure_prompt_rule,
-    process_prompt_rules,
     replace_prompt_rules,
 )
 from .quota_recovery import (
@@ -443,14 +442,14 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
             recovery_tab = QWidget()
             recovery_layout = QVBoxLayout(recovery_tab)
-            self.tabs.addTab(recovery_tab, "Usage recovery")
-            recovery_title = QLabel("Codex quota availability")
+            self.tabs.addTab(recovery_tab, "Token recovery")
+            recovery_title = QLabel("Codex token availability observer")
             recovery_title.setStyleSheet("font-size: 14px; font-weight: 600;")
             recovery_layout.addWidget(recovery_title)
 
             five_rule = self._quota_rule(settings, "five_hour")
             self.five_hour_recovery = QCheckBox(
-                "Notify the agent when the five-hour quota becomes available"
+                "Send a prompt when five-hour tokens become available"
             )
             self.five_hour_recovery.setChecked(
                 five_rule.enabled if five_rule else False
@@ -471,7 +470,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
             weekly_rule = self._quota_rule(settings, "weekly")
             self.weekly_recovery = QCheckBox(
-                "Notify the agent when the weekly quota becomes available"
+                "Send a prompt when weekly tokens become available"
             )
             self.weekly_recovery.setChecked(
                 weekly_rule.enabled if weekly_rule else False
@@ -936,7 +935,10 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 f"{rule.occurrence_count}/{rule.max_occurrences} sends used."
             )
         if rule.enabled and rule.trigger == "red_inactivity":
-            return "Waiting for canonical red inactivity, then the configured delay."
+            return (
+                "Waiting for the protocol red-duration point, then the "
+                "configured delay."
+            )
         labels = {
             "dispatching": "Dispatch was claimed; automatic retry is disabled.",
             "dispatch_started": "Dispatch started; await later session evidence.",
@@ -957,7 +959,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         )
         if (
             not preferences_dialog.isVisible()
-            or labels != ("Controls", "Prompt rules", "Usage recovery")
+            or labels != ("Controls", "Prompt rules", "Token recovery")
             or preferences_dialog.five_hour_text.maxLength()
             != MAX_SCHEDULED_PROMPT_TEXT_LENGTH
         ):
@@ -968,7 +970,7 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 "a janela de preferencias nao passou na verificacao visual."
             )
         print(
-            "Preferencias construidas com Controls, Prompt rules e Usage recovery."
+            "Preferencias construidas com Controls, Prompt rules e Token recovery."
         )
         preferences_dialog.close()
         if owned_app:
@@ -1131,22 +1133,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                     profile_id=profile_id,
                     presence_store=presence_store,
                 )
-                if legacy_result.state in {
-                    "dispatch_started",
-                    "input_emitted",
-                    "failed_or_uncertain",
-                }:
-                    result_state = legacy_result.state
-                    result_rule_id = "legacy"
-                else:
-                    rule_result = process_prompt_rules(
-                        store=control_store,
-                        profile_id=profile_id,
-                        presence_store=presence_store,
-                        usage_gated_only=False,
-                    )
-                    result_state = rule_result.state
-                    result_rule_id = rule_result.rule_id
+                result_state = legacy_result.state
+                result_rule_id = "legacy"
             except (ControlError, OSError) as exc:
                 notice_key = f"error:{type(exc).__name__}:{exc}"
                 if last_schedule_notice.get(notice_profile) != notice_key:

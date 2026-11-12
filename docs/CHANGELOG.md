@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased - v0.13.0
+## Unreleased - v0.13.1
+
+- Made the background observer the sole scheduler for every modern Prompt Rule,
+  including ordinary rules while the tray is closed.
+- Kept local rule timers on the monitor cadence while token-account reads stay
+  on their slower cadence.
+- Allowed an explicitly armed red-duration rule to continue from the last real
+  activity after `finish`, including the reported 15 + 271 minute case.
+- Renamed the separate quota observer UI to **Token recovery** and exposed only
+  sanitized window states through `control show`.
+
+## 2026-11-05 - v0.13.0
 
 - Replaced the untraceable optional MP3 with an original deterministic WAV,
   its standard-library generator, recorded provenance and byte-for-byte test.
@@ -11,7 +22,6 @@
 - Fixed usage-gated red-inactivity Prompt Rules that could remain indefinitely
   in `waiting_for_event`: the background observer now owns their timing phase
   and defers the Codex account read until the post-red delay is due.
-
 - Added a checksummed Debian package for Debian, Ubuntu and Linux Mint with an
   offline verifier and disposable compatibility tests.
 - Kept package installation non-interactive: user configuration, databases,

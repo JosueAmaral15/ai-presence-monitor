@@ -366,7 +366,7 @@ def _red_inactivity_event_at(
     if worker_id is None:
         return None
     worker = store.get_worker(worker_id)
-    if worker is None or worker.status != "active":
+    if worker is None:
         return None
     try:
         protocol = get_protocol(worker.protocol)

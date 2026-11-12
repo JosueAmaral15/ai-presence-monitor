@@ -29,6 +29,7 @@ from ai_presence_monitor.cli import (
     _install_codex_hook,
     _install_reply_observer_service,
     _install_systemd_service,
+    _observe_prompt_rules,
     _observe_replies_once,
     _record_event,
     _run_codex_hook,
@@ -53,6 +54,7 @@ from ai_presence_monitor.control import (
     ControlSettings,
     ControlStore,
     PromptRule,
+    QuotaRecoveryRule,
 )
 from ai_presence_monitor.notify import NotificationError
 from ai_presence_monitor.store import PresenceStore
@@ -220,6 +222,18 @@ class CliBehaviorTests(unittest.TestCase):
         )
         self.assertEqual(background_args.component, "reply-observer")
         self.assertTrue(background_args.dry_run)
+
+        observer_args = parser.parse_args(
+            [
+                "observe-prompt-rules",
+                "--interval",
+                "300",
+                "--local-interval",
+                "30",
+            ]
+        )
+        self.assertEqual(observer_args.interval, 300)
+        self.assertEqual(observer_args.local_interval, 30)
 
         schema_args = parser.parse_args(["schema-status", "--json"])
         self.assertTrue(schema_args.json)
@@ -669,6 +683,15 @@ class CliBehaviorTests(unittest.TestCase):
                             text="private rule prompt",
                         ),
                     ),
+                    quota_recovery_rules=(
+                        QuotaRecoveryRule(
+                            window="weekly",
+                            enabled=True,
+                            thread_id="private-token-session",
+                            text="private token recovery prompt",
+                            last_state="waiting_for_availability",
+                        ),
+                    ),
                 )
             )
             args = argparse.Namespace(
@@ -689,8 +712,60 @@ class CliBehaviorTests(unittest.TestCase):
             payload = output.getvalue()
             self.assertNotIn("private scheduled prompt", payload)
             self.assertNotIn("private rule prompt", payload)
+            self.assertNotIn("private token recovery prompt", payload)
+            self.assertNotIn("private-token-session", payload)
             self.assertIn('"scheduled_prompt_text_configured": true', payload)
             self.assertIn('"prompt_rule_count": 1', payload)
+            self.assertIn('"quota_recovery_rule_count": 1', payload)
+            self.assertIn('"enabled_quota_recovery_rule_count": 1', payload)
+            self.assertIn('"state": "waiting_for_availability"', payload)
+
+    def test_prompt_rule_observer_separates_local_and_token_polling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = replace(
+                make_config(root),
+                control_path=root / "control.json",
+                monitor_interval_seconds=30,
+                codex_limit_poll_interval_seconds=300,
+            )
+            args = argparse.Namespace(
+                interval=None,
+                local_interval=None,
+                evidence_ttl=None,
+                request_timeout=10.0,
+                codex_executable="codex",
+                once=False,
+            )
+            empty_result = SimpleNamespace(
+                prompt_rules=SimpleNamespace(
+                    targets=(),
+                    observation_state=None,
+                    rule_results=(),
+                ),
+                quota_recovery=SimpleNamespace(targets=(), rule_results=()),
+            )
+
+            with (
+                patch(
+                    "ai_presence_monitor.cli.observe_automations_once",
+                    return_value=empty_result,
+                ) as observe,
+                patch(
+                    "ai_presence_monitor.cli.time.time",
+                    side_effect=[1_000.0, 1_000.0, 1_030.0, 1_030.0],
+                ),
+                patch(
+                    "ai_presence_monitor.cli.time.sleep",
+                    side_effect=[None, KeyboardInterrupt],
+                ),
+                self.assertRaises(KeyboardInterrupt),
+            ):
+                _observe_prompt_rules(args, config)
+
+            self.assertEqual(observe.call_count, 2)
+            self.assertTrue(observe.call_args_list[0].kwargs["observe_usage"])
+            self.assertFalse(observe.call_args_list[1].kwargs["observe_usage"])
 
     def test_profile_mutation_is_rejected_but_profile_remains_readable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

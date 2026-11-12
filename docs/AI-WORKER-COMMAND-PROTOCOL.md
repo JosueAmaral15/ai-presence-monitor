@@ -145,10 +145,11 @@ sessao, com TTL valido e observado depois do vencimento. O AI-worker nao deve
 fabricar evidencia, remover o gate nem substituir estado ausente ou
 desconhecido por disponibilidade presumida.
 
-Para `red_inactivity`, o mesmo servico observa o relogio canonico enquanto o
-worker estiver ativo, cria o prazo depois do vermelho e continua sem consultar
-a conta ate esse prazo vencer. `finish` antes do vermelho mantem a regra
-aguardando, porque um worker `idle` nao produz inatividade vermelha canonica.
+Para `red_inactivity`, o mesmo servico observa o ultimo relogio real do
+protocolo, cria o prazo depois da duracao vermelha e continua sem consultar a
+conta ate esse prazo vencer. Um `finish` real atualiza esse relogio e deixa o
+worker `idle`, suprimindo alertas, mas uma regra explicitamente armada continua
+sua contagem independente.
 
 Instalacao Linux feita pelo operador humano:
 
@@ -158,7 +159,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now ai-presence-prompt-rule-observer.service
 ```
 
-O mesmo servico processa a aba humana **Usage recovery**, mas ela e um
+O mesmo servico processa a aba humana **Token recovery**, mas ela e um
 mecanismo independente de Prompt Rules. Um AI-worker nao pode habilitar,
 rearmar nem redirecionar essas regras. O envio exige que a janela de 300 ou
 10.080 minutos tenha sido observada esgotada e depois disponivel, que

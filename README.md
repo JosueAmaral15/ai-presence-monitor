@@ -686,12 +686,15 @@ project or agent profile and add one or more rules. Each rule stores its exact
 session, enabled state, trigger, delay, prompt, repetition interval and maximum
 send count independently for that worker. Defaults are 270 minutes, `continue`
 and three sends when bounded repetition is enabled. A rule may start after it
-is armed or after canonical red inactivity: 30 minutes in Protocol 1 or 15
-minutes in Protocol 2, followed by the rule's delay. One-shot rules are
+is armed or after the protocol red-duration point: 30 minutes in Protocol 1 or
+15 minutes in Protocol 2, followed by the rule's delay. A real `finish` event
+restarts that inactivity clock but does not cancel an explicitly armed rule.
+One-shot rules are
 disarmed before transport. Repeating rules pause after every send until a later
 hook from the same exact session is observed; failure or uncertainty disables
-the rule. The tray must be running when conditions are evaluated, but saved
-fields and runtime state survive restarts.
+the rule. The background `prompt-rule-observer` is the sole scheduler for all
+modern rules, so the tray may be closed after saving. Saved fields and runtime
+state survive restarts.
 
 Each rule can also require available Codex usage. This second condition uses
 only fresh sanitized `usage_available` evidence for the exact worker and
@@ -700,13 +703,14 @@ aggregate availability decision reported by Codex across whichever five-hour,
 weekly, plan or credit controls apply to the account, without storing balances
 or raw rate-limit payloads. Missing, expired, unknown or blocked evidence keeps
 the rule armed in `waiting_for_usage` and never consumes an occurrence. Run the
-dedicated `ai-presence observe-prompt-rules` service for rules that enable this
-condition. It stays idle when no usage-gated rule is due and continues after a
-worker becomes inactive, so a rule can wait across a five-hour or weekly
-reset. Install it on Linux with `ai-presence install-background-service
+dedicated `ai-presence observe-prompt-rules` service. Local timers are checked
+without reading the account; slower token polling starts only for a due
+usage-gated rule or enabled token-recovery rule. It continues after a worker
+becomes inactive, so a rule can wait across a five-hour or weekly reset.
+Install it on Linux with `ai-presence install-background-service
 --component prompt-rule-observer`.
 
-The tray has a separate **Usage recovery** tab for quota-reset notifications.
+The tray has a separate **Token recovery** tab for token-availability prompts.
 It does not replace Prompt Rules and has no delay or inactivity trigger. The
 user can independently enable the five-hour and weekly windows for a project
 or agent, select an exact Codex session and edit the explicit recovery message.
@@ -714,8 +718,9 @@ The observer sends once only after it has observed that exact window exhausted
 and later available. Initial availability, unknown window data and ordinary
 inactivity never dispatch. A later exhaustion rearms a new cycle; a failed or
 uncertain attempt is not retried in the same cycle. This uses the same installed
-`prompt-rule-observer` service so one sanitized App Server read can serve both
-features.
+automation observer so one sanitized App Server read can serve both features.
+`control show --json` exposes only the window, enabled state and observer state;
+it omits sessions and prompt text.
 
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous

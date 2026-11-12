@@ -38,10 +38,11 @@ def observe_automations_once(
     now: float | None = None,
     reader: Callable[..., RateLimitSnapshot] = read_codex_rate_limits,
     client: CodexQueueClient | None = None,
+    observe_usage: bool = True,
 ) -> AutomationObserverResult:
     checked_at = time.time() if now is None else now
     queue_client = client or CodexQueueClient(executable=codex_executable)
-    preliminary_results = _process_usage_gated_rules(
+    preliminary_results = _process_prompt_rules_before_usage(
         control_store=control_store,
         presence_store=presence_store,
         checked_at=checked_at,
@@ -56,12 +57,12 @@ def observe_automations_once(
         control_store=control_store,
         presence_store=presence_store,
     )
-    if not prompt_targets and not quota_targets:
+    if not observe_usage or (not prompt_targets and not quota_targets):
         return AutomationObserverResult(
             PromptRuleObserverResult(
                 (),
                 None,
-                tuple(result for _, result in preliminary_results),
+                tuple(result for _, _, result in preliminary_results),
             ),
             QuotaRecoveryObserverResult((), (), ()),
         )
@@ -88,8 +89,8 @@ def observe_automations_once(
     target_profiles = {target.profile_id for target in prompt_targets}
     preliminary_visible = tuple(
         result
-        for profile_id, result in preliminary_results
-        if profile_id not in target_profiles
+        for profile_id, requires_usage, result in preliminary_results
+        if not requires_usage or profile_id not in target_profiles
     )
     prompt_result = PromptRuleObserverResult(
         prompt_result.targets,
@@ -108,30 +109,31 @@ def observe_automations_once(
     return AutomationObserverResult(prompt_result, quota_result)
 
 
-def _process_usage_gated_rules(
+def _process_prompt_rules_before_usage(
     *,
     control_store: ControlStore,
     presence_store: PresenceStore,
     checked_at: float,
     client: CodexQueueClient,
-) -> tuple[tuple[str, PromptRuleRunResult], ...]:
-    results: list[tuple[str, PromptRuleRunResult]] = []
+) -> tuple[tuple[str, bool, PromptRuleRunResult], ...]:
+    results: list[tuple[str, bool, PromptRuleRunResult]] = []
     for profile_id in control_store.list_profile_ids():
         settings = control_store.load(profile_id)
         if not settings.task_automation_enabled:
             continue
-        if not any(
-            rule.enabled and rule.require_usage_available
-            for rule in settings.prompt_rules
-        ):
-            continue
-        result = process_prompt_rules(
-            store=control_store,
-            profile_id=profile_id,
-            presence_store=presence_store,
-            now=checked_at,
-            client=client,
-            usage_gated_only=True,
-        )
-        results.append((profile_id, result))
+        for requires_usage in (False, True):
+            if not any(
+                rule.enabled and rule.require_usage_available is requires_usage
+                for rule in settings.prompt_rules
+            ):
+                continue
+            result = process_prompt_rules(
+                store=control_store,
+                profile_id=profile_id,
+                presence_store=presence_store,
+                now=checked_at,
+                client=client,
+                usage_gated_only=requires_usage,
+            )
+            results.append((profile_id, requires_usage, result))
     return tuple(results)
