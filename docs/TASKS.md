@@ -5,7 +5,8 @@
 ### Task 063 - Confiabilidade das Prompt Rules e observer de tokens explicito
 
 **Prioridade**: Critica
-**Status**: implementada e validada localmente; upgrade real e E2E externo pendentes
+**Status**: implementada; runtime e Prompt Rule E2E validados, estabilidade do
+host e recuperacao real de tokens pendentes
 **Plano**: `docs/planning/TASK-063-prompt-observer-reliability.md`
 **Objetivo**: impedir regras vermelhas habilitadas de permanecerem sem prazo
 quando a bandeja fecha ou o worker termina, e tornar a retomada por tokens uma
@@ -20,6 +21,13 @@ funcionalidade observer explicita e independente.
 - [x] Expor **Token recovery** explicitamente na GUI e no status sanitizado.
 - [x] Cobrir atraso de 271 minutos, worker idle, tray fechada e no-retry.
 - [x] Validar runtime candidato sem realizar envio real nao autorizado.
+- [x] Atualizar transacionalmente o runtime instalado para `0.13.1`.
+- [x] Validar um despacho one-shot isolado na sessao Codex exata.
+- [x] Observar hooks posteriores da mesma sessao sem fabricar atividade.
+- [ ] Liberar espaco operacional no volume raiz e observar os servicos sem
+  novos reinicios por falta de disco.
+- [ ] Validar **Token recovery** quando uma cota naturalmente esgotada voltar a
+  ficar disponivel.
 
 **Causa raiz**: a bandeja era proprietaria das regras comuns, enquanto o
 servico em segundo plano processava apenas regras condicionadas a tokens. Com a
@@ -36,6 +44,32 @@ sintaxe shell, wheel/sdist e `git diff --check`. O wheel `0.13.1` foi instalado
 em ambiente isolado, reportou a versao correta e passou em `tray --check`; o
 upgrade transacional instalado reportou `would_upgrade` em `--dry-run`. Nenhum
 prompt real foi enviado e nenhum servico instalado foi reiniciado.
+
+**Evidencia real (2026-11-13)**: o upgrade transacional `0.13.0 -> 0.13.1`
+terminou em `completed` e preservou o manifesto de rollback. Schema 3,
+integridade, `doctor --strict`, monitor, observer Discord e observer de Prompt
+Rules passaram; no pos-upgrade imediato, os tres servicos ficaram
+`active/running` com `NRestarts=0`.
+Uma regra `after_delay` one-shot em armazenamento temporario foi processada
+pelo observer instalado, registrou uma ocorrencia `dispatch_started`,
+desabilitou-se e enviou o marcador exclusivo
+`AI-PRESENCE-PROMPT-RULE-E2E:8268cb7d-cc85-4545-9439-c2ad545988b4` para a
+sessao atual. O marcador retornou como a entrada seguinte. O banco canonico
+registrou `prompt_submitted` e hooks posteriores `tool_started` e
+`tool_completed` para o mesmo worker e sessao. O armazenamento temporario foi
+removido e nenhuma Prompt Rule pessoal foi alterada. O E2E de **Token
+recovery** permanece separado porque exige observar uma cota naturalmente
+esgotada voltar a ficar disponivel.
+
+**Risco operacional observado**: minutos depois do pos-upgrade, o volume raiz
+chegou a 100% e SQLite retornou `database or disk is full`. Monitor e observer
+Discord reiniciaram duas vezes; o Prompt Rule observer nao reiniciou. Depois da
+remocao do ambiente temporario criado por este E2E, os tres voltaram a
+`active/running` e `doctor --strict` confirmou schema e integridade, mas o
+volume continua criticamente cheio. Uma observacao adicional de 65 segundos
+nao registrou novos reinicios e o doctor continuou saudavel, mas isso nao e
+uma margem operacional suficiente. O risco bloqueia promocao para `main` ate o
+operador liberar espaco e uma janela mais longa confirmar estabilidade.
 
 ### Task 062 - Backlog sem pre-requisitos e skill pack Agensi
 
@@ -61,7 +95,7 @@ mantida fora do pacote para preservar o frontmatter portavel.
 ### Task 061 - Confirmacao posterior por lifecycle hook do Codex
 
 **Prioridade**: Alta
-**Status**: bloqueio externo reproduzido na sessao corrente
+**Status**: concluida com evidencia real na sessao corrente
 **Plano**: `docs/planning/TASK-061-codex-hook-confirmation.md`
 **Objetivo**: garantir que uma entrega nativa confirmada visualmente tambem
 produza a evidencia posterior de atividade exigida pelo monitor, sem fabricar
@@ -69,11 +103,11 @@ produza a evidencia posterior de atividade exigida pelo monitor, sem fabricar
 
 - [x] Confirmar que a configuracao instalada usa eventos e matchers suportados.
 - [x] Validar o comando do hook em dry-run, sem gravar atividade.
-- [ ] Recarregar ou iniciar uma sessao Codex que tenha revisado e confiado nos
+- [x] Recarregar ou iniciar uma sessao Codex que tenha revisado e confiado nos
   hooks atuais.
-- [ ] Observar `UserPromptSubmit` e pelo menos um evento posterior da mesma
+- [x] Observar `UserPromptSubmit` e pelo menos um evento posterior da mesma
   sessao no banco canonico.
-- [ ] Reavaliar o gate de promocao somente depois dessa evidencia.
+- [x] Reavaliar o gate de promocao somente depois dessa evidencia.
 
 **Evidencia (2026-11-05 e 2026-11-11)**: o marcador exclusivo da Prompt Rule
 chegou a sessao correta e iniciou um novo turno, mas nenhum lifecycle hook
@@ -87,6 +121,14 @@ nao no transporte da Prompt Rule. Em 2026-11-05, `codex doctor` e um
 retornou `ok` enquanto processos Codex mantinham o banco e WAL/SHM abertos.
 Logo, a falha historica nao deve ser descrita como corrupcao atual nem motivar
 reparo destrutivo; pouco espaco em disco continua sendo um risco correlato.
+
+**Resolucao (2026-11-13)**: depois do upgrade para `0.13.1`, um novo marcador
+exclusivo enviado pela Prompt Rule retornou como a proxima entrada da sessao.
+O banco canonico registrou `prompt_submitted` e, em seguida, varios eventos
+reais `tool_started` e `tool_completed` do mesmo worker e sessao. Nenhum hook
+foi executado manualmente, nenhum `touch` foi usado e nao houve reenvio do
+marcador. Isso satisfaz o gate de lifecycle da tarefa sem atribuir a um hook
+isolado a autoria da mensagem.
 
 ### Task 060 - Prompt Rule presa aguardando inatividade vermelha
 
@@ -104,8 +146,8 @@ delay.` depois que a inatividade vermelha canônica já ocorreu.
 - [x] Fazer o observer contínuo avançar regras vermelhas sem depender da GUI.
 - [x] Preservar gate de tokens, atraso posterior ao vermelho e no-retry incerto.
 - [x] Validar tray fechada, Protocolo 1/2 e isolamento entre perfis.
-- [ ] Concluir o E2E real isolado: transporte exato validado; evidencia
-  posterior por hook pendente na Task 061.
+- [x] Concluir o E2E real isolado com transporte exato e evidencia posterior
+  por hook acompanhada na Task 061.
 
 **Causa raiz**: a bandeja excluía deliberadamente regras condicionadas ao uso,
 enquanto o observer contínuo só selecionava essas regras depois que
@@ -129,6 +171,11 @@ atraso e registrou uma unica ocorrencia `dispatch_started`. O marcador
 exclusivo retornou como a proxima mensagem da sessao Codex exata. Nao houve
 reenvio. A evidencia posterior por lifecycle hook nao apareceu e foi separada
 na Task 061, sem reclassificar `dispatch_started` como confirmacao do hook.
+
+**Fechamento de hook (2026-11-13)**: um novo E2E no runtime `0.13.1` entregou
+um marcador exclusivo a sessao exata e persistiu `prompt_submitted`,
+`tool_started` e `tool_completed` posteriores no banco canonico. A Task 061
+registra a evidencia e fecha a limitacao observada no teste anterior.
 
 ### Task 059 - Alarme reproduzivel e licenciamento publico
 

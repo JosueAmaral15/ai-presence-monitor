@@ -69,3 +69,40 @@ Local validation completed on 2026-11-12:
 
 No real runtime upgrade, service restart, prompt transport or quota transition
 was performed as part of this validation.
+
+## Installed Runtime Evidence
+
+Authorized validation completed on 2026-11-13:
+
+- the transactional `0.13.0` to `0.13.1` upgrade ended in `completed` and
+  retained its private rollback manifest;
+- schema 3, database integrity and strict doctor checks passed;
+- monitor, Discord reply observer and Prompt Rule observer were initially
+  `active/running` with zero restarts;
+- an isolated, already-due, non-usage one-shot rule was processed by the
+  installed observer without changing personal controls;
+- it claimed one occurrence, persisted `dispatch_started`, disabled itself and
+  delivered unique marker
+  `AI-PRESENCE-PROMPT-RULE-E2E:8268cb7d-cc85-4545-9439-c2ad545988b4` to the
+  exact current Codex session;
+- the marker returned as the next user input, followed by canonical
+  `prompt_submitted`, `tool_started` and `tool_completed` evidence for that
+  worker and session;
+- the isolated control file and database were removed after dispatch.
+
+The natural exhausted-to-available Token Recovery E2E remains outside this
+result and must not be simulated by deliberately consuming the user's quota.
+
+### Host Stability Follow-up
+
+Minutes after the successful postflight, the root volume reached 100% and
+SQLite reported `database or disk is full`. The monitor and Discord reply
+observer each restarted twice; the Prompt Rule observer did not restart. After
+removing only this session's temporary build environment, all three services
+returned to `active/running` and strict doctor again confirmed schema and
+database integrity. A subsequent 65-second observation recorded no additional
+restarts, but the root volume remained critically full.
+
+This is host storage pressure rather than evidence of a Prompt Rule regression,
+but it prevents a production-promotion claim. Free disk space and a subsequent
+restart-free observation window are required before promotion to `main`.

@@ -67,3 +67,18 @@ loaded from `~/.codex/hooks.json`, non-managed hooks require user review and
 trust, `*` is a supported catch-all matcher, and most local function tools use
 the lifecycle hook path. A runtime reload or explicit trust review may require
 human interaction in Codex Desktop.
+
+## Resolution Evidence
+
+Resolved on 2026-11-13 after the authorized `0.13.1` runtime upgrade. A new
+one-shot Prompt Rule delivered unique marker
+`AI-PRESENCE-PROMPT-RULE-E2E:8268cb7d-cc85-4545-9439-c2ad545988b4` to the
+exact current Codex session. It returned as the next input, and the canonical
+monitor database then recorded `prompt_submitted`, `tool_started` and
+`tool_completed` for the same worker and session.
+
+No lifecycle hook was invoked manually, no `touch` substituted for evidence
+and the marker was not resent. The result confirms that this session has loaded
+and trusted the installed hooks. It does not imply that every future session
+has loaded them; strict doctor and recent-event evidence remain separate
+health signals.
