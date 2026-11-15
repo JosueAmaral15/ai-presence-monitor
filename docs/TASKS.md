@@ -2,10 +2,52 @@
 
 ## Estado atual e tarefas recentes
 
-### Task 065 - E2E natural de Token Recovery
+### Task 066 - Recuperacao generica de disponibilidade e sessao tardia
 
 **Prioridade**: Critica
-**Status**: aguardando opt-in humano e transicao natural de cota
+**Status**: implementada e validada localmente; runtime/E2E pendentes
+**Plano**: `docs/planning/TASK-066-generic-availability-recovery.md`
+**Objetivo**: substituir as opcoes expostas de cinco horas e semanal por uma
+politica unica de retomada quando o provedor voltar a aceitar trabalho, com
+arquitetura extensivel e validacao da sessao antes de envios tardios.
+
+- [x] Definir responsabilidades com Strategy, Abstract Factory, Observer e
+  principios GRASP.
+- [x] Criar contrato polimorfico de disponibilidade e sessao por provedor.
+- [x] Implementar a familia Codex sem expor janelas na interface.
+- [x] Migrar configuracoes legadas sem despacho prematuro ou duplicado.
+- [x] Unificar checkbox, sessao e texto na bandeja.
+- [x] Validar sessao exata antes de Availability Recovery e Prompt Rules.
+- [x] Cobrir atraso de 271 minutos e sessao ausente/invalida.
+- [x] Documentar Gemini e Claude como adapters futuros, desabilitados ate
+  existir observacao e transporte confiaveis.
+- [x] Executar gate local completo e construir wheel/sdist.
+- [x] Instalar o wheel `0.14.0` isoladamente e validar a bandeja.
+- [x] Executar dry-run transacional `0.13.1 -> 0.14.0` com rollback valido.
+- [ ] Atualizar transacionalmente o runtime candidato `0.14.0`.
+- [ ] Executar E2E real autorizado separadamente.
+
+**Relacao com Prompt Rules**: Availability Recovery e uma alternativa
+independente orientada a transicao de capacidade. Ela nao substitui timers,
+gatilhos vermelhos, repeticao nem demais condicoes das Prompt Rules.
+
+**Evidencia local (2026-11-15)**: 398 testes passaram com 87% de cobertura.
+Ruff, mypy em 53 arquivos, sintaxe shell, wheel/sdist, verificacao offscreen da
+bandeja e `git diff --check` passaram. Um teste deterministico manteve uma
+Prompt Rule de 271 minutos em `waiting_for_session` sem input e a despachou
+somente depois que a mesma sessao voltou a ser validada. Uma leitura real
+read-only da sessao atual retornou o identificador exato, com estado filho
+`notLoaded`; isso prova resolucao de metadados agora, nao estabilidade por 271
+minutos nem processamento futuro. O wheel `0.14.0` reportou a versao correta,
+carregou a factory Codex e construiu a nova aba em instalacao isolada. O
+upgrade instalado em `--dry-run` retornou `would_upgrade` de `0.13.1` para
+`0.14.0` com o rollback preservado de `0.13.1`.
+
+### Task 065 - E2E natural de Availability Recovery
+
+**Prioridade**: Critica
+**Status**: replanejada pela Task 066; aguardando runtime 0.14.0, opt-in humano
+e transicao natural de capacidade
 **Plano**: `docs/planning/TASK-065-natural-token-recovery-e2e.md`
 **Objetivo**: comprovar que uma cota Codex realmente esgotada e posteriormente
 disponivel dispara uma unica mensagem para a sessao exata, sem consumo
@@ -15,17 +57,18 @@ artificial de tokens e sem confundir disponibilidade inicial com recuperacao.
 - [x] Iniciar o worker exato do projeto em Protocolo 2.
 - [x] Registrar leitura sanitizada `usage_available` sem expor percentuais,
   conta, prompt ou identificador da sessao.
-- [x] Confirmar que o perfil corrente ainda possui zero regras de Token
-  Recovery configuradas ou habilitadas.
+- [x] Confirmar que o perfil corrente ainda possui zero regras de recuperacao
+  configuradas ou habilitadas no runtime instalado.
+- [ ] Atualizar o runtime para a politica agregada da Task 066.
 - [ ] Operador habilitar na bandeja uma regra para a sessao Codex exata.
-- [ ] Observar naturalmente o estado esgotado da janela escolhida.
-- [ ] Observar a mesma janela voltar a ficar disponivel.
+- [ ] Observar naturalmente o provedor ficar indisponivel.
+- [ ] Observar o mesmo provedor voltar a ficar disponivel.
 - [ ] Receber marcador exclusivo na sessao exata e confirmar hooks posteriores.
 
 **Limite atual (2026-11-15)**: a conta esta disponivel e nenhuma regra foi
 habilitada pelo operador. O AI-worker nao pode habilitar, rearmar ou
 redirecionar essa regra. O observer permanece funcional, mas o E2E depende do
-opt-in humano e de uma futura transicao natural de cota.
+runtime candidato, do opt-in humano e de uma futura transicao natural.
 
 ### Task 064 - Recuperacao de armazenamento e estabilidade dos servicos
 

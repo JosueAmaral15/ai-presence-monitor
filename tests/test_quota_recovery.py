@@ -16,6 +16,7 @@ from ai_presence_monitor.quota_recovery import (
     configure_quota_recovery_rule,
     observe_quota_recovery_once,
     replace_quota_recovery_rules,
+    unified_availability_rule,
 )
 from ai_presence_monitor.store import PresenceStore
 
@@ -83,7 +84,14 @@ class QuotaRecoveryTests(unittest.TestCase):
             snapshot(five_hour=100, weekly=42, reverse=True)
         )
 
-        self.assertEqual(states, {"five_hour": "exhausted", "weekly": "available"})
+        self.assertEqual(
+            states,
+            {
+                "availability": "available",
+                "five_hour": "exhausted",
+                "weekly": "available",
+            },
+        )
 
     def test_initial_availability_never_dispatches(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -117,6 +125,103 @@ class QuotaRecoveryTests(unittest.TestCase):
 
             self.assertEqual(result.rule_results[0].state, "armed")
             self.assertEqual(client.calls, [])
+
+    def test_unified_recovery_waits_for_session_then_dispatches_once(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            controls, presence = self.make_stores(Path(tmp))
+            rule = configure_quota_recovery_rule(
+                None,
+                window="availability",
+                enabled=True,
+                thread_id="session-1",
+                text="resume when capacity returns",
+            )
+            controls.save(
+                replace_quota_recovery_rules(
+                    ControlSettings(
+                        task_automation_enabled=True,
+                        native_input_enabled=True,
+                    ),
+                    [rule],
+                ),
+                "worker-1",
+            )
+            client = FakeClient()
+
+            exhausted = observe_quota_recovery_once(
+                control_store=controls,
+                presence_store=presence,
+                now=1_000.0,
+                reader=lambda **_: replace(
+                    snapshot(five_hour=100, weekly=100),
+                    ordinary_usage_allowed=False,
+                ),
+                client=client,  # type: ignore[arg-type]
+            )
+            blocked = observe_quota_recovery_once(
+                control_store=controls,
+                presence_store=presence,
+                now=2_000.0,
+                reader=lambda **_: snapshot(five_hour=0, weekly=0),
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "unknown",
+            )
+            sent = observe_quota_recovery_once(
+                control_store=controls,
+                presence_store=presence,
+                now=2_100.0,
+                reader=lambda **_: snapshot(five_hour=0, weekly=0),
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "available",
+            )
+
+            self.assertEqual(exhausted.rule_results[0].state, "waiting_for_availability")
+            self.assertEqual(blocked.rule_results[0].state, "waiting_for_session")
+            self.assertEqual(sent.rule_results[0].state, "dispatch_started")
+            self.assertEqual(
+                client.calls,
+                [("session-1", "resume when capacity returns")],
+            )
+
+    def test_legacy_rules_merge_only_when_destination_and_text_match(self) -> None:
+        first = configure_quota_recovery_rule(
+            None,
+            window="five_hour",
+            enabled=True,
+            thread_id="session-1",
+            text="resume",
+        )
+        second = replace(
+            configure_quota_recovery_rule(
+                None,
+                window="weekly",
+                enabled=True,
+                thread_id="session-1",
+                text="resume",
+            ),
+            last_state="waiting_for_availability",
+            exhausted_observed_at=1_000.0,
+        )
+
+        merged = unified_availability_rule(
+            replace_quota_recovery_rules(ControlSettings(), [first, second])
+        )
+        conflict = unified_availability_rule(
+            replace_quota_recovery_rules(
+                ControlSettings(),
+                [first, replace(second, thread_id="another-session")],
+            )
+        )
+
+        self.assertIsNotNone(merged)
+        assert merged is not None
+        self.assertEqual(merged.window, "availability")
+        self.assertTrue(merged.enabled)
+        self.assertEqual(merged.last_state, "waiting_for_availability")
+        self.assertIsNotNone(conflict)
+        assert conflict is not None
+        self.assertFalse(conflict.enabled)
+        self.assertEqual(conflict.last_state, "disabled")
 
     def test_exhausted_to_available_dispatches_once_then_rearms_next_cycle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

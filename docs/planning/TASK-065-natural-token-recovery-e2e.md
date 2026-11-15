@@ -1,8 +1,8 @@
-# Task 065 - Natural Token Recovery E2E
+# Task 065 - Natural Availability Recovery E2E
 
 ## Objective
 
-Validate the complete Token Recovery path for one exact Codex session without
+Validate the complete Availability Recovery path for one exact Codex session without
 deliberately consuming quota and without treating initial availability as a
 recovery event.
 
@@ -11,15 +11,15 @@ recovery event.
 1. Confirm the installed runtime, database, controls and managed services are
    healthy before observing account usage.
 2. Start the project-scoped worker and read one sanitized Codex usage snapshot.
-3. Inspect only sanitized Token Recovery rule counts and states for the current
+3. Inspect only sanitized Availability Recovery counts and states for the current
    worker profile; never print the configured prompt, session identifier or
    credentials.
-4. Require the human operator to opt in through the tray, selecting the exact
-   Codex session and either the five-hour or weekly window. An AI-worker must
+4. Require the human operator to opt in through the tray, selecting the Codex
+   provider and exact session. An AI-worker must
    not enable, rearm or redirect this rule.
-5. Let the background observer record a natural `exhausted` state and persist
+5. Let the background observer record natural unavailability and persist
    `waiting_for_availability`.
-6. After the same quota window becomes available naturally, require a unique
+6. After the same provider becomes available naturally, require a unique
    marker to return to the selected Codex session.
 7. Confirm later canonical hooks for that same worker and session. Treat
    `dispatch_started` and `input_emitted` as transport evidence only.
@@ -33,10 +33,11 @@ recovery event.
 - [x] Monitor, Discord reply observer and Prompt Rule observer are active.
 - [x] The exact project worker has `task_automation` and native input enabled.
 - [x] A sanitized one-shot read reports the current real usage state.
-- [ ] The human operator has enabled a Token Recovery rule for the exact
+- [ ] Runtime `0.14.0` is installed transactionally.
+- [ ] The human operator has enabled an Availability Recovery rule for the exact
   current Codex session.
-- [ ] The selected window is observed naturally exhausted.
-- [ ] The same window is later observed naturally available.
+- [ ] The provider is observed naturally unavailable.
+- [ ] The same provider is later observed naturally available.
 - [ ] A unique marker returns to the exact target session without manual entry.
 - [ ] Canonical hooks after delivery confirm processing in the same session.
 
@@ -56,11 +57,12 @@ software failure.
 
 ## Human Gate
 
-In the tray, select the current `ai-presence-monitor` worker profile, open
-**Token recovery**, select the exact current Codex session, enable either
-**Five-hour usage recovery** or **Weekly usage recovery**, enter a unique
-marker as the prompt, and save. Keep the Prompt Rule observer service running.
+After the authorized `0.14.0` upgrade, select the current
+`ai-presence-monitor` worker profile in the tray, open **Availability
+recovery**, select Codex and the exact current session, enable the single rule,
+enter a unique marker as the message, and save. Keep the Prompt Rule observer
+service running.
 
 After that opt-in, no quota should be consumed deliberately. The observer must
-remain armed until the chosen quota naturally reaches exhaustion and later
-becomes available.
+remain armed until the provider naturally becomes unavailable and later
+available.

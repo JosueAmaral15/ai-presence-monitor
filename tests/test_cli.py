@@ -685,7 +685,7 @@ class CliBehaviorTests(unittest.TestCase):
                     ),
                     quota_recovery_rules=(
                         QuotaRecoveryRule(
-                            window="weekly",
+                            window="availability",
                             enabled=True,
                             thread_id="private-token-session",
                             text="private token recovery prompt",
@@ -718,6 +718,13 @@ class CliBehaviorTests(unittest.TestCase):
             self.assertIn('"prompt_rule_count": 1', payload)
             self.assertIn('"quota_recovery_rule_count": 1', payload)
             self.assertIn('"enabled_quota_recovery_rule_count": 1', payload)
+            self.assertIn('"availability_recovery_rule_count": 1', payload)
+            self.assertIn(
+                '"enabled_availability_recovery_rule_count": 1',
+                payload,
+            )
+            self.assertIn('"provider": "codex"', payload)
+            self.assertIn('"scope": "availability"', payload)
             self.assertIn('"state": "waiting_for_availability"', payload)
 
     def test_prompt_rule_observer_separates_local_and_token_polling(self) -> None:

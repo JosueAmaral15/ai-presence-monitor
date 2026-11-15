@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass, replace
 from typing import Callable, Literal
 
+from .availability import CodexAvailabilityProvider, SessionTargetState
 from .codex_app_server import (
     RateLimitSnapshot,
     RateLimitWindowSnapshot,
@@ -26,6 +27,7 @@ QuotaRecoveryRunState = Literal[
     "automation_disabled",
     "armed",
     "waiting_for_availability",
+    "waiting_for_session",
     "dispatch_started",
     "input_emitted",
     "failed_or_uncertain",
@@ -59,6 +61,7 @@ def configure_quota_recovery_rule(
     existing: QuotaRecoveryRule | None,
     *,
     window: str,
+    provider: str = "codex",
     enabled: bool,
     thread_id: str | None,
     text: str,
@@ -74,12 +77,15 @@ def configure_quota_recovery_rule(
     ):
         raise ControlError("O texto da recuperacao de cota e invalido.")
     if enabled and clean_thread is None:
-        raise ControlError("Selecione uma sessao Codex exata para recuperar a cota.")
+        raise ControlError(
+            "Selecione uma sessao exata para recuperar a disponibilidade."
+        )
 
-    configuration = (window, enabled, clean_thread, clean_text)
+    configuration = (window, provider, enabled, clean_thread, clean_text)
     if existing is not None:
         previous = (
             existing.window,
+            existing.provider,
             existing.enabled,
             existing.thread_id,
             existing.text,
@@ -88,6 +94,7 @@ def configure_quota_recovery_rule(
             return existing
     return QuotaRecoveryRule(
         window=window,
+        provider=provider,
         enabled=enabled,
         thread_id=clean_thread,
         text=clean_text,
@@ -100,6 +107,64 @@ def replace_quota_recovery_rules(
     rules: tuple[QuotaRecoveryRule, ...] | list[QuotaRecoveryRule],
 ) -> ControlSettings:
     return replace(settings, quota_recovery_rules=tuple(rules))
+
+
+def unified_availability_rule(
+    settings: ControlSettings,
+) -> QuotaRecoveryRule | None:
+    current = next(
+        (
+            rule
+            for rule in settings.quota_recovery_rules
+            if rule.window == "availability"
+        ),
+        None,
+    )
+    if current is not None:
+        return current
+    legacy = tuple(
+        rule
+        for rule in settings.quota_recovery_rules
+        if rule.window in {"five_hour", "weekly"}
+    )
+    if not legacy:
+        return None
+    configured = tuple(rule for rule in legacy if rule.enabled)
+    candidates = configured or legacy
+    first = candidates[0]
+    compatible = all(
+        (rule.provider, rule.thread_id, rule.text)
+        == (first.provider, first.thread_id, first.text)
+        for rule in candidates
+    )
+    if not compatible:
+        return replace(
+            first,
+            window="availability",
+            enabled=False,
+            last_state="disabled",
+            exhausted_observed_at=None,
+            last_attempt_at=None,
+            last_dispatch_at=None,
+        )
+    waiting = any(
+        rule.last_state in {"waiting_for_availability", "waiting_for_session"}
+        for rule in candidates
+    )
+    return replace(
+        first,
+        window="availability",
+        enabled=bool(configured),
+        last_state="waiting_for_availability" if waiting else first.last_state,
+        exhausted_observed_at=min(
+            (
+                rule.exhausted_observed_at
+                for rule in candidates
+                if rule.exhausted_observed_at is not None
+            ),
+            default=None,
+        ),
+    )
 
 
 def enabled_quota_recovery_targets(
@@ -122,7 +187,13 @@ def enabled_quota_recovery_targets(
 def classify_quota_windows(
     snapshot: RateLimitSnapshot,
 ) -> dict[str, QuotaWindowState]:
+    aggregate = CodexAvailabilityProvider().classify(snapshot)
     states: dict[str, QuotaWindowState] = {
+        "availability": (
+            "exhausted"
+            if aggregate == "unavailable"
+            else aggregate
+        ),
         "five_hour": "unknown",
         "weekly": "unknown",
     }
@@ -143,6 +214,7 @@ def observe_quota_recovery_once(
     now: float | None = None,
     reader: Callable[..., RateLimitSnapshot] = read_codex_rate_limits,
     client: CodexQueueClient | None = None,
+    session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> QuotaRecoveryObserverResult:
     targets = enabled_quota_recovery_targets(
         control_store=control_store,
@@ -166,6 +238,7 @@ def observe_quota_recovery_once(
                 window_states=window_states,
                 checked_at=checked_at,
                 client=queue_client,
+                session_validator=session_validator,
             )
         )
     return QuotaRecoveryObserverResult(
@@ -182,6 +255,7 @@ def process_quota_recovery_snapshot(
     window_states: dict[str, QuotaWindowState],
     checked_at: float,
     client: CodexQueueClient,
+    session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> tuple[QuotaRecoveryRunResult, ...]:
     settings = store.load(profile_id)
     if not settings.task_automation_enabled:
@@ -218,9 +292,29 @@ def process_quota_recovery_snapshot(
                 )
             )
             continue
-        if original.last_state != "waiting_for_availability":
+        if original.last_state not in {
+            "waiting_for_availability",
+            "waiting_for_session",
+        }:
             results.append(
                 QuotaRecoveryRunResult(profile_id, original.window, "armed")
+            )
+            continue
+
+        if (
+            session_validator is not None
+            and original.thread_id is not None
+            and session_validator(original.thread_id) != "available"
+        ):
+            if original.last_state != "waiting_for_session":
+                updated = replace(original, last_state="waiting_for_session")
+                settings = _save_rule(store, profile_id, settings, updated)
+            results.append(
+                QuotaRecoveryRunResult(
+                    profile_id,
+                    original.window,
+                    "waiting_for_session",
+                )
             )
             continue
 
@@ -285,7 +379,9 @@ def _save_rule(
     updated: QuotaRecoveryRule,
 ) -> ControlSettings:
     rules = tuple(
-        updated if rule.window == updated.window else rule
+        updated
+        if (rule.provider, rule.window) == (updated.provider, updated.window)
+        else rule
         for rule in settings.quota_recovery_rules
     )
     saved = replace(settings, quota_recovery_rules=rules)
@@ -303,7 +399,11 @@ def _complete_dispatch(
 ) -> None:
     settings = store.load(profile_id)
     current = next(
-        (rule for rule in settings.quota_recovery_rules if rule.window == window),
+        (
+            rule
+            for rule in settings.quota_recovery_rules
+            if rule.window == window
+        ),
         None,
     )
     if current is None or current.last_state != "dispatching":

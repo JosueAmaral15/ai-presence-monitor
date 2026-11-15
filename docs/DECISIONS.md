@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11-15 - Recovery observes provider capacity, not quota window names
+
+**Decision**: expose one Availability Recovery policy per worker profile.
+Provider-specific quota windows are interpreted by a Strategy created through
+an Abstract Factory. Prompt Rules remain an independent feature. Before either
+mechanism emits delayed native input, its provider validates the exact session
+through a fresh metadata-only read.
+
+**Reason**:
+
+- the operator wants to resume work when capacity returns, regardless of which
+  provider-specific window caused the interruption;
+- separate five-hour and weekly controls leak Codex implementation details and
+  do not generalize to Gemini or Claude;
+- a destination selected 271 minutes, five hours or one week earlier can no
+  longer be assumed readable;
+- a failed session lookup is safer as a durable waiting state than as an
+  uncertain transport attempt.
+
+**Consequence**:
+
+The Codex adapter is the only installed provider family. Legacy five-hour and
+weekly rules remain readable and compatible configurations are unified;
+conflicting destinations are disabled for human review. Unsupported providers
+fail closed. `waiting_for_session` retries only the read-only validation and
+does not consume an occurrence or emit input.
+
 ## 2026-10-15 - Private Linux 0.10.7 may use a version-specific local CI exception
 
 **Decision**: permit the private Linux 0.10.7 candidate to advance from

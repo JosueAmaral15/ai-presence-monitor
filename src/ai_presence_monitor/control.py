@@ -29,12 +29,19 @@ DEFAULT_WEEKLY_RECOVERY_TEXT = (
     "task from the last confirmed activity, review the current repository "
     "state, and continue from the documented next step."
 )
-QUOTA_RECOVERY_WINDOWS = frozenset({"five_hour", "weekly"})
+DEFAULT_AVAILABILITY_RECOVERY_TEXT = (
+    "Capacity is available again. Resume the accepted task from the last "
+    "confirmed activity, review the current project state, and continue from "
+    "the documented next step."
+)
+AVAILABILITY_PROVIDERS = frozenset({"codex"})
+QUOTA_RECOVERY_WINDOWS = frozenset({"availability", "five_hour", "weekly"})
 QUOTA_RECOVERY_STATES = frozenset(
     {
         "disabled",
         "armed",
         "waiting_for_availability",
+        "waiting_for_session",
         "dispatching",
         "dispatch_started",
         "input_emitted",
@@ -48,6 +55,7 @@ PROMPT_RULE_STATES = frozenset(
         "armed",
         "waiting_for_event",
         "waiting_for_usage",
+        "waiting_for_session",
         "waiting_for_confirmation",
         "dispatching",
         "dispatch_started",
@@ -102,6 +110,7 @@ class PromptRule:
 @dataclass(frozen=True)
 class QuotaRecoveryRule:
     window: str
+    provider: str = "codex"
     enabled: bool = False
     thread_id: str | None = None
     text: str = DEFAULT_SCHEDULED_PROMPT_TEXT
@@ -695,6 +704,12 @@ def _quota_recovery_rules_value(
                     "five_hour",
                     choices=QUOTA_RECOVERY_WINDOWS,
                 ),
+                provider=_choice_value(
+                    raw_rule,
+                    "provider",
+                    "codex",
+                    choices=AVAILABILITY_PROVIDERS,
+                ),
                 enabled=_bool_value(raw_rule, "enabled", False),
                 thread_id=_optional_string(raw_rule, "thread_id", None),
                 text=_required_string(
@@ -752,6 +767,8 @@ def _validate_quota_recovery_rules(settings: ControlSettings) -> None:
         if rule.window not in QUOTA_RECOVERY_WINDOWS or rule.window in seen:
             raise ControlError("A janela da regra de recuperacao e invalida ou duplicada.")
         seen.add(rule.window)
+        if rule.provider not in AVAILABILITY_PROVIDERS:
+            raise ControlError("O provedor da recuperacao e invalido.")
         text = rule.text.strip()
         if (
             not text

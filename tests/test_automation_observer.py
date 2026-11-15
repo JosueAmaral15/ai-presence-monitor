@@ -79,6 +79,7 @@ class AutomationObserverTests(unittest.TestCase):
                 reader=lambda **_: self.fail("account reader must not run"),
                 client=client,  # type: ignore[arg-type]
                 observe_usage=False,
+                session_validator=lambda _: "available",
             )
 
             self.assertEqual(
@@ -190,6 +191,7 @@ class AutomationObserverTests(unittest.TestCase):
                     now=red_at - 1,
                     reader=reader,
                     client=client,  # type: ignore[arg-type]
+                    session_validator=lambda _: "available",
                 )
                 at_red = observe_automations_once(
                     control_store=controls,
@@ -198,6 +200,7 @@ class AutomationObserverTests(unittest.TestCase):
                     now=red_at,
                     reader=reader,
                     client=client,  # type: ignore[arg-type]
+                    session_validator=lambda _: "available",
                 )
                 before_due = observe_automations_once(
                     control_store=controls,
@@ -206,6 +209,7 @@ class AutomationObserverTests(unittest.TestCase):
                     now=red_at + 59,
                     reader=reader,
                     client=client,  # type: ignore[arg-type]
+                    session_validator=lambda _: "available",
                 )
                 due = observe_automations_once(
                     control_store=controls,
@@ -214,6 +218,7 @@ class AutomationObserverTests(unittest.TestCase):
                     now=red_at + 60,
                     reader=reader,
                     client=client,  # type: ignore[arg-type]
+                    session_validator=lambda _: "available",
                 )
 
                 self.assertEqual(before_red.prompt_rules.rule_results[0].state, "waiting_for_event")
@@ -294,6 +299,7 @@ class AutomationObserverTests(unittest.TestCase):
                 now=1_060.0,
                 reader=reader,
                 client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "available",
             )
 
             self.assertEqual(reads, 1)

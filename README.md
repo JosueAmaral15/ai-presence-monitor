@@ -710,17 +710,22 @@ becomes inactive, so a rule can wait across a five-hour or weekly reset.
 Install it on Linux with `ai-presence install-background-service
 --component prompt-rule-observer`.
 
-The tray has a separate **Token recovery** tab for token-availability prompts.
-It does not replace Prompt Rules and has no delay or inactivity trigger. The
-user can independently enable the five-hour and weekly windows for a project
-or agent, select an exact Codex session and edit the explicit recovery message.
-The observer sends once only after it has observed that exact window exhausted
-and later available. Initial availability, unknown window data and ordinary
-inactivity never dispatch. A later exhaustion rearms a new cycle; a failed or
-uncertain attempt is not retried in the same cycle. This uses the same installed
-automation observer so one sanitized App Server read can serve both features.
-`control show --json` exposes only the window, enabled state and observer state;
-it omits sessions and prompt text.
+The tray has a separate **Availability recovery** tab. It does not replace
+Prompt Rules and has no delay or inactivity trigger. The user enables one
+provider-neutral policy for a project or agent, selects an exact session and
+edits the recovery message. Provider-specific limits such as Codex five-hour
+and weekly windows remain adapter details instead of separate user rules. The
+observer sends once only after the provider reported capacity unavailable and
+later available. Initial availability, unknown evidence and ordinary inactivity
+never dispatch. Immediately before transport, a fresh read-only provider probe
+must still resolve the exact session; otherwise the rule stays armed in
+`waiting_for_session`. A later unavailable state rearms a new cycle, while a
+failed or uncertain transport is not retried in the same cycle.
+
+The provider strategy and factory currently install only the Codex family.
+Gemini and Claude remain explicit fail-closed extension points until each has a
+documented capacity source and exact-session input transport. `control show
+--json` omits exact sessions and message text.
 
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous

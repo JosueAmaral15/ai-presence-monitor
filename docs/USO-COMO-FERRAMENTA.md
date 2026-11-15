@@ -191,27 +191,28 @@ consulta tokens no intervalo mais lento somente quando uma regra condicionada
 esta vencida ou uma recuperacao esta habilitada. A bandeja apenas edita e exibe
 as regras, evitando despacho concorrente entre GUI e servico.
 
-### Recuperacao independente de tokens
+### Recuperacao independente de disponibilidade
 
-A aba **Token recovery** e separada de Prompt Rules. Para cada perfil, o
-usuario pode habilitar dois observers independentes:
+A aba **Availability recovery** e separada de Prompt Rules. Para cada perfil,
+o usuario habilita uma unica politica, escolhe o provedor, a sessao exata e a
+mensagem. A configuracao e o estado sobrevivem ao fechamento da bandeja e sao
+isolados por `worker_id`.
 
-- **five-hour quota**: acompanha somente a janela informada pelo Codex com
-  duracao de 300 minutos;
-- **weekly quota**: acompanha somente a janela com duracao de 10.080 minutos.
+No adapter Codex, janelas de cinco horas, semanal, plano e creditos sao
+evidencias internas. A decisao agregada da conta tem precedencia e percentuais,
+saldo, identidade e payload bruto nao sao persistidos. A Strategy interpreta a
+evidencia; a Abstract Factory fornece o observer, o validador de sessao e o
+transporte compativeis. Gemini e Claude ainda nao possuem familias instaladas e
+falham fechados.
 
-Cada checkbox possui sessao Codex exata e mensagem propria. A configuracao e o
-estado sobrevivem ao fechamento da bandeja e sao isolados por `worker_id`. O
-monitor nao presume que `primary` significa cinco horas: identifica cada
-janela por `windowDurationMins`, usa `usedPercent` apenas em memoria e nao o
-persiste no `control.json` ou no SQLite.
-
-Habilitar uma regra a coloca em `armed`. Ela nao envia enquanto a cota ja
-estiver disponivel. Primeiro precisa observar `usedPercent >= 100`, passando a
-`waiting_for_availability`; somente uma leitura posterior abaixo de 100 permite
-um despacho. O estado e gravado como `dispatching` antes de chamar `codex
-queue`, impedindo repeticao depois de queda ou reinicio. Falha ou incerteza
-fica em `failed_or_uncertain` ate um novo ciclo real de esgotamento.
+Habilitar a regra a coloca em `armed`. Ela nao envia enquanto a capacidade ja
+estiver disponivel. Primeiro precisa observar indisponibilidade, passando a
+`waiting_for_availability`; somente uma leitura posterior disponivel permite
+considerar o despacho. Antes de chamar `codex queue`, uma leitura read-only
+confirma que a sessao exata ainda pode ser resolvida. Falha nessa leitura mantem
+a regra em `waiting_for_session`, sem emitir input. O estado e gravado como
+`dispatching` antes do transporte. Falha ou incerteza do transporte fica em
+`failed_or_uncertain` ate um novo ciclo real de indisponibilidade.
 
 O recurso exige **Enable task automation**, **Enable native Codex input**, uma
 sessao exata e o mesmo componente continuo usado pelas regras condicionadas a
@@ -223,11 +224,11 @@ systemctl --user enable --now ai-presence-prompt-rule-observer.service
 ```
 
 Inatividade, alerta vermelho, fim de expediente e `finish` nao sao evidencias
-de esgotamento. O observer consulta apenas os campos sanitizados do Codex App
-Server e nao usa mouse, teclado, Discord ou atividade sintetica.
+de indisponibilidade. O observer consulta apenas metadados sanitizados e nao
+usa mouse, teclado, Discord ou atividade sintetica.
 
-`ai-presence control show --json` informa somente janela, habilitacao e estado
-do observer. Sessao exata e texto da mensagem nao aparecem nesse relatorio.
+`ai-presence control show --json` informa somente provedor, escopo legado,
+habilitacao e estado. Sessao exata e texto nao aparecem nesse relatorio.
 
 O gatilho pode contar desde a ativacao ou desde o ponto de duracao vermelha,
 seguido pelo atraso configurado. Um `finish` real reinicia o relogio monitorado,

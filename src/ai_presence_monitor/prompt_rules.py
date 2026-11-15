@@ -3,8 +3,9 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, replace
-from typing import Literal
+from typing import Callable, Literal
 
+from .availability import SessionTargetState
 from .codex_input import CodexInputError, CodexQueueClient, send_native_message
 from .control import (
     DEFAULT_PROMPT_RULE_OCCURRENCES,
@@ -28,6 +29,7 @@ PromptRuleRunState = Literal[
     "waiting",
     "waiting_for_event",
     "waiting_for_usage",
+    "waiting_for_session",
     "waiting_for_confirmation",
     "dispatch_started",
     "input_emitted",
@@ -160,6 +162,7 @@ def process_prompt_rules(
     now: float | None = None,
     client: CodexQueueClient | None = None,
     usage_gated_only: bool | None = None,
+    session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> PromptRuleRunResult:
     checked_at = time.time() if now is None else now
     settings = store.load(profile_id)
@@ -246,6 +249,21 @@ def process_prompt_rules(
                 settings = _save_rule(store, profile_id, settings, rule)
             waiting = waiting or PromptRuleRunResult(
                 "waiting_for_usage",
+                rule_id=rule.rule_id,
+                due_at=due_at,
+            )
+            continue
+
+        if (
+            session_validator is not None
+            and rule.thread_id is not None
+            and session_validator(rule.thread_id) != "available"
+        ):
+            if rule.last_state != "waiting_for_session":
+                rule = replace(rule, last_state="waiting_for_session")
+                settings = _save_rule(store, profile_id, settings, rule)
+            waiting = waiting or PromptRuleRunResult(
+                "waiting_for_session",
                 rule_id=rule.rule_id,
                 due_at=due_at,
             )

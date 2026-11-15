@@ -4,6 +4,10 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
+from .availability import (
+    DefaultAvailabilityProviderFactory,
+    SessionTargetState,
+)
 from .codex_app_server import RateLimitSnapshot, read_codex_rate_limits
 from .codex_evidence import codex_limit_observation_from_snapshot
 from .codex_input import CodexQueueClient
@@ -39,14 +43,20 @@ def observe_automations_once(
     reader: Callable[..., RateLimitSnapshot] = read_codex_rate_limits,
     client: CodexQueueClient | None = None,
     observe_usage: bool = True,
+    session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> AutomationObserverResult:
     checked_at = time.time() if now is None else now
     queue_client = client or CodexQueueClient(executable=codex_executable)
+    validator = session_validator or DefaultAvailabilityProviderFactory(
+        codex_executable=codex_executable,
+        request_timeout=request_timeout,
+    ).create("codex").validate_session
     preliminary_results = _process_prompt_rules_before_usage(
         control_store=control_store,
         presence_store=presence_store,
         checked_at=checked_at,
         client=queue_client,
+        session_validator=validator,
     )
     prompt_targets = due_usage_rule_targets(
         control_store=control_store,
@@ -85,6 +95,7 @@ def observe_automations_once(
         now=checked_at,
         collector=lambda **_: observation,
         client=queue_client,
+        session_validator=validator,
     )
     target_profiles = {target.profile_id for target in prompt_targets}
     preliminary_visible = tuple(
@@ -105,6 +116,7 @@ def observe_automations_once(
         now=checked_at,
         reader=lambda **_: snapshot,
         client=queue_client,
+        session_validator=validator,
     )
     return AutomationObserverResult(prompt_result, quota_result)
 
@@ -115,6 +127,7 @@ def _process_prompt_rules_before_usage(
     presence_store: PresenceStore,
     checked_at: float,
     client: CodexQueueClient,
+    session_validator: Callable[[str], SessionTargetState],
 ) -> tuple[tuple[str, bool, PromptRuleRunResult], ...]:
     results: list[tuple[str, bool, PromptRuleRunResult]] = []
     for profile_id in control_store.list_profile_ids():
@@ -134,6 +147,7 @@ def _process_prompt_rules_before_usage(
                 now=checked_at,
                 client=client,
                 usage_gated_only=requires_usage,
+                session_validator=session_validator,
             )
             results.append((profile_id, requires_usage, result))
     return tuple(results)

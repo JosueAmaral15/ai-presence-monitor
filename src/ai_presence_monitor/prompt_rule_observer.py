@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
+from .availability import SessionTargetState
 from .codex_evidence import (
     CodexLimitObservation,
     collect_codex_limit_observation,
@@ -66,6 +67,7 @@ def observe_prompt_rules_once(
     now: float | None = None,
     collector: Callable[..., CodexLimitObservation] = collect_codex_limit_observation,
     client: CodexQueueClient | None = None,
+    session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> PromptRuleObserverResult:
     checked_at = time.time() if now is None else now
     targets = due_usage_rule_targets(
@@ -99,6 +101,7 @@ def observe_prompt_rules_once(
                 now=checked_at,
                 client=queue_client,
                 usage_gated_only=True,
+                session_validator=session_validator,
             )
         )
     return PromptRuleObserverResult(targets, observation.state, tuple(results))

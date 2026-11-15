@@ -24,6 +24,29 @@ service downtime or account-read failure can delay evaluation until the next
 healthy cycle. Transport start remains preliminary and does not prove that the
 target session processed the prompt.
 
+## Task 066 - Generic availability recovery and delayed sessions
+
+- [x] Provider-specific quota windows are hidden behind a normalized
+      availability strategy.
+- [x] The abstract factory installs only the Codex provider family; unsupported
+      provider identifiers fail closed.
+- [x] Initial availability cannot dispatch; a persisted unavailable state must
+      precede availability.
+- [x] Availability Recovery and Prompt Rules remain separate state machines.
+- [x] A fresh read-only exact-session lookup runs immediately before delayed
+      native transport in the background observer.
+- [x] Missing or unreadable sessions stay armed in `waiting_for_session` and
+      emit no input.
+- [x] Legacy five-hour and weekly controls are read compatibly; conflicting
+      destinations are disabled for human review during unification.
+
+### Residual risk
+
+A successful metadata lookup proves that the provider resolves the exact
+session at that instant; it does not prove the graphical view is open or that a
+later queue process will complete. Only a returned unique marker and later
+canonical hooks provide E2E processing evidence.
+
 ## Task 060 - Usage-gated red Prompt Rule ownership
 
 - [x] The background observer advances only rules that require Codex usage;

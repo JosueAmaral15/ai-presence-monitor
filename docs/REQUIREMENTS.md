@@ -257,10 +257,15 @@
   fechada sem desabilitar a regra, consumir ocorrencia ou iniciar transporte.
 - O gate deve usar a decisao agregada do Codex, sem persistir saldos,
   percentuais, identidade da conta ou payload bruto de limites.
-- A secao independente **Token recovery** deve oferecer checkboxes separados
-  para as janelas de cinco horas e semanal, sessao exata e mensagem propria.
-- Token recovery deve despachar apenas depois de observar a transicao
-  `exhausted -> available`; disponibilidade inicial nao autoriza envio.
+- A secao independente **Availability recovery** deve oferecer uma unica
+  politica por perfil, com provedor, sessao exata e mensagem propria.
+- Limites de cinco horas, semanais, plano ou creditos devem permanecer detalhes
+  do adapter; a interface reage apenas a `unavailable -> available`.
+- Disponibilidade inicial nao autoriza envio. Antes do transporte tardio, o
+  adapter deve confirmar novamente a sessao exata; estado desconhecido mantem
+  a regra armada em `waiting_for_session`.
+- Adapters Gemini e Claude nao devem ser simulados: permanecem indisponiveis
+  ate existir fonte de capacidade e transporte de sessao documentados.
 
 ## Bandeja e Controle de Entrada
 

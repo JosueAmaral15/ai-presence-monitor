@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased - v0.13.1
+## Unreleased - v0.14.0
+
+- Replaced separate five-hour and weekly recovery controls with one provider-
+  neutral **Availability recovery** policy while retaining compatible legacy
+  loading.
+- Added a provider strategy and abstract factory. Codex is the first concrete
+  family; unavailable Gemini and Claude adapters fail closed.
+- Added a fresh read-only exact-session check before delayed Prompt Rule and
+  Availability Recovery transport. Unreadable sessions remain armed in
+  `waiting_for_session` instead of emitting uncertain input.
 
 - Made the background observer the sole scheduler for every modern Prompt Rule,
   including ordinary rules while the tray is closed.
@@ -8,8 +17,8 @@
   on their slower cadence.
 - Allowed an explicitly armed red-duration rule to continue from the last real
   activity after `finish`, including the reported 15 + 271 minute case.
-- Renamed the separate quota observer UI to **Token recovery** and exposed only
-  sanitized window states through `control show`.
+- Added the original separate quota observer UI and sanitized observer state;
+  its provider-specific controls are superseded by Availability Recovery.
 
 ## 2026-11-05 - v0.13.0
 

@@ -716,6 +716,53 @@ class PromptRuleTests(unittest.TestCase):
                 [("session-idle", "continue after idle delay")],
             )
 
+    def test_271_minute_rule_waits_until_exact_session_is_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            control = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            rule = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-delayed",
+                trigger="after_delay",
+                delay_minutes=271,
+                text="continue after validation",
+                repeat_enabled=False,
+                repeat_interval_minutes=271,
+                now=1_000.0,
+                rule_id="delayed-session-validation",
+            )
+            control.save(configured_settings(rule), "worker-delayed")
+            client = FakeClient()
+            due_at = 1_000.0 + 271 * 60
+
+            blocked = process_prompt_rules(
+                store=control,
+                profile_id="worker-delayed",
+                presence_store=presence,
+                now=due_at,
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "unknown",
+            )
+            self.assertEqual(blocked.state, "waiting_for_session")
+            self.assertTrue(control.load("worker-delayed").prompt_rules[0].enabled)
+
+            sent = process_prompt_rules(
+                store=control,
+                profile_id="worker-delayed",
+                presence_store=presence,
+                now=due_at + 60,
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "available",
+            )
+
+            self.assertEqual(sent.state, "dispatch_started")
+            self.assertEqual(
+                client.calls,
+                [("session-delayed", "continue after validation")],
+            )
+
     def test_failure_disables_rule_and_multiple_rules_dispatch_one_per_poll(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
