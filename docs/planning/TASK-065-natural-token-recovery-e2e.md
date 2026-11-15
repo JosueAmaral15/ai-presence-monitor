@@ -33,7 +33,7 @@ recovery event.
 - [x] Monitor, Discord reply observer and Prompt Rule observer are active.
 - [x] The exact project worker has `task_automation` and native input enabled.
 - [x] A sanitized one-shot read reports the current real usage state.
-- [ ] Runtime `0.14.0` is installed transactionally.
+- [x] Runtime `0.14.0` is installed transactionally.
 - [ ] The human operator has enabled an Availability Recovery rule for the exact
   current Codex session.
 - [ ] The provider is observed naturally unavailable.
@@ -54,6 +54,14 @@ reported `usage_available`. The corresponding worker profile had
 Token Recovery rules. Therefore no exhausted-to-available transition exists
 yet and no dispatch is permitted. This is an external observation gate, not a
 software failure.
+
+The authorized transaction later installed `0.14.0`, preserved a private
+`0.13.1` rollback manifest and passed schema, integrity, strict doctor, managed
+service and graphical tray checks. The installed observer reported
+`quota_targets=0`, confirming that no Availability Recovery rule is currently
+armed. The operator also reported a natural account change from 1 percent to
+100 percent before the upgrade. That transition cannot retroactively prove an
+observer dispatch and does not satisfy the remaining criteria.
 
 ## Human Gate
 

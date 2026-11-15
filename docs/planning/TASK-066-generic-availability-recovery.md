@@ -66,6 +66,7 @@ authenticated capacity source and exact-session input transport exist.
 - [x] Prompt Rules remain independent and retain all existing semantics.
 - [x] Gemini and Claude extension points fail closed until adapters exist.
 - [x] Focused and full quality gates pass.
+- [x] Runtime `0.14.0` is installed transactionally and the tray is restarted.
 - [ ] A real exact-session E2E remains separately authorized and evidenced.
 
 ## Local Validation - 2026-11-15
@@ -85,6 +86,15 @@ authenticated capacity source and exact-session input transport exist.
 - a live metadata-only read matched the current exact Codex session. Its child
   status was `notLoaded`, which is expected for an independently owned GUI
   session and is not long-delay E2E evidence.
+
+## Installed Runtime - 2026-11-15
+
+One explicitly authorized transaction completed from `0.13.1` to `0.14.0`.
+Schema 3, SQLite integrity and strict doctor passed. All three managed services
+were restarted and remained `active/running` without new restarts. The
+graphical tray was reloaded as one active transient-unit process, and its
+offscreen preference check constructed Controls, Prompt rules and Availability
+recovery. No automated prompt was sent during this maintenance operation.
 
 ## External Validation Boundary
 

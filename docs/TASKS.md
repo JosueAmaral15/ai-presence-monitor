@@ -2,10 +2,35 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 067 - Upgrade transacional do runtime 0.14.0
+
+**Prioridade**: Critica
+**Status**: concluida; runtime, servicos e bandeja validados
+**Plano**: `docs/planning/TASK-067-runtime-upgrade-0140.md`
+**Objetivo**: instalar uma unica vez o candidato validado `0.14.0`, preservar
+rollback para `0.13.1` e confirmar o funcionamento do host grafico real.
+
+- [x] Confirmar wheel, hash, rollback, espaco e saude pre-upgrade.
+- [x] Executar uma unica transacao autorizada `0.13.1 -> 0.14.0`.
+- [x] Validar versao instalada, schema 3, integridade e doctor estrito.
+- [x] Reiniciar e validar os tres servicos gerenciados.
+- [x] Reiniciar a bandeja e confirmar uma unica instancia ativa.
+- [x] Construir as preferencias da bandeja com o runtime instalado.
+
+**Evidencia (2026-11-15)**: a transacao terminou em `completed` e preservou o
+manifesto privado em
+`~/.local/state/ai-presence-monitor/backups/upgrade-0.13.1-to-0.14.0-20261115-124035-1f3cf04b/manifest.json`.
+O runtime reportou `0.14.0`; schema 3, integridade SQLite e `doctor --strict`
+passaram. Monitor, observer Discord e observer de automacao ficaram
+`active/running`, com zero reinicios desde o upgrade. A bandeja foi recarregada
+em uma unidade transitoria, permaneceu `active/running` e possui exatamente um
+processo. O check offscreen construiu **Controls**, **Prompt rules** e
+**Availability recovery**.
+
 ### Task 066 - Recuperacao generica de disponibilidade e sessao tardia
 
 **Prioridade**: Critica
-**Status**: implementada e validada localmente; runtime/E2E pendentes
+**Status**: implementada e instalada; E2E natural pendente
 **Plano**: `docs/planning/TASK-066-generic-availability-recovery.md`
 **Objetivo**: substituir as opcoes expostas de cinco horas e semanal por uma
 politica unica de retomada quando o provedor voltar a aceitar trabalho, com
@@ -24,7 +49,7 @@ arquitetura extensivel e validacao da sessao antes de envios tardios.
 - [x] Executar gate local completo e construir wheel/sdist.
 - [x] Instalar o wheel `0.14.0` isoladamente e validar a bandeja.
 - [x] Executar dry-run transacional `0.13.1 -> 0.14.0` com rollback valido.
-- [ ] Atualizar transacionalmente o runtime candidato `0.14.0`.
+- [x] Atualizar transacionalmente o runtime candidato `0.14.0`.
 - [ ] Executar E2E real autorizado separadamente.
 
 **Relacao com Prompt Rules**: Availability Recovery e uma alternativa
@@ -43,11 +68,17 @@ carregou a factory Codex e construiu a nova aba em instalacao isolada. O
 upgrade instalado em `--dry-run` retornou `would_upgrade` de `0.13.1` para
 `0.14.0` com o rollback preservado de `0.13.1`.
 
+**Runtime real (2026-11-15)**: a Task 067 concluiu o upgrade para `0.14.0` e
+validou schema, banco, servicos e bandeja. O relato do operador confirma uma
+volta natural de 1% para 100% de quota entre prompts humanos. Como a politica
+`0.14.0` ainda nao estava instalada e armada durante essa transicao, o relato
+comprova disponibilidade natural do provedor, mas nao um despacho automatico.
+
 ### Task 065 - E2E natural de Availability Recovery
 
 **Prioridade**: Critica
-**Status**: replanejada pela Task 066; aguardando runtime 0.14.0, opt-in humano
-e transicao natural de capacidade
+**Status**: runtime 0.14.0 instalado; aguardando opt-in humano e proxima
+transicao natural de capacidade
 **Plano**: `docs/planning/TASK-065-natural-token-recovery-e2e.md`
 **Objetivo**: comprovar que uma cota Codex realmente esgotada e posteriormente
 disponivel dispara uma unica mensagem para a sessao exata, sem consumo
@@ -59,16 +90,17 @@ artificial de tokens e sem confundir disponibilidade inicial com recuperacao.
   conta, prompt ou identificador da sessao.
 - [x] Confirmar que o perfil corrente ainda possui zero regras de recuperacao
   configuradas ou habilitadas no runtime instalado.
-- [ ] Atualizar o runtime para a politica agregada da Task 066.
+- [x] Atualizar o runtime para a politica agregada da Task 066.
 - [ ] Operador habilitar na bandeja uma regra para a sessao Codex exata.
 - [ ] Observar naturalmente o provedor ficar indisponivel.
 - [ ] Observar o mesmo provedor voltar a ficar disponivel.
 - [ ] Receber marcador exclusivo na sessao exata e confirmar hooks posteriores.
 
-**Limite atual (2026-11-15)**: a conta esta disponivel e nenhuma regra foi
-habilitada pelo operador. O AI-worker nao pode habilitar, rearmar ou
-redirecionar essa regra. O observer permanece funcional, mas o E2E depende do
-runtime candidato, do opt-in humano e de uma futura transicao natural.
+**Limite atual (2026-11-15)**: o runtime candidato foi instalado e a conta esta
+disponivel. A transicao natural relatada de 1% para 100% ocorreu antes do
+upgrade e nao pode ser atribuida ao observer. O AI-worker nao pode habilitar,
+rearmar ou redirecionar a regra; o E2E depende do opt-in humano e de uma futura
+transicao natural indisponivel -> disponivel.
 
 ### Task 064 - Recuperacao de armazenamento e estabilidade dos servicos
 
@@ -342,6 +374,10 @@ Presence Monitor sem incluir segredos nem substituir o runtime.
 - [x] Preparar pacote local e executar validacoes de seguranca.
 - [x] Separar lifecycle, human loop e continuacao protegida em tres skills.
 - [x] Preparar ficha de listagem fora do ZIP portavel.
+- [ ] Acessar ou criar a conta do operador em `agensi.io`.
+- [ ] Revisar os termos, requisitos de criador e pagamentos vigentes na conta.
+- [ ] Criar a listagem das skills usando o pacote local validado.
+- [ ] Revisar compatibilidade, preco, licenca, suporte e texto comercial.
 - [ ] Submeter ou publicar somente mediante aprovacao externa especifica.
 
 **Evidencia local (2026-11-11)**: o candidato em
@@ -351,6 +387,12 @@ ZIP temporario passou no teste de integridade e contem somente texto, sem
 executavel, segredo, caminho pessoal ou leitor de ambiente. O frontmatter
 portavel permanece limitado a `name` e `description`; a ficha comercial esta
 em `marketplace/agensi/LISTING-DRAFT.md`, fora do pacote.
+
+**Limite externo**: acesso autenticado, cadastro de criador, configuracao de
+pagamentos, upload e publicacao representam o operador perante um terceiro.
+Devem ser executados em uma sessao propria e somente depois de autorizacao
+explicita para a acao externa correspondente; o pacote local pronto nao
+equivale a uma listagem criada ou publicada.
 
 ### Task 056 - Sincronizacao segura de historico Codex entre computadores
 

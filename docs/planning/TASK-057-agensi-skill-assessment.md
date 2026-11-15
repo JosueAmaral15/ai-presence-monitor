@@ -53,7 +53,12 @@ protocol and report preliminary versus confirmed delivery states. It must not:
 4. Document compatibility separately for Codex, Claude Code, Cursor and other
    tested agents rather than treating the format as proof of runtime support.
 5. Present the package and listing copy for human review.
-6. Create an account, configure payouts or upload only after explicit approval.
+6. Access or create the operator account at `agensi.io`, then verify the
+   current creator, review and payout requirements in the authenticated flow.
+7. Create a draft listing from the validated local package and review its
+   compatibility claims, pricing, license, support scope and commercial copy.
+8. Configure payouts, upload, submit or publish only after explicit approval
+   for the corresponding external action.
 
 ## Local package candidate
 
@@ -73,6 +78,10 @@ portable Codex validator accepts a narrower frontmatter schema than Agensi.
 All three skills passed the Codex `quick_validate.py` validator on 2026-11-11.
 A temporary ZIP passed archive integrity and text-only/security scans. No
 marketplace account, payout setup, upload or publication was performed.
+
+The next phase is external and remains pending: authenticated access, creator
+onboarding, draft-listing creation and human review. A local ZIP or listing
+draft does not prove that Agensi accepted, approved or published the skills.
 
 Official references used for this assessment:
 
