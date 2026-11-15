@@ -2,6 +2,32 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 068 - Proveniencia do despacho automatico observado
+
+**Prioridade**: Alta
+**Status**: investigacao concluida; melhoria de auditoria pendente
+**Plano**: `docs/planning/TASK-068-automatic-dispatch-provenance.md`
+**Objetivo**: correlacionar o prompt recebido durante a ausencia do operador
+com a regra, o perfil, a fila Codex e os hooks posteriores, sem confundir
+Prompt Rules condicionadas a uso com Availability Recovery.
+
+- [x] Correlacionar journal, controle persistido, historico Codex e eventos.
+- [x] Confirmar que o prompt das 11:28 foi automatico e processado.
+- [x] Identificar a regra, o perfil e a segunda condicao de disponibilidade.
+- [x] Separar o despacho das 11:23, pertencente ao projeto `clarify`.
+- [x] Confirmar que nenhuma Availability Recovery rule estava configurada.
+- [ ] Persistir auditoria por despacho com perfil, regra, origem e resultado.
+
+**Conclusao (2026-11-15)**: o observer iniciou o despacho para
+`ai-presence-monitor` as 11:28:44/45. A sessao exata iniciou a tarefa as
+11:28:51, recebeu `continue with what you were doing.` as 11:28:54, respondeu
+as 11:29:00 e concluiu as 11:51:39. Hooks canonicos confirmam
+`UserPromptSubmit` e atividade de ferramentas. A origem foi uma Prompt Rule de
+inatividade vermelha, repetitiva, com atraso de 271 minutos e
+`require_usage_available=true`; nao foi Availability Recovery. O perfil tinha
+zero regras de Availability Recovery, e o observer registrava
+`quota_targets=0` e `quota_recovery=none`.
+
 ### Task 067 - Upgrade transacional do runtime 0.14.0
 
 **Prioridade**: Critica
@@ -101,6 +127,11 @@ disponivel. A transicao natural relatada de 1% para 100% ocorreu antes do
 upgrade e nao pode ser atribuida ao observer. O AI-worker nao pode habilitar,
 rearmar ou redirecionar a regra; o E2E depende do opt-in humano e de uma futura
 transicao natural indisponivel -> disponivel.
+
+**Distincao confirmada pela Task 068**: o prompt automatico recebido as 11:28
+nao satisfaz este E2E. Ele veio de uma Prompt Rule com disponibilidade como
+segunda condicao. Naquele ciclo, o observer registrou `quota_targets=0`; a aba
+Availability Recovery nao possuia regra configurada ou habilitada.
 
 ### Task 064 - Recuperacao de armazenamento e estabilidade dos servicos
 
