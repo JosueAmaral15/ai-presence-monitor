@@ -2,11 +2,36 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 064 - Recuperacao de armazenamento e estabilidade dos servicos
+
+**Prioridade**: Critica
+**Status**: concluida; host operacional, capacidade ainda deve ser monitorada
+**Plano**: `docs/planning/TASK-064-host-storage-stability.md`
+**Objetivo**: remover a condicao `database or disk is full` sem apagar dados,
+projetos, ambientes ativos ou artefatos de rollback, e comprovar que os
+servicos deixaram o ciclo de reinicio.
+
+- [x] Mapear caches grandes e processos com arquivos abertos.
+- [x] Preservar runtime primario Codex e virtualenvs Poetry.
+- [x] Remover somente caches e staging regeneraveis autorizados.
+- [x] Validar schema, integridade SQLite e `doctor --strict`.
+- [x] Observar seis amostras em cinco minutos sem novos reinicios.
+- [x] Confirmar `codex queue` depois de um aviso transitorio do probe.
+
+**Evidencia (2026-11-15)**: o volume raiz passou de 629 MB livres e 100% de
+uso para 7,1 GB livres e 97%. Foram removidos 1,9 GB de artefatos Poetry, 1,3
+GB de navegadores Playwright inativos e aproximadamente 3,4 GB de diretorios
+temporarios `codex-runtime-install-*`. Projetos, bancos, configuracao,
+virtualenvs, `codex-primary-runtime` e manifestos de rollback foram preservados.
+Schema 3 e integridade permaneceram saudaveis. Monitor, observer Discord e
+observer de Prompt Rules ficaram `active/running`; os contadores historicos
+permaneceram em `49/19/0` durante seis amostras ao longo de cinco minutos.
+
 ### Task 063 - Confiabilidade das Prompt Rules e observer de tokens explicito
 
 **Prioridade**: Critica
-**Status**: implementada; runtime e Prompt Rule E2E validados, estabilidade do
-host e recuperacao real de tokens pendentes
+**Status**: implementada; runtime, Prompt Rule E2E e estabilidade do host
+validados, recuperacao real de tokens pendente
 **Plano**: `docs/planning/TASK-063-prompt-observer-reliability.md`
 **Objetivo**: impedir regras vermelhas habilitadas de permanecerem sem prazo
 quando a bandeja fecha ou o worker termina, e tornar a retomada por tokens uma
@@ -24,7 +49,7 @@ funcionalidade observer explicita e independente.
 - [x] Atualizar transacionalmente o runtime instalado para `0.13.1`.
 - [x] Validar um despacho one-shot isolado na sessao Codex exata.
 - [x] Observar hooks posteriores da mesma sessao sem fabricar atividade.
-- [ ] Liberar espaco operacional no volume raiz e observar os servicos sem
+- [x] Liberar espaco operacional no volume raiz e observar os servicos sem
   novos reinicios por falta de disco.
 - [ ] Validar **Token recovery** quando uma cota naturalmente esgotada voltar a
   ficar disponivel.
@@ -70,6 +95,12 @@ volume continua criticamente cheio. Uma observacao adicional de 65 segundos
 nao registrou novos reinicios e o doctor continuou saudavel, mas isso nao e
 uma margem operacional suficiente. O risco bloqueia promocao para `main` ate o
 operador liberar espaco e uma janela mais longa confirmar estabilidade.
+
+**Recuperacao (2026-11-15)**: a Task 064 liberou aproximadamente 6,5 GB sem
+remover dados persistentes. Seis amostras em cinco minutos mantiveram os tres
+servicos ativos e os contadores de reinicio inalterados; schema, integridade e
+fila Codex passaram. O bloqueio de armazenamento foi removido, embora o volume
+em 97% ainda exija acompanhamento.
 
 ### Task 062 - Backlog sem pre-requisitos e skill pack Agensi
 
