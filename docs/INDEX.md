@@ -35,6 +35,7 @@
 - [Plano de sincronizacao segura do historico Codex](planning/TASK-056-secure-codex-history-sync.md)
 - [Avaliacao da skill para Agensi](planning/TASK-057-agensi-skill-assessment.md)
 - [Observer independente de recuperacao de cotas](planning/TASK-058-codex-quota-recovery-observer.md)
+- [E2E natural de Token Recovery](planning/TASK-065-natural-token-recovery-e2e.md)
 - [Plano de diagnostico de causa por observers](planning/TASK-022-cause-aware-diagnostics.md)
 - [Plano do E2E de recovery e release 0.8.0](planning/TASK-023-recovery-e2e-release-080.md)
 - [Upgrade operacional 0.8.0 e proximos passos de produto](planning/TASK-024-operational-upgrade-productization.md)

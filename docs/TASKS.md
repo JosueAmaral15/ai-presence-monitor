@@ -2,6 +2,31 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 065 - E2E natural de Token Recovery
+
+**Prioridade**: Critica
+**Status**: aguardando opt-in humano e transicao natural de cota
+**Plano**: `docs/planning/TASK-065-natural-token-recovery-e2e.md`
+**Objetivo**: comprovar que uma cota Codex realmente esgotada e posteriormente
+disponivel dispara uma unica mensagem para a sessao exata, sem consumo
+artificial de tokens e sem confundir disponibilidade inicial com recuperacao.
+
+- [x] Validar runtime, banco, controles e servicos instalados.
+- [x] Iniciar o worker exato do projeto em Protocolo 2.
+- [x] Registrar leitura sanitizada `usage_available` sem expor percentuais,
+  conta, prompt ou identificador da sessao.
+- [x] Confirmar que o perfil corrente ainda possui zero regras de Token
+  Recovery configuradas ou habilitadas.
+- [ ] Operador habilitar na bandeja uma regra para a sessao Codex exata.
+- [ ] Observar naturalmente o estado esgotado da janela escolhida.
+- [ ] Observar a mesma janela voltar a ficar disponivel.
+- [ ] Receber marcador exclusivo na sessao exata e confirmar hooks posteriores.
+
+**Limite atual (2026-11-15)**: a conta esta disponivel e nenhuma regra foi
+habilitada pelo operador. O AI-worker nao pode habilitar, rearmar ou
+redirecionar essa regra. O observer permanece funcional, mas o E2E depende do
+opt-in humano e de uma futura transicao natural de cota.
+
 ### Task 064 - Recuperacao de armazenamento e estabilidade dos servicos
 
 **Prioridade**: Critica
