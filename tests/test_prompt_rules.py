@@ -254,6 +254,12 @@ class PromptRuleTests(unittest.TestCase):
             self.assertEqual(rearmed.due_at, 3_060.0)
             self.assertEqual(sent.state, "dispatch_started")
             self.assertEqual(client.calls, [("session-1", "continue")])
+            audits = presence.list_automation_dispatch_audits(worker_id="worker-1")
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0].source, "prompt_rule")
+            self.assertEqual(audits[0].rule_id, "red-rule")
+            self.assertEqual(audits[0].transport_state, "dispatch_started")
+            self.assertEqual(audits[0].confirmation_state, "pending")
 
     def test_red_rule_cancels_initial_due_time_after_new_activity(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -809,6 +815,11 @@ class PromptRuleTests(unittest.TestCase):
             )
             self.assertEqual(sent.rule_id, "rule-2")
             self.assertEqual(len(client.calls), 1)
+            audits = presence.list_automation_dispatch_audits(worker_id="worker-1")
+            self.assertEqual(
+                [audit.transport_state for audit in audits],
+                ["dispatch_started", "failed_or_uncertain"],
+            )
 
     def test_profile_disable_and_profile_isolation_block_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

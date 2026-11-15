@@ -167,6 +167,16 @@ validacao read-only da sessao exata. Disponibilidade inicial, inatividade e
 estado desconhecido nao autorizam entrada. `waiting_for_session` nao autoriza
 fallback GUI; falha ou incerteza de transporte nao deve ser repetida.
 
+Uma IA pode consultar a trilha sanitizada sem alterar regras ou presenca:
+
+```bash
+ai-presence dispatch-audit --profile WORKER_ID --limit 20 --json
+```
+
+O comando nao retorna texto de prompt nem ID bruto da sessao. Estado de
+transporte preliminar nao autoriza declarar E2E; exija `confirmed` e, para uma
+prova formal, marcador exclusivo que o usuario nao digitou.
+
 Para coletar evidencias locais no Linux:
 
 ```bash

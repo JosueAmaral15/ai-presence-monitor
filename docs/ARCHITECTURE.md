@@ -152,6 +152,25 @@ returned exact ID. An unreadable target remains armed as
 proves addressability only at that instant. E2E processing still requires a
 unique returned marker and later same-session hooks.
 
+### Persistent automatic-dispatch audit
+
+Schema 4 adds one append-only audit row immediately before each automatic
+native transport. Prompt Rules and Availability Recovery share the store but
+retain distinct `source` and `trigger` values.
+
+```text
+rule claim -> audit dispatching -> native transport -> preliminary state
+                                             |
+later exact-session hook -> fingerprint match + later timestamp -> confirmed
+```
+
+The session fingerprint is SHA-256 over the worker ID and exact session ID.
+The database does not store the raw session ID, prompt text, account payload,
+token, percentage or transport exception. A failed or uncertain transport is
+terminal and cannot later become confirmed. Reconciliation is idempotent and
+uses only a canonical hook observed after the attempt for the same worker and
+fingerprint.
+
 ### Linux system evidence observers
 
 Phase 4 adds `linux_evidence.py` and the Linux-only

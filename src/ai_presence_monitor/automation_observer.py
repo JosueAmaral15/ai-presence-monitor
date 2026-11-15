@@ -46,6 +46,7 @@ def observe_automations_once(
     session_validator: Callable[[str], SessionTargetState] | None = None,
 ) -> AutomationObserverResult:
     checked_at = time.time() if now is None else now
+    presence_store.confirm_pending_automation_dispatches()
     queue_client = client or CodexQueueClient(executable=codex_executable)
     validator = session_validator or DefaultAvailabilityProviderFactory(
         codex_executable=codex_executable,

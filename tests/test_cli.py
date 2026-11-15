@@ -24,6 +24,7 @@ from ai_presence_monitor.cli import (
     _disable_current_automation,
     _disable_current_prompt_rules,
     _dispatch_answer,
+    _dispatch_audit,
     _identity,
     _install_background_service,
     _install_codex_hook,
@@ -237,6 +238,22 @@ class CliBehaviorTests(unittest.TestCase):
 
         schema_args = parser.parse_args(["schema-status", "--json"])
         self.assertTrue(schema_args.json)
+
+        audit_args = parser.parse_args(
+            [
+                "dispatch-audit",
+                "--profile",
+                "worker-1",
+                "--confirmation",
+                "confirmed",
+                "--limit",
+                "5",
+                "--json",
+            ]
+        )
+        self.assertEqual(audit_args.profile, "worker-1")
+        self.assertEqual(audit_args.limit, 5)
+        self.assertTrue(audit_args.json)
 
         doctor_args = parser.parse_args(["doctor", "--json", "--strict"])
         self.assertTrue(doctor_args.json)
@@ -604,6 +621,41 @@ class CliBehaviorTests(unittest.TestCase):
                 self.assertEqual(_continue_task(args, config), 2)
 
             self.assertIn("automacao de tarefas desativada", error.getvalue())
+
+    def test_dispatch_audit_cli_is_read_only_and_sanitized(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = make_config(root)
+            store = PresenceStore(config.db_path)
+            raw_session = "11111111-2222-3333-4444-555555555555"
+            audit = store.claim_automation_dispatch(
+                worker_id="worker-1",
+                rule_id="rule-1",
+                source="prompt_rule",
+                trigger="after_delay",
+                provider="codex",
+                session_id=raw_session,
+                attempted_at=100.0,
+            )
+            store.complete_automation_dispatch(
+                audit.audit_id,
+                transport_state="dispatch_started",
+                updated_at=101.0,
+            )
+            args = argparse.Namespace(
+                profile="worker-1",
+                confirmation=None,
+                limit=20,
+                json=True,
+            )
+
+            with redirect_stdout(StringIO()) as output:
+                self.assertEqual(_dispatch_audit(args, config), 0)
+
+            payload = output.getvalue()
+            self.assertIn('"source": "prompt_rule"', payload)
+            self.assertIn('"confirmation_state": "pending"', payload)
+            self.assertNotIn(raw_session, payload)
 
     def test_control_and_send_input_dry_run_share_runtime_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

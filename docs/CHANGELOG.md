@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased - v0.14.0
+## Unreleased - v0.15.0
+
+- Added schema 4 with an append-only, sanitized audit trail for automatic
+  Prompt Rule and Availability Recovery transport attempts.
+- Added exact-session confirmation reconciliation from later canonical hooks;
+  preliminary transport states remain distinct from confirmed processing.
+- Added the read-only `dispatch-audit` CLI with bounded profile and
+  confirmation filters. Records contain fingerprints, not raw session IDs or
+  prompt text.
+
+## 2026-11-15 - v0.14.0
 
 - Replaced separate five-hour and weekly recovery controls with one provider-
   neutral **Availability recovery** policy while retaining compatible legacy

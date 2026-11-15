@@ -389,6 +389,15 @@ A Strategy e a Abstract Factory possuem hoje somente a familia Codex. Gemini e
 Claude permanecem extensoes fail-closed ate existir fonte documentada de
 capacidade e transporte para sessao exata.
 
+O schema 4 registra uma auditoria sanitizada antes de cada transporte
+automatico de Prompt Rule ou Availability Recovery. Ele persiste fingerprint
+da sessao por worker, nunca o ID bruto nem o texto. Hooks posteriores da sessao
+exata podem confirmar a entrega preliminar. Consulte o historico limitado com:
+
+```bash
+ai-presence dispatch-audit --profile WORKER_ID --limit 20 --json
+```
+
 O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
 sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar
 qualquer campo inicia um novo ciclo, zera tentativas e ocorrencias anteriores e

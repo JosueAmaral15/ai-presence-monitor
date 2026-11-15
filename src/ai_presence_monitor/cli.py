@@ -106,6 +106,7 @@ DISABLED_RUNTIME_SAFE_COMMANDS = frozenset(
         "doctor",
         "disable-current-automation",
         "disable-current-prompt-rules",
+        "dispatch-audit",
         "protocols",
         "questions",
         "schema-status",
@@ -833,6 +834,49 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
             if key == "control_path":
                 continue
             print(f"{key}={value if value is not None else '-'}")
+    return 0
+
+
+def _dispatch_audit(args: argparse.Namespace, config: AppConfig) -> int:
+    if args.limit <= 0 or args.limit > 100:
+        raise ValueError("Dispatch audit limit must be between 1 and 100.")
+    audits = PresenceStore(config.db_path).list_automation_dispatch_audits(
+        worker_id=args.profile,
+        confirmation_state=args.confirmation,
+        limit=args.limit,
+    )
+    payload = [
+        {
+            "audit_id": audit.audit_id,
+            "worker_id": audit.worker_id,
+            "rule_id": audit.rule_id,
+            "source": audit.source,
+            "trigger": audit.trigger,
+            "provider": audit.provider,
+            "target_session_fingerprint": audit.target_session_fingerprint,
+            "occurrence_number": audit.occurrence_number,
+            "transport_state": audit.transport_state,
+            "confirmation_state": audit.confirmation_state,
+            "attempted_at": audit.attempted_at,
+            "confirmed_at": audit.confirmed_at,
+            "updated_at": audit.updated_at,
+        }
+        for audit in audits
+    ]
+    if args.json:
+        print(json.dumps({"count": len(payload), "dispatches": payload}, indent=2))
+        return 0
+    if not payload:
+        print("dispatch-audit: no records")
+        return 0
+    for item in payload:
+        print(
+            "dispatch-audit: "
+            f"audit={item['audit_id']} worker={item['worker_id']} "
+            f"source={item['source']} rule={item['rule_id']} "
+            f"transport={item['transport_state']} "
+            f"confirmation={item['confirmation_state']}"
+        )
     return 0
 
 
@@ -2262,6 +2306,30 @@ def build_parser() -> argparse.ArgumentParser:
     control_parser.add_argument("--clear-remote", action="store_true")
     control_parser.add_argument("--json", action="store_true")
     control_parser.set_defaults(func=lambda args, config: _control(args, config))
+
+    dispatch_audit_parser = subparsers.add_parser(
+        "dispatch-audit",
+        help="Consulta a proveniencia sanitizada de despachos automaticos.",
+    )
+    dispatch_audit_parser.add_argument(
+        "--profile",
+        help="Limita a consulta ao ID exato de um worker.",
+    )
+    dispatch_audit_parser.add_argument(
+        "--confirmation",
+        choices=("pending", "confirmed", "not_applicable"),
+        help="Filtra pelo estado de confirmacao posterior.",
+    )
+    dispatch_audit_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Quantidade maxima de registros, de 1 a 100. Padrao: 20.",
+    )
+    dispatch_audit_parser.add_argument("--json", action="store_true")
+    dispatch_audit_parser.set_defaults(
+        func=lambda args, config: _dispatch_audit(args, config)
+    )
 
     disable_current_parser = subparsers.add_parser(
         "disable-current-automation",

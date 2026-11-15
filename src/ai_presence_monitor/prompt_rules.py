@@ -278,6 +278,19 @@ def process_prompt_rules(
             last_attempt_at=checked_at,
         )
         settings = _save_rule(store, profile_id, settings, claimed)
+        if profile_id is None or rule.thread_id is None:
+            raise ControlError(
+                "Automatic Prompt Rule dispatch requires an exact worker and session."
+            )
+        audit = presence_store.claim_automation_dispatch(
+            worker_id=profile_id,
+            rule_id=rule.rule_id,
+            source="prompt_rule",
+            trigger=rule.trigger,
+            provider="codex",
+            session_id=rule.thread_id,
+            attempted_at=checked_at,
+        )
         try:
             result = send_native_message(
                 settings=settings,
@@ -288,6 +301,11 @@ def process_prompt_rules(
                 detached=True,
             )
         except CodexInputError:
+            presence_store.complete_automation_dispatch(
+                audit.audit_id,
+                transport_state="failed_or_uncertain",
+                updated_at=checked_at,
+            )
             _complete_dispatch(
                 store,
                 profile_id=profile_id,
@@ -303,6 +321,11 @@ def process_prompt_rules(
             )
 
         occurrence_count = rule.occurrence_count + 1
+        presence_store.complete_automation_dispatch(
+            audit.audit_id,
+            transport_state=result.state,
+            updated_at=checked_at,
+        )
         should_repeat = rule.repeat_enabled and occurrence_count < rule.max_occurrences
         _complete_dispatch(
             store,
