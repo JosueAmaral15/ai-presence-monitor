@@ -18,6 +18,7 @@ from ai_presence_monitor.codex_app_server import (
     ThreadSnapshot,
     probe_codex_app_server,
     read_codex_rate_limits,
+    read_codex_thread,
     sanitize_codex_message,
 )
 
@@ -298,6 +299,41 @@ class CodexAppServerClientTests(unittest.TestCase):
         self.assertEqual(
             [message["method"] for message in transport.sent],
             ["initialize", "initialized", "account/rateLimits/read"],
+        )
+        self.assertTrue(transport.closed)
+
+    def test_thread_reader_requests_only_exact_metadata_and_closes(self) -> None:
+        thread_id = "session-delayed"
+        transport = FakeTransport(
+            [
+                {"id": 1, "result": {}},
+                {
+                    "id": 2,
+                    "result": {
+                        "thread": {
+                            "id": thread_id,
+                            "status": {"type": "notLoaded"},
+                            "turns": [{"text": "private"}],
+                        }
+                    },
+                },
+            ]
+        )
+
+        snapshot = read_codex_thread(
+            thread_id,
+            transport_factory=lambda executable: cast(JsonRpcTransport, transport),
+        )
+
+        self.assertEqual(snapshot.thread_id, thread_id)
+        self.assertEqual(snapshot.status, "notLoaded")
+        self.assertEqual(
+            [message["method"] for message in transport.sent],
+            ["initialize", "initialized", "thread/read"],
+        )
+        self.assertEqual(
+            cast(dict[str, object], transport.sent[-1]["params"]),
+            {"threadId": thread_id, "includeTurns": False},
         )
         self.assertTrue(transport.closed)
 

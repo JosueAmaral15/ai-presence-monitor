@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.13.1 is a Linux prerelease candidate. It is suitable for
+AI Presence Monitor 0.14.0 is a Linux prerelease candidate. It is suitable for
 controlled local evaluation across multiple projects and Linux computers after
 the documented installation and verification gates pass. It is not a hosted
 service, public SaaS, package-index distribution, stable release or multi-tenant

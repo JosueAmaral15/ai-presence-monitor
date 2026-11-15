@@ -124,6 +124,34 @@ other state is fail-closed as `waiting_for_usage`; it neither claims dispatch
 nor consumes an occurrence. The scheduler never reads raw balances or calls
 the App Server itself, so polling cadence and input remain separate concerns.
 
+### Availability recovery and delayed session validation
+
+Availability Recovery is an independent consumer, not a Prompt Rule subtype.
+Its durable observer reacts to a normalized `unavailable -> available`
+transition and never treats initial availability as recovery.
+
+```text
+provider factory
+      |
+      +--> capacity strategy ----> normalized availability
+      +--> session validator ----> available | unknown
+      +--> native dispatcher ----> preliminary transport state
+                                      |
+                                      v
+                            later canonical hooks
+```
+
+The Codex family interprets the account-level usage permission and uses known
+rate-limit windows only as a fail-closed fallback. Five-hour and weekly limits
+remain adapter details. Unsupported provider families are not constructed.
+
+Immediately before delayed Availability Recovery or Prompt Rule transport, the
+Codex validator performs `thread/read` with `includeTurns=false` and checks the
+returned exact ID. An unreadable target remains armed as
+`waiting_for_session`; it does not trigger GUI fallback. This metadata check
+proves addressability only at that instant. E2E processing still requires a
+unique returned marker and later same-session hooks.
+
 ### Linux system evidence observers
 
 Phase 4 adds `linux_evidence.py` and the Linux-only

@@ -11,6 +11,7 @@ from unittest.mock import patch
 from test_cli import make_config
 
 from ai_presence_monitor.control import (
+    DEFAULT_AVAILABILITY_RECOVERY_TEXT,
     DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
     DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
     ControlError,
@@ -79,11 +80,12 @@ class ControlStoreTests(unittest.TestCase):
                 ),
                 quota_recovery_rules=(
                     QuotaRecoveryRule(
-                        window="five_hour",
+                        window="availability",
+                        provider="codex",
                         enabled=True,
                         thread_id="thread-1",
-                        text=DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
-                        last_state="waiting_for_availability",
+                        text=DEFAULT_AVAILABILITY_RECOVERY_TEXT,
+                        last_state="waiting_for_session",
                         exhausted_observed_at=1_800.0,
                     ),
                 ),
@@ -97,6 +99,36 @@ class ControlStoreTests(unittest.TestCase):
             payload = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(payload["version"], 1)
             self.assertNotIn("token", payload)
+
+    def test_legacy_recovery_rule_without_provider_remains_readable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "control.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "settings": {
+                            "native_input_enabled": True,
+                            "quota_recovery_rules": [
+                                {
+                                    "window": "five_hour",
+                                    "enabled": True,
+                                    "thread_id": "session-legacy",
+                                    "text": DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
+                                    "last_state": "waiting_for_availability",
+                                }
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            rule = ControlStore(path, ControlSettings()).load().quota_recovery_rules[0]
+
+            self.assertEqual(rule.provider, "codex")
+            self.assertEqual(rule.window, "five_hour")
+            self.assertEqual(rule.last_state, "waiting_for_availability")
 
     def test_legacy_control_file_receives_scheduled_prompt_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -374,16 +374,20 @@ depois de o worker ficar inativo. No
 Linux, instale-o com `ai-presence install-background-service --component
 prompt-rule-observer`.
 
-A aba separada **Token recovery** da bandeja envia prompts quando tokens voltam
-a ficar disponiveis. Ela nao substitui Prompt Rules e nao possui atraso nem gatilho de
-inatividade. O usuario pode habilitar separadamente as janelas de cinco horas e
-semanal para um projeto/agente, selecionar a sessao Codex exata e editar a
-mensagem explicita. O observer envia uma unica vez somente depois de observar
-aquela janela esgotada e posteriormente disponivel. Disponibilidade inicial,
-janela desconhecida e inatividade comum nao disparam mensagem. Um novo
-esgotamento rearma outro ciclo; tentativa falha ou incerta nao e repetida no
-mesmo ciclo. O recurso reutiliza o servico `prompt-rule-observer`, permitindo
-que uma leitura sanitizada sirva aos dois mecanismos.
+A aba separada **Availability recovery** envia uma mensagem quando o provedor
+volta a aceitar trabalho. Ela nao substitui Prompt Rules e nao possui atraso
+nem gatilho de inatividade. O usuario habilita uma unica politica por
+projeto/agente, seleciona a sessao exata e edita a mensagem. Janelas de cinco
+horas e semanal sao detalhes internos do adapter Codex, nao opcoes separadas.
+O observer envia uma unica vez somente depois de observar indisponibilidade e
+posterior disponibilidade. Antes do transporte, uma leitura nova precisa
+confirmar que a sessao exata ainda existe; caso contrario, a regra permanece
+armada em `waiting_for_session`. Disponibilidade inicial, evidencia desconhecida
+e inatividade comum nao disparam mensagem.
+
+A Strategy e a Abstract Factory possuem hoje somente a familia Codex. Gemini e
+Claude permanecem extensoes fail-closed ate existir fonte documentada de
+capacidade e transporte para sessao exata.
 
 O atraso padrao e 270 minutos e o texto padrao e `continue`. Salvar uma regra
 sem mudancas preserva o vencimento atual. Reabilitar uma regra ou alterar

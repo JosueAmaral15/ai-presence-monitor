@@ -21,11 +21,10 @@ from .codex_input import (
 )
 from .config import AppConfig, load_config
 from .control import (
-    DEFAULT_FIVE_HOUR_RECOVERY_TEXT,
+    DEFAULT_AVAILABILITY_RECOVERY_TEXT,
     DEFAULT_PROMPT_RULE_OCCURRENCES,
     DEFAULT_SCHEDULED_PROMPT_DELAY_MINUTES,
     DEFAULT_SCHEDULED_PROMPT_TEXT,
-    DEFAULT_WEEKLY_RECOVERY_TEXT,
     MAX_PROMPT_RULES,
     MAX_SCHEDULED_PROMPT_DELAY_MINUTES,
     MAX_SCHEDULED_PROMPT_TEXT_LENGTH,
@@ -44,6 +43,7 @@ from .prompt_rules import (
 from .quota_recovery import (
     configure_quota_recovery_rule,
     replace_quota_recovery_rules,
+    unified_availability_rule,
 )
 from .remote_questions import RemoteQuestionError, build_discord_client
 from .scheduled_prompt import (
@@ -442,56 +442,47 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
 
             recovery_tab = QWidget()
             recovery_layout = QVBoxLayout(recovery_tab)
-            self.tabs.addTab(recovery_tab, "Token recovery")
-            recovery_title = QLabel("Codex token availability observer")
+            self.tabs.addTab(recovery_tab, "Availability recovery")
+            recovery_title = QLabel("Agent capacity availability observer")
             recovery_title.setStyleSheet("font-size: 14px; font-weight: 600;")
             recovery_layout.addWidget(recovery_title)
 
-            five_rule = self._quota_rule(settings, "five_hour")
-            self.five_hour_recovery = QCheckBox(
-                "Send a prompt when five-hour tokens become available"
+            recovery_rule = self._availability_rule(settings)
+            self.availability_recovery = QCheckBox(
+                "Send a message when agent capacity becomes available"
             )
-            self.five_hour_recovery.setChecked(
-                five_rule.enabled if five_rule else False
+            self.availability_recovery.setChecked(
+                recovery_rule.enabled if recovery_rule else False
             )
-            recovery_layout.addWidget(self.five_hour_recovery)
-            five_form = QFormLayout()
-            self.five_hour_session = session_combo(
-                five_rule.thread_id if five_rule else settings.codex_thread_id,
+            recovery_layout.addWidget(self.availability_recovery)
+            recovery_form = QFormLayout()
+            self.availability_provider = QComboBox()
+            self.availability_provider.addItem("Codex", "codex")
+            if recovery_rule is not None:
+                provider_index = self.availability_provider.findData(
+                    recovery_rule.provider
+                )
+                if provider_index >= 0:
+                    self.availability_provider.setCurrentIndex(provider_index)
+            recovery_form.addRow("Provider", self.availability_provider)
+            self.availability_session = session_combo(
+                recovery_rule.thread_id if recovery_rule else settings.codex_thread_id,
                 selected_profile(self.profile),
             )
-            five_form.addRow("Exact Codex session", self.five_hour_session)
-            self.five_hour_text = QLineEdit(
-                five_rule.text if five_rule else DEFAULT_FIVE_HOUR_RECOVERY_TEXT
+            recovery_form.addRow("Exact agent session", self.availability_session)
+            self.availability_text = QLineEdit(
+                recovery_rule.text
+                if recovery_rule
+                else DEFAULT_AVAILABILITY_RECOVERY_TEXT
             )
-            self.five_hour_text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
-            five_form.addRow("Recovery message", self.five_hour_text)
-            recovery_layout.addLayout(five_form)
-
-            weekly_rule = self._quota_rule(settings, "weekly")
-            self.weekly_recovery = QCheckBox(
-                "Send a prompt when weekly tokens become available"
-            )
-            self.weekly_recovery.setChecked(
-                weekly_rule.enabled if weekly_rule else False
-            )
-            recovery_layout.addWidget(self.weekly_recovery)
-            weekly_form = QFormLayout()
-            self.weekly_session = session_combo(
-                weekly_rule.thread_id if weekly_rule else settings.codex_thread_id,
-                selected_profile(self.profile),
-            )
-            weekly_form.addRow("Exact Codex session", self.weekly_session)
-            self.weekly_text = QLineEdit(
-                weekly_rule.text if weekly_rule else DEFAULT_WEEKLY_RECOVERY_TEXT
-            )
-            self.weekly_text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
-            weekly_form.addRow("Recovery message", self.weekly_text)
-            recovery_layout.addLayout(weekly_form)
+            self.availability_text.setMaxLength(MAX_SCHEDULED_PROMPT_TEXT_LENGTH)
+            recovery_form.addRow("Recovery message", self.availability_text)
+            recovery_layout.addLayout(recovery_form)
             recovery_note = QLabel(
-                "A message is sent only after this monitor observes the selected "
-                "window exhausted and later available. Initial availability, "
-                "unknown evidence and ordinary inactivity do not trigger it."
+                "This is independent from Prompt rules. A message is sent only "
+                "after the provider reports capacity unavailable and later "
+                "available, and the exact session is validated again. Initial "
+                "availability and unknown evidence do not trigger it."
             )
             recovery_note.setWordWrap(True)
             recovery_layout.addWidget(recovery_note)
@@ -524,44 +515,33 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
             self.endpoint.setText(settings.codex_remote or "")
             self.auth_env.setText(settings.remote_auth_token_env or "")
             self._rebuild_rules(settings)
-            five_rule = self._quota_rule(settings, "five_hour")
-            self.five_hour_recovery.setChecked(
-                five_rule.enabled if five_rule else False
+            recovery_rule = self._availability_rule(settings)
+            provider_index = self.availability_provider.findData(
+                recovery_rule.provider if recovery_rule else "codex"
+            )
+            if provider_index >= 0:
+                self.availability_provider.setCurrentIndex(provider_index)
+            self.availability_recovery.setChecked(
+                recovery_rule.enabled if recovery_rule else False
             )
             populate_session_combo(
-                self.five_hour_session,
-                five_rule.thread_id if five_rule else settings.codex_thread_id,
+                self.availability_session,
+                recovery_rule.thread_id
+                if recovery_rule
+                else settings.codex_thread_id,
                 profile_id,
             )
-            self.five_hour_text.setText(
-                five_rule.text if five_rule else DEFAULT_FIVE_HOUR_RECOVERY_TEXT
-            )
-            weekly_rule = self._quota_rule(settings, "weekly")
-            self.weekly_recovery.setChecked(
-                weekly_rule.enabled if weekly_rule else False
-            )
-            populate_session_combo(
-                self.weekly_session,
-                weekly_rule.thread_id if weekly_rule else settings.codex_thread_id,
-                profile_id,
-            )
-            self.weekly_text.setText(
-                weekly_rule.text if weekly_rule else DEFAULT_WEEKLY_RECOVERY_TEXT
+            self.availability_text.setText(
+                recovery_rule.text
+                if recovery_rule
+                else DEFAULT_AVAILABILITY_RECOVERY_TEXT
             )
 
         @staticmethod
-        def _quota_rule(
+        def _availability_rule(
             settings: ControlSettings,
-            window: str,
         ) -> QuotaRecoveryRule | None:
-            return next(
-                (
-                    rule
-                    for rule in settings.quota_recovery_rules
-                    if rule.window == window
-                ),
-                None,
-            )
+            return unified_availability_rule(settings)
 
         def _rules_for_settings(
             self,
@@ -656,18 +636,12 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 settings,
                 [
                     configure_quota_recovery_rule(
-                        self._quota_rule(self._original, "five_hour"),
-                        window="five_hour",
-                        enabled=self.five_hour_recovery.isChecked(),
-                        thread_id=selected_session(self.five_hour_session),
-                        text=self.five_hour_text.text(),
-                    ),
-                    configure_quota_recovery_rule(
-                        self._quota_rule(self._original, "weekly"),
-                        window="weekly",
-                        enabled=self.weekly_recovery.isChecked(),
-                        thread_id=selected_session(self.weekly_session),
-                        text=self.weekly_text.text(),
+                        self._availability_rule(self._original),
+                        window="availability",
+                        provider=str(self.availability_provider.currentData()),
+                        enabled=self.availability_recovery.isChecked(),
+                        thread_id=selected_session(self.availability_session),
+                        text=self.availability_text.text(),
                     ),
                 ],
             )
@@ -928,6 +902,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 "Waiting for fresh Codex usage availability observed after "
                 "this rule became due."
             )
+        if rule.enabled and rule.last_state == "waiting_for_session":
+            return "Waiting for the exact agent session to become readable."
         if rule.enabled and rule.next_due_at is not None:
             due = datetime.fromtimestamp(rule.next_due_at).astimezone()
             return (
@@ -959,8 +935,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
         )
         if (
             not preferences_dialog.isVisible()
-            or labels != ("Controls", "Prompt rules", "Token recovery")
-            or preferences_dialog.five_hour_text.maxLength()
+            or labels != ("Controls", "Prompt rules", "Availability recovery")
+            or preferences_dialog.availability_text.maxLength()
             != MAX_SCHEDULED_PROMPT_TEXT_LENGTH
         ):
             preferences_dialog.close()
@@ -970,7 +946,8 @@ def run_tray(  # pragma: no cover - optional Qt presentation; smoke-tested.
                 "a janela de preferencias nao passou na verificacao visual."
             )
         print(
-            "Preferencias construidas com Controls, Prompt rules e Token recovery."
+            "Preferencias construidas com Controls, Prompt rules e "
+            "Availability recovery."
         )
         preferences_dialog.close()
         if owned_app:

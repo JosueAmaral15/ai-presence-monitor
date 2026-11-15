@@ -497,6 +497,22 @@ def read_codex_rate_limits(
         transport.close()
 
 
+def read_codex_thread(
+    thread_id: str,
+    *,
+    codex_executable: str = "codex",
+    request_timeout: float = 10.0,
+    transport_factory: Callable[[str], JsonRpcTransport] = SubprocessJsonRpcTransport,
+) -> ThreadSnapshot:
+    transport = transport_factory(codex_executable)
+    try:
+        client = CodexAppServerClient(transport, request_timeout=request_timeout)
+        client.initialize()
+        return client.read_thread(thread_id)
+    finally:
+        transport.close()
+
+
 def sanitize_codex_message(
     message: dict[str, object],
     *,

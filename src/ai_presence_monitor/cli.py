@@ -789,6 +789,23 @@ def _control(args: argparse.Namespace, config: AppConfig) -> int:
         1 for rule in prompt_rules if rule.enabled
     )
     quota_recovery_rules = settings_payload.pop("quota_recovery_rules")
+    availability_states = [
+        {
+            "provider": rule.provider,
+            "scope": rule.window,
+            "enabled": rule.enabled,
+            "state": rule.last_state,
+        }
+        for rule in quota_recovery_rules
+    ]
+    settings_payload["availability_recovery_rule_count"] = len(
+        quota_recovery_rules
+    )
+    settings_payload["enabled_availability_recovery_rule_count"] = sum(
+        1 for rule in quota_recovery_rules if rule.enabled
+    )
+    settings_payload["availability_recovery_states"] = availability_states
+    # Backward-compatible aliases for clients written before Task 066.
     settings_payload["quota_recovery_rule_count"] = len(quota_recovery_rules)
     settings_payload["enabled_quota_recovery_rule_count"] = sum(
         1 for rule in quota_recovery_rules if rule.enabled
