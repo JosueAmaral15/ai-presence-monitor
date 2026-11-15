@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.13.0 is a Linux prerelease candidate. It is suitable for
+AI Presence Monitor 0.13.1 is a Linux prerelease candidate. It is suitable for
 controlled local evaluation across multiple projects and Linux computers after
 the documented installation and verification gates pass. It is not a hosted
 service, public SaaS, package-index distribution, stable release or multi-tenant
@@ -75,6 +75,25 @@ controlled operation. A release is supported only when:
 There is no response-time SLA. Operational defects should include sanitized
 version, command exit status, schema status and doctor output. Never attach the
 real `.env`, database, tokens, webhooks, prompts or message contents.
+
+## Storage Safety
+
+SQLite and the background observers require writable host storage. Treat
+`database or disk is full` as a host incident: stop release promotion, recover
+space and verify database integrity before interpreting restart loops as an
+application regression.
+
+Regenerable caches may be cleared only after checking that no active process
+holds files inside them. Preserve repositories, `.env`, SQLite databases,
+transactional rollback manifests, active virtual environments and the current
+Codex primary runtime. Safe candidates can include Poetry download artifacts,
+unused Playwright browser downloads and incomplete `codex-runtime-install-*`
+staging directories. Their removal means the corresponding dependency may
+need to be downloaded again.
+
+After recovery, run `schema-status --json`, `doctor --strict`, inspect service
+restart counters and observe several real monitor/observer cycles. A service
+that is merely active immediately after restart is not stability evidence.
 
 ## End of Support
 
