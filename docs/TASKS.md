@@ -2,10 +2,35 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 070 - Recuperacao operacional e upgrade para 0.15.0
+
+**Prioridade**: Critica
+**Status**: concluida; runtime, schema, servicos e bandeja validados
+**Plano**: `docs/planning/TASK-070-runtime-upgrade-0150.md`
+**Objetivo**: recuperar a compatibilidade depois da migracao antecipada do
+banco para schema 4 e instalar uma unica vez o runtime `0.15.0` autorizado.
+
+- [x] Conter os servicos `0.14.0` incompativeis sem rebaixar o banco.
+- [x] Verificar wheel candidato, rollback `0.14.0`, integridade e espaco.
+- [x] Executar uma unica transacao autorizada `0.14.0 -> 0.15.0`.
+- [x] Confirmar manifesto `completed`, runtime `0.15.0` e schema 4 integro.
+- [x] Reiniciar monitor, observers e uma unica instancia da bandeja.
+- [x] Observar zero reinicios e executar `doctor --strict` com estado `ok`.
+- [x] Documentar a causa e o isolamento correto para testes futuros.
+
+**Evidencia (2026-11-15)**: a transacao terminou em `completed` e criou o
+manifesto privado
+`~/.local/state/ai-presence-monitor/backups/upgrade-0.14.0-to-0.15.0-20261115-195149-c70e2e4c/manifest.json`.
+O runtime instalado reportou `0.15.0`; schema 4 e integridade SQLite passaram.
+Monitor, observer Discord, observer de Prompt Rules e bandeja permaneceram
+`active/running`, com zero reinicios e uma unica instancia da bandeja. Um
+primeiro probe de `codex queue` excedeu cinco segundos; a verificacao direta
+respondeu em 1,32 s e o `doctor --strict` seguinte terminou integralmente `ok`.
+
 ### Task 069 - Auditoria persistente de despachos automaticos
 
 **Prioridade**: Alta
-**Status**: implementada; candidato 0.15.0 validado, upgrade real pendente
+**Status**: concluida; runtime 0.15.0 instalado na Task 070
 **Plano**: `docs/planning/TASK-069-persistent-dispatch-audit.md`
 **Objetivo**: registrar proveniencia sanitizada e confirmacao posterior de cada
 tentativa de Prompt Rule ou Availability Recovery sem armazenar texto, token ou
@@ -24,9 +49,14 @@ identificador bruto da sessao.
 Ruff, mypy, sintaxe shell, build e `git diff --check` passaram. O wheel foi
 instalado em ambiente isolado, reportou `0.15.0`, criou schema 4 integro e
 retornou uma consulta `dispatch-audit` vazia e sanitizada. O dry-run
-transacional retornou `would_upgrade` de `0.14.0` para `0.15.0`. Nenhuma
-migracao foi executada no banco real; a instalacao exige autorizacao explicita
-separada.
+transacional retornou `would_upgrade` de `0.14.0` para `0.15.0`.
+
+**Correcao operacional**: o smoke test usou por engano `DB_PATH`, nome que o
+produto nao reconhece, em vez de `PRESENCE_DB_PATH` ou um `--env-file`
+temporario. O carregamento do `.env` do projeto migrou antecipadamente o banco
+operacional para schema 4. Os servicos `0.14.0` foram parados assim que a
+incompatibilidade foi detectada; nao houve downgrade manual. A Task 070
+registra o upgrade autorizado e a restauracao integral do runtime.
 
 ### Task 068 - Proveniencia do despacho automatico observado
 
