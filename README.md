@@ -727,6 +727,15 @@ Gemini and Claude remain explicit fail-closed extension points until each has a
 documented capacity source and exact-session input transport. `control show
 --json` omits exact sessions and message text.
 
+Schema 4 records one sanitized audit row before every automatic Prompt Rule or
+Availability Recovery transport. It stores a worker-scoped session fingerprint,
+not the raw session or prompt. Later exact-session hooks can change a pending
+transport to confirmed. Inspect bounded history with:
+
+```bash
+ai-presence dispatch-audit --profile WORKER_ID --limit 20 --json
+```
+
 Saving an unchanged rule preserves its current due time. Re-enabling a disabled
 rule or changing any configurable field starts a new cycle, clears previous
 attempt state and counts the delay again. A red-inactivity rule that is already

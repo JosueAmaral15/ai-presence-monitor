@@ -234,6 +234,7 @@ def observe_quota_recovery_once(
         results.extend(
             process_quota_recovery_snapshot(
                 store=control_store,
+                presence_store=presence_store,
                 profile_id=target.profile_id,
                 window_states=window_states,
                 checked_at=checked_at,
@@ -251,6 +252,7 @@ def observe_quota_recovery_once(
 def process_quota_recovery_snapshot(
     *,
     store: ControlStore,
+    presence_store: PresenceStore,
     profile_id: str,
     window_states: dict[str, QuotaWindowState],
     checked_at: float,
@@ -324,6 +326,19 @@ def process_quota_recovery_snapshot(
             last_attempt_at=checked_at,
         )
         settings = _save_rule(store, profile_id, settings, claimed)
+        if original.thread_id is None:
+            raise ControlError(
+                "Availability Recovery dispatch requires an exact session."
+            )
+        audit = presence_store.claim_automation_dispatch(
+            worker_id=profile_id,
+            rule_id=f"{original.provider}:{original.window}",
+            source="availability_recovery",
+            trigger="unavailable_to_available",
+            provider=original.provider,
+            session_id=original.thread_id,
+            attempted_at=checked_at,
+        )
         try:
             result = send_native_message(
                 settings=settings,
@@ -334,6 +349,11 @@ def process_quota_recovery_snapshot(
                 detached=True,
             )
         except CodexInputError:
+            presence_store.complete_automation_dispatch(
+                audit.audit_id,
+                transport_state="failed_or_uncertain",
+                updated_at=checked_at,
+            )
             _complete_dispatch(
                 store,
                 profile_id=profile_id,
@@ -349,6 +369,11 @@ def process_quota_recovery_snapshot(
                 )
             )
             continue
+        presence_store.complete_automation_dispatch(
+            audit.audit_id,
+            transport_state=result.state,
+            updated_at=checked_at,
+        )
         _complete_dispatch(
             store,
             profile_id=profile_id,

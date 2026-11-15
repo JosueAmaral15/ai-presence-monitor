@@ -1,5 +1,18 @@
 # Rollback
 
+## Automatic dispatch audit (schema 4)
+
+Version 0.15.0 upgrades the local database from schema 3 to schema 4 by adding
+the `automation_dispatch_audit` table and indexes. The migration does not
+rewrite existing operational rows.
+
+A 0.14.0 runtime refuses to open a database marked as schema 4. Roll back only
+through the transactional manifest created during the 0.14.0 to 0.15.0
+upgrade, with both `--authorize-once` and `--restore-database`. That operation
+restores the schema 3 snapshot and discards audit and operational records
+written after the upgrade. Never lower `PRAGMA user_version` manually or drop
+the audit table from a real database.
+
 ## Debian package 0.13.0
 
 Before replacing a working wheel installation, identify the active executable

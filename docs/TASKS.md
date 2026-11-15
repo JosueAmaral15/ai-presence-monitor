@@ -2,10 +2,36 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 069 - Auditoria persistente de despachos automaticos
+
+**Prioridade**: Alta
+**Status**: implementada; candidato 0.15.0 validado, upgrade real pendente
+**Plano**: `docs/planning/TASK-069-persistent-dispatch-audit.md`
+**Objetivo**: registrar proveniencia sanitizada e confirmacao posterior de cada
+tentativa de Prompt Rule ou Availability Recovery sem armazenar texto, token ou
+identificador bruto da sessao.
+
+- [x] Criar schema 4 com tabela e indices de auditoria.
+- [x] Gravar a tentativa antes do transporte e seu resultado depois dele.
+- [x] Confirmar posteriormente por hook da sessao exata.
+- [x] Diferenciar `prompt_rule` de `availability_recovery`.
+- [x] Expor consulta CLI sanitizada e limitada por perfil.
+- [x] Cobrir migracao, falha, confirmacao e ausencia de dados sensiveis.
+- [x] Atualizar arquitetura, seguranca e operacao.
+- [x] Executar gates completos e preparar candidato de upgrade.
+
+**Evidencia (2026-11-15)**: 403 testes passaram e a cobertura ficou em 87%;
+Ruff, mypy, sintaxe shell, build e `git diff --check` passaram. O wheel foi
+instalado em ambiente isolado, reportou `0.15.0`, criou schema 4 integro e
+retornou uma consulta `dispatch-audit` vazia e sanitizada. O dry-run
+transacional retornou `would_upgrade` de `0.14.0` para `0.15.0`. Nenhuma
+migracao foi executada no banco real; a instalacao exige autorizacao explicita
+separada.
+
 ### Task 068 - Proveniencia do despacho automatico observado
 
 **Prioridade**: Alta
-**Status**: investigacao concluida; melhoria de auditoria pendente
+**Status**: concluida; melhoria de auditoria entregue na Task 069
 **Plano**: `docs/planning/TASK-068-automatic-dispatch-provenance.md`
 **Objetivo**: correlacionar o prompt recebido durante a ausencia do operador
 com a regra, o perfil, a fila Codex e os hooks posteriores, sem confundir
@@ -16,7 +42,7 @@ Prompt Rules condicionadas a uso com Availability Recovery.
 - [x] Identificar a regra, o perfil e a segunda condicao de disponibilidade.
 - [x] Separar o despacho das 11:23, pertencente ao projeto `clarify`.
 - [x] Confirmar que nenhuma Availability Recovery rule estava configurada.
-- [ ] Persistir auditoria por despacho com perfil, regra, origem e resultado.
+- [x] Persistir auditoria por despacho com perfil, regra, origem e resultado.
 
 **Conclusao (2026-11-15)**: o observer iniciou o despacho para
 `ai-presence-monitor` as 11:28:44/45. A sessao exata iniciou a tarefa as

@@ -182,6 +182,11 @@ class QuotaRecoveryTests(unittest.TestCase):
                 client.calls,
                 [("session-1", "resume when capacity returns")],
             )
+            audits = presence.list_automation_dispatch_audits(worker_id="worker-1")
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0].source, "availability_recovery")
+            self.assertEqual(audits[0].trigger, "unavailable_to_available")
+            self.assertEqual(audits[0].transport_state, "dispatch_started")
 
     def test_legacy_rules_merge_only_when_destination_and_text_match(self) -> None:
         first = configure_quota_recovery_rule(
@@ -321,6 +326,10 @@ class QuotaRecoveryTests(unittest.TestCase):
             self.assertEqual(failed.rule_results[0].state, "failed_or_uncertain")
             self.assertEqual(repeated.rule_results[0].state, "armed")
             self.assertEqual(len(client.calls), 1)
+            audits = presence.list_automation_dispatch_audits(worker_id="worker-1")
+            self.assertEqual(len(audits), 1)
+            self.assertEqual(audits[0].transport_state, "failed_or_uncertain")
+            self.assertEqual(audits[0].confirmation_state, "not_applicable")
 
     def test_profile_settings_remain_isolated_after_restart(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

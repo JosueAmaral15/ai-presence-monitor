@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.14.0 is a Linux prerelease candidate. It is suitable for
+AI Presence Monitor 0.15.0 is a Linux prerelease candidate. It is suitable for
 controlled local evaluation across multiple projects and Linux computers after
 the documented installation and verification gates pass. It is not a hosted
 service, public SaaS, package-index distribution, stable release or multi-tenant
@@ -15,7 +15,7 @@ security boundary.
 | Operating system | Linux |
 | Python | CPython 3.10, 3.11 and 3.12 |
 | Package | Dedicated per-user wheel or verified Debian package |
-| Database | Local SQLite, schema version 3 |
+| Database | Local SQLite, schema version 4 |
 | Background runtime | User systemd when available; direct CLI otherwise |
 | Codex activity | Installed hooks and explicit lifecycle commands |
 | Native Codex input | Codex CLI providing `codex queue` |

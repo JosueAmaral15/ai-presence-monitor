@@ -230,6 +230,18 @@ usa mouse, teclado, Discord ou atividade sintetica.
 `ai-presence control show --json` informa somente provedor, escopo legado,
 habilitacao e estado. Sessao exata e texto nao aparecem nesse relatorio.
 
+Cada tentativa automatica fica auditavel no schema 4. Consulte sem expor texto
+ou ID bruto de sessao:
+
+```bash
+ai-presence dispatch-audit --profile WORKER_ID --limit 20 --json
+ai-presence dispatch-audit --profile WORKER_ID --confirmation pending
+```
+
+`dispatching`, `dispatch_started` e `input_emitted` descrevem transporte, nao
+processamento pelo agente. Somente um hook canonico posterior da mesma sessao
+muda a confirmacao para `confirmed`. `failed_or_uncertain` permanece terminal.
+
 O gatilho pode contar desde a ativacao ou desde o ponto de duracao vermelha,
 seguido pelo atraso configurado. Um `finish` real reinicia o relogio monitorado,
 mas nao cancela uma regra explicitamente armada. Repeticao exige intervalo e limite de ocorrencias, com

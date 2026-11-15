@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import sqlite3
 import time
@@ -18,7 +19,12 @@ CODEX_SESSION_PATTERN = re.compile(
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=$|[ |])"
 )
 
-SCHEMA_VERSION = 3
+
+def automation_session_fingerprint(worker_id: str, session_id: str) -> str:
+    payload = f"{worker_id}\0{session_id}".encode()
+    return hashlib.sha256(payload).hexdigest()
+
+SCHEMA_VERSION = 4
 SQLITE_BUSY_TIMEOUT_SECONDS = 30.0
 SQLITE_BUSY_TIMEOUT_MS = int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
 REQUIRED_TABLES = frozenset(
@@ -30,6 +36,7 @@ REQUIRED_TABLES = frozenset(
         "agent_conversations",
         "agent_messages",
         "observer_state",
+        "automation_dispatch_audit",
         "diagnostic_evidence",
         "diagnostic_diagnoses",
         "diagnostic_diagnosis_evidence",
@@ -41,7 +48,8 @@ REQUIRED_TABLES = frozenset(
 REQUIRED_TABLES_BY_SCHEMA = {
     1: REQUIRED_TABLES - {"agent_conversations", "agent_messages"},
     2: REQUIRED_TABLES,
-    3: REQUIRED_TABLES,
+    3: REQUIRED_TABLES - {"automation_dispatch_audit"},
+    4: REQUIRED_TABLES,
 }
 
 
@@ -185,6 +193,23 @@ class CodexSessionRef:
     worker_id: str
     task: str | None
     observed_at: float
+
+
+@dataclass(frozen=True)
+class AutomationDispatchAudit:
+    audit_id: str
+    worker_id: str
+    rule_id: str
+    source: str
+    trigger: str
+    provider: str
+    target_session_fingerprint: str
+    occurrence_number: int
+    transport_state: str
+    confirmation_state: str
+    attempted_at: float
+    confirmed_at: float | None
+    updated_at: float
 
 
 @dataclass(frozen=True)
@@ -442,6 +467,52 @@ class PresenceStore:
                     state_value TEXT NOT NULL,
                     updated_at REAL NOT NULL
                 )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS automation_dispatch_audit (
+                    audit_id TEXT PRIMARY KEY,
+                    worker_id TEXT NOT NULL,
+                    rule_id TEXT NOT NULL,
+                    source TEXT NOT NULL CHECK (
+                        source IN ('prompt_rule', 'availability_recovery')
+                    ),
+                    trigger TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    target_session_fingerprint TEXT NOT NULL,
+                    occurrence_number INTEGER NOT NULL CHECK (
+                        occurrence_number > 0
+                    ),
+                    transport_state TEXT NOT NULL CHECK (
+                        transport_state IN (
+                            'dispatching',
+                            'dispatch_started',
+                            'input_emitted',
+                            'failed_or_uncertain'
+                        )
+                    ),
+                    confirmation_state TEXT NOT NULL CHECK (
+                        confirmation_state IN (
+                            'pending', 'confirmed', 'not_applicable'
+                        )
+                    ),
+                    attempted_at REAL NOT NULL,
+                    confirmed_at REAL,
+                    updated_at REAL NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_dispatch_audit_worker_time
+                ON automation_dispatch_audit(worker_id, attempted_at DESC)
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_dispatch_audit_pending
+                ON automation_dispatch_audit(confirmation_state, worker_id)
                 """
             )
             initialize_diagnostic_schema(conn)
@@ -1381,6 +1452,186 @@ class PresenceStore:
                 (key, value, updated_at),
             )
 
+    def claim_automation_dispatch(
+        self,
+        *,
+        worker_id: str,
+        rule_id: str,
+        source: str,
+        trigger: str,
+        provider: str,
+        session_id: str,
+        attempted_at: float | None = None,
+    ) -> AutomationDispatchAudit:
+        if source not in {"prompt_rule", "availability_recovery"}:
+            raise ValueError(f"Unsupported automation source: {source}")
+        values = (worker_id, rule_id, trigger, provider, session_id)
+        if any(not value.strip() for value in values):
+            raise ValueError("Automation audit fields cannot be empty.")
+        timestamp = time.time() if attempted_at is None else attempted_at
+        audit_id = uuid.uuid4().hex
+        fingerprint = automation_session_fingerprint(worker_id, session_id)
+        with self.session() as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM automation_dispatch_audit
+                WHERE worker_id = ? AND rule_id = ? AND source = ?
+                """,
+                (worker_id, rule_id, source),
+            ).fetchone()
+            occurrence_number = int(row["count"]) + 1
+            conn.execute(
+                """
+                INSERT INTO automation_dispatch_audit (
+                    audit_id, worker_id, rule_id, source, trigger, provider,
+                    target_session_fingerprint, occurrence_number,
+                    transport_state, confirmation_state, attempted_at,
+                    confirmed_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'dispatching', 'pending', ?, NULL, ?)
+                """,
+                (
+                    audit_id,
+                    worker_id,
+                    rule_id,
+                    source,
+                    trigger,
+                    provider,
+                    fingerprint,
+                    occurrence_number,
+                    timestamp,
+                    timestamp,
+                ),
+            )
+        audit = self.get_automation_dispatch_audit(audit_id)
+        assert audit is not None
+        return audit
+
+    def complete_automation_dispatch(
+        self,
+        audit_id: str,
+        *,
+        transport_state: str,
+        updated_at: float | None = None,
+    ) -> AutomationDispatchAudit:
+        if transport_state not in {
+            "dispatch_started",
+            "input_emitted",
+            "failed_or_uncertain",
+        }:
+            raise ValueError(f"Unsupported transport state: {transport_state}")
+        timestamp = time.time() if updated_at is None else updated_at
+        confirmation = (
+            "not_applicable"
+            if transport_state == "failed_or_uncertain"
+            else "pending"
+        )
+        with self.session() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE automation_dispatch_audit
+                SET transport_state = ?, confirmation_state = ?, updated_at = ?
+                WHERE audit_id = ? AND transport_state = 'dispatching'
+                """,
+                (transport_state, confirmation, timestamp, audit_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError(f"Automation audit is not dispatching: {audit_id}")
+        audit = self.get_automation_dispatch_audit(audit_id)
+        assert audit is not None
+        return audit
+
+    def confirm_pending_automation_dispatches(self) -> int:
+        pending = self.list_automation_dispatch_audits(
+            confirmation_state="pending",
+            limit=1000,
+        )
+        confirmed = 0
+        sessions_by_worker: dict[str, list[CodexSessionRef]] = {}
+        for audit in pending:
+            sessions = sessions_by_worker.get(audit.worker_id)
+            if sessions is None:
+                sessions = self.list_codex_sessions(
+                    worker_id=audit.worker_id,
+                    limit=100,
+                )
+                sessions_by_worker[audit.worker_id] = sessions
+            observed_at = max(
+                (
+                    session.observed_at
+                    for session in sessions
+                    if session.observed_at > audit.attempted_at
+                    and automation_session_fingerprint(
+                        audit.worker_id,
+                        session.session_id,
+                    )
+                    == audit.target_session_fingerprint
+                ),
+                default=None,
+            )
+            if observed_at is None:
+                continue
+            with self.session() as conn:
+                cursor = conn.execute(
+                    """
+                    UPDATE automation_dispatch_audit
+                    SET confirmation_state = 'confirmed', confirmed_at = ?,
+                        updated_at = ?
+                    WHERE audit_id = ? AND confirmation_state = 'pending'
+                    """,
+                    (observed_at, observed_at, audit.audit_id),
+                )
+            confirmed += cursor.rowcount
+        return confirmed
+
+    def get_automation_dispatch_audit(
+        self,
+        audit_id: str,
+    ) -> AutomationDispatchAudit | None:
+        with self.session() as conn:
+            row = conn.execute(
+                "SELECT * FROM automation_dispatch_audit WHERE audit_id = ?",
+                (audit_id,),
+            ).fetchone()
+        return self._row_to_automation_dispatch_audit(row) if row else None
+
+    def list_automation_dispatch_audits(
+        self,
+        *,
+        worker_id: str | None = None,
+        confirmation_state: str | None = None,
+        limit: int = 20,
+    ) -> list[AutomationDispatchAudit]:
+        if limit <= 0:
+            return []
+        if limit > 1000:
+            raise ValueError("Automation audit limit cannot exceed 1000.")
+        where: list[str] = []
+        params: list[object] = []
+        if worker_id is not None:
+            where.append("worker_id = ?")
+            params.append(worker_id)
+        if confirmation_state is not None:
+            if confirmation_state not in {"pending", "confirmed", "not_applicable"}:
+                raise ValueError(
+                    f"Unsupported confirmation state: {confirmation_state}"
+                )
+            where.append("confirmation_state = ?")
+            params.append(confirmation_state)
+        clause = f"WHERE {' AND '.join(where)}" if where else ""
+        params.append(limit)
+        with self.session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT * FROM automation_dispatch_audit
+                {clause}
+                ORDER BY attempted_at DESC, audit_id DESC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        return [self._row_to_automation_dispatch_audit(row) for row in rows]
+
     @staticmethod
     def _row_to_worker(row: sqlite3.Row) -> WorkerState:
         return WorkerState(
@@ -1419,6 +1670,26 @@ class PresenceStore:
             level=row["level"],
             triggered_at=row["triggered_at"],
             signal_age_seconds=row["signal_age_seconds"],
+        )
+
+    @staticmethod
+    def _row_to_automation_dispatch_audit(
+        row: sqlite3.Row,
+    ) -> AutomationDispatchAudit:
+        return AutomationDispatchAudit(
+            audit_id=row["audit_id"],
+            worker_id=row["worker_id"],
+            rule_id=row["rule_id"],
+            source=row["source"],
+            trigger=row["trigger"],
+            provider=row["provider"],
+            target_session_fingerprint=row["target_session_fingerprint"],
+            occurrence_number=row["occurrence_number"],
+            transport_state=row["transport_state"],
+            confirmation_state=row["confirmation_state"],
+            attempted_at=row["attempted_at"],
+            confirmed_at=row["confirmed_at"],
+            updated_at=row["updated_at"],
         )
 
     @staticmethod

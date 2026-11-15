@@ -1,5 +1,23 @@
 # Security Checklist
 
+## Task 069 - Persistent automatic-dispatch audit
+
+- [x] The audit row is claimed before automatic native transport.
+- [x] Prompt Rules and Availability Recovery use explicit source values.
+- [x] Raw session IDs and prompt text are excluded from the audit table.
+- [x] Session correlation uses a worker-scoped SHA-256 fingerprint.
+- [x] `dispatch_started` and `input_emitted` remain pending until a later
+      canonical hook from the exact worker and session.
+- [x] Failed or uncertain transport is terminal and cannot be confirmed.
+- [x] The bounded CLI is read-only and cannot mutate or rearm a rule.
+
+### Residual risk
+
+The fingerprint is a correlation identifier, not a secret or authentication
+boundary. A process running as the same OS user can still modify the SQLite
+database. Canonical hooks prove later session activity, not that a particular
+model response was correct or useful.
+
 ## Task 063 - Prompt observer ownership and token recovery
 
 - [x] The background observer is the only dispatcher for modern Prompt Rules;

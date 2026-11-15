@@ -70,7 +70,7 @@ class AgentChatTests(unittest.TestCase):
 
             PresenceStore(path)
 
-            self.assertEqual(SCHEMA_VERSION, 3)
+            self.assertEqual(SCHEMA_VERSION, 4)
             self.assertTrue(inspect_schema(path).healthy)
             with sqlite3.connect(path) as conn:
                 value = conn.execute("SELECT value FROM legacy_marker").fetchone()[0]
