@@ -40,6 +40,15 @@ The first post-start Codex queue probe exceeded its five-second health timeout.
 A direct non-dispatching `codex queue --help` probe completed in 1.32 seconds,
 and the next strict doctor check passed. No prompt was sent during validation.
 
+A later `schema-status` invocation returned `unreadable` once while the monitor
+and two observers were concurrently using the DELETE-journal database. A retry
+after three seconds and an independent read-only SQLite connection both
+reported schema 4 and `integrity=ok`; service restart counters remained zero.
+This is evidence of transient read contention, not database corruption. The
+operator should retry a read-only health query before escalating this isolated
+result, while repeated unreadable results remain a failure requiring service
+and storage diagnosis.
+
 ## Future Isolation Rule
 
 Do not rely on a generic `DB_PATH` variable. A disposable package test must:

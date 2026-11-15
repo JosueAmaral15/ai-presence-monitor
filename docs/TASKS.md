@@ -26,6 +26,10 @@ Monitor, observer Discord, observer de Prompt Rules e bandeja permaneceram
 `active/running`, com zero reinicios e uma unica instancia da bandeja. Um
 primeiro probe de `codex queue` excedeu cinco segundos; a verificacao direta
 respondeu em 1,32 s e o `doctor --strict` seguinte terminou integralmente `ok`.
+Uma leitura posterior de `schema-status` encontrou contencao SQLite transitoria
+e retornou `unreadable` uma vez. A repeticao apos tres segundos e uma conexao
+direta somente leitura confirmaram schema 4 e `integrity=ok`; os servicos nao
+reiniciaram. Isso nao foi classificado como corrupcao de dados.
 
 ### Task 069 - Auditoria persistente de despachos automaticos
 
