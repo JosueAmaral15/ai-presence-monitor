@@ -65,11 +65,18 @@ Completed on 2026-11-15:
 - 403 tests passed with 87% aggregate coverage;
 - Ruff, mypy, shell syntax and `git diff --check` passed;
 - wheel and source distribution `0.15.0` built successfully;
-- an isolated installation reported version `0.15.0`, initialized healthy
-  schema 4 and returned a sanitized empty `dispatch-audit` response;
+- a package smoke test reported version `0.15.0`, initialized healthy schema 4
+  and returned a sanitized empty `dispatch-audit` response;
 - the transactional dry-run reported `would_upgrade` from `0.14.0` to
   `0.15.0` using the preserved `0.14.0` rollback wheel.
 
-The installed runtime and its real database were not mutated. A real upgrade
-remains a separate, explicitly authorized operation because schema 4 is not
-readable by runtime `0.14.0`.
+The package smoke test used the unrecognized variable `DB_PATH` instead of
+`PRESENCE_DB_PATH` or an isolated `--env-file`. The application consequently
+loaded the project `.env` and migrated the operational database before the
+authorized runtime upgrade. Runtime `0.14.0` correctly refused schema 4; all
+affected units were stopped without downgrading or deleting data. Task 070
+records the explicitly authorized transactional recovery to runtime `0.15.0`.
+
+Future package smoke tests must create a private temporary environment file
+whose `PRESENCE_DB_PATH` points to the temporary workspace, pass that file with
+`--env-file`, and assert the resolved database path before `init`.
