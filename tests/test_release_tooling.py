@@ -19,6 +19,7 @@ from scripts.release_lib import (
     wheel_metadata,
 )
 from scripts.verify_release import (
+    STATIC_ASSETS,
     _validate_installed_doctor,
     _verify_linux_launcher,
     _verify_reproducible_alarm,
@@ -28,6 +29,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class ReleaseToolingTests(unittest.TestCase):
+    def test_release_requires_first_run_and_distribution_guides(self) -> None:
+        self.assertTrue(
+            {
+                "GETTING-STARTED.md",
+                "PRIMEIROS-PASSOS.md",
+                "DISTRIBUTION-CHANNELS.md",
+            }.issubset(STATIC_ASSETS)
+        )
+
     def test_package_and_runtime_versions_are_synchronized(self) -> None:
         self.assertEqual(project_version(PROJECT_ROOT), __version__)
 

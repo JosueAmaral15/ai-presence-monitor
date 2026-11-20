@@ -64,6 +64,7 @@ Alertas:
 Guia detalhado do `.env` e dos dados necessarios:
 
 - [docs/INDEX.md](docs/INDEX.md)
+- [docs/PRIMEIROS-PASSOS.md](docs/PRIMEIROS-PASSOS.md)
 - [docs/USO-COMO-FERRAMENTA.md](docs/USO-COMO-FERRAMENTA.md)
 - [docs/CONFIGURANDO-ENV.md](docs/CONFIGURANDO-ENV.md)
 - [docs/ENVIRONMENT-GUIDE.md](docs/ENVIRONMENT-GUIDE.md)
@@ -78,13 +79,13 @@ Guia detalhado do `.env` e dos dados necessarios:
 - [docs/SUPPORT.md](docs/SUPPORT.md)
 - [docs/RELEASING.md](docs/RELEASING.md)
 
-Na candidata Linux 0.13.0, valide o sidecar do arquivo canonico, o bundle
+Na release Linux 0.15.1, valide o sidecar do arquivo canonico, o bundle
 extraido e use o instalador incluido:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.13.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.15.1-py3-none-any.whl
 ai-presence --version
 ```
 

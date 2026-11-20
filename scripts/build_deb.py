@@ -102,10 +102,17 @@ def build_debian_package(
         shutil.copy2(PROJECT_ROOT / ".env.example", shared_dir / ".env.example")
         for name in ("README.md", "README.pt-BR.md"):
             shutil.copy2(PROJECT_ROOT / name, doc_dir / name)
-        install_doc = PROJECT_ROOT / "docs" / "INSTALL-DEB.md"
-        if not install_doc.is_file():
-            raise ReleaseError("Debian installation documentation is missing.")
-        shutil.copy2(install_doc, doc_dir / "INSTALL-DEB.md")
+        package_docs = (
+            "INSTALL-DEB.md",
+            "GETTING-STARTED.md",
+            "PRIMEIROS-PASSOS.md",
+            "DISTRIBUTION-CHANNELS.md",
+        )
+        for name in package_docs:
+            source = PROJECT_ROOT / "docs" / name
+            if not source.is_file():
+                raise ReleaseError(f"Debian documentation is missing: {name}.")
+            shutil.copy2(source, doc_dir / name)
         _write_file(doc_dir / "copyright", _copyright_text(), mode=0o644)
         _write_file(
             lintian_dir / PACKAGE_NAME,
@@ -224,7 +231,7 @@ def _manual_text(command: str) -> str:
         "ai-presence-tray": "run the optional graphical system tray",
     }[command]
     return (
-        f".TH {command.upper()} 1 \"04 November 2026\" \"AI Presence Monitor\"\n"
+        f".TH {command.upper()} 1 \"20 November 2026\" \"AI Presence Monitor\"\n"
         ".SH NAME\n"
         f"{command} \\- {description}\n"
         ".SH SYNOPSIS\n"
@@ -303,8 +310,9 @@ License: Apache-2.0
 def _changelog_text(version: str, maintainer: str) -> str:
     return (
         f"{PACKAGE_NAME} ({version}) stable; urgency=medium\n\n"
-        "  * Add the verified Debian, Ubuntu and Linux Mint package.\n\n"
-        f" -- {maintainer}  Wed, 04 Nov 2026 09:00:00 -0300\n"
+        "  * Update the verified Linux package and first-run documentation.\n"
+        "  * Keep automation observers alive after temporary provider errors.\n\n"
+        f" -- {maintainer}  Fri, 20 Nov 2026 14:00:00 -0300\n"
     )
 
 

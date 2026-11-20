@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased - v0.15.0
+## Unreleased - v0.15.1
+
+- Kept the continuous automation observer alive when the Codex App Server
+  temporarily rejects or cannot complete a rate-limit read. The cycle remains
+  fail-closed, records unknown availability and sends no prompt.
+- Added English and Portuguese first-run guides to the repository, canonical
+  Linux bundle and Debian package.
+- Updated release and Debian installation examples for the current artifacts.
+
+## 2026-11-15 - v0.15.0
 
 - Added schema 4 with an append-only, sanitized audit trail for automatic
   Prompt Rule and Availability Recovery transport attempts.

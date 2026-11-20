@@ -1,5 +1,26 @@
 # Security Checklist
 
+## Task 071 - Provider-read resilience
+
+- [x] A temporary Codex App Server account-read failure terminates neither the
+      automation cycle nor the continuous observer process.
+- [x] Prompt Rules remain armed with `unknown` usage evidence and emit no
+      native input while the provider read is unavailable.
+- [x] Availability Recovery retains its persisted transition state and emits
+      no native input while availability is unknown.
+- [x] A later healthy provider read resumes ordinary evaluation without
+      synthetically changing presence clocks or fabricating a recovery event.
+- [x] Provider exception text, account payloads, balances and session IDs are
+      not persisted by this failure path.
+
+### Residual risk
+
+Repeated provider failures can delay both usage-gated Prompt Rules and genuine
+availability recovery. The observer remains alive, but it cannot distinguish a
+temporary App Server defect from an unavailable account until a later healthy
+read. Operators must inspect the service journal when the state remains
+`unknown`; no automatic input is a safer result than an unverified dispatch.
+
 ## Task 069 - Persistent automatic-dispatch audit
 
 - [x] The audit row is claimed before automatic native transport.

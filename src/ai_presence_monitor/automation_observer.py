@@ -8,7 +8,11 @@ from .availability import (
     DefaultAvailabilityProviderFactory,
     SessionTargetState,
 )
-from .codex_app_server import RateLimitSnapshot, read_codex_rate_limits
+from .codex_app_server import (
+    CodexAppServerError,
+    RateLimitSnapshot,
+    read_codex_rate_limits,
+)
 from .codex_evidence import codex_limit_observation_from_snapshot
 from .codex_input import CodexQueueClient
 from .control import ControlStore
@@ -78,10 +82,24 @@ def observe_automations_once(
             QuotaRecoveryObserverResult((), (), ()),
         )
 
-    snapshot = reader(
-        codex_executable=codex_executable,
-        request_timeout=request_timeout,
-    )
+    try:
+        snapshot = reader(
+            codex_executable=codex_executable,
+            request_timeout=request_timeout,
+        )
+    except CodexAppServerError:
+        return AutomationObserverResult(
+            PromptRuleObserverResult(
+                prompt_targets,
+                "unknown",
+                tuple(result for _, _, result in preliminary_results),
+            ),
+            QuotaRecoveryObserverResult(
+                quota_targets,
+                (("availability", "unknown"),),
+                (),
+            ),
+        )
     observation = codex_limit_observation_from_snapshot(
         snapshot,
         ttl_seconds=evidence_ttl_seconds,

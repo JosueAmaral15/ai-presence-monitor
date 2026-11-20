@@ -16,9 +16,21 @@ from scripts.build_deb import (
     _write_gzip,
 )
 from scripts.release_lib import ReleaseError
+from scripts.verify_deb import REQUIRED_PATHS
 
 
 class DebianPackageTests(unittest.TestCase):
+    def test_package_requires_first_run_and_distribution_guides(self) -> None:
+        for name in (
+            "GETTING-STARTED.md",
+            "PRIMEIROS-PASSOS.md",
+            "DISTRIBUTION-CHANNELS.md",
+        ):
+            self.assertIn(
+                f"usr/share/doc/ai-presence-monitor/{name}",
+                REQUIRED_PATHS,
+            )
+
     def test_control_declares_portable_python_package(self) -> None:
         control = _control_text("1.2.3-1", "Maintainer <maintainer@example.test>")
 

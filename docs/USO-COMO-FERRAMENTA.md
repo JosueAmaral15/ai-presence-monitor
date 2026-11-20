@@ -191,6 +191,14 @@ consulta tokens no intervalo mais lento somente quando uma regra condicionada
 esta vencida ou uma recuperacao esta habilitada. A bandeja apenas edita e exibe
 as regras, evitando despacho concorrente entre GUI e servico.
 
+Se o Codex App Server falhar temporariamente ao ler os limites, o observer
+registra a observacao daquele ciclo como desconhecida, mantem regras e
+transicoes armadas e nao envia nenhum prompt. O proximo ciclo saudavel retoma a
+avaliacao normal. Se `systemctl --user is-active
+ai-presence-prompt-rule-observer.service` nao retornar `active`, consulte o
+journal; a versao 0.15.1 impede que essa falha temporaria, por si so, encerre o
+servico.
+
 ### Recuperacao independente de disponibilidade
 
 A aba **Availability recovery** e separada de Prompt Rules. Para cada perfil,

@@ -2,7 +2,7 @@
 
 ## Product Status
 
-AI Presence Monitor 0.15.0 is a Linux prerelease candidate. It is suitable for
+AI Presence Monitor 0.15.1 is a Linux release candidate. It is suitable for
 controlled local evaluation across multiple projects and Linux computers after
 the documented installation and verification gates pass. It is not a hosted
 service, public SaaS, package-index distribution, stable release or multi-tenant
@@ -38,7 +38,7 @@ audio behavior is best effort until validated there.
 - Windows runtime is preserved but disabled and unsupported for this release.
 - Wayland GUI mouse/keyboard fallback is unsupported. Native `codex queue`
   remains the preferred transport when available.
-- Python 3.9 and Python 3.13 or newer are outside the 0.13.0 support contract.
+- Python 3.9 and Python 3.13 or newer are outside the 0.15.1 support contract.
 - Shared multi-user databases and containers are not supported deployment
   targets; containers are package-compatibility test environments only.
 - Public Internet endpoints, inbound web servers and automatic package

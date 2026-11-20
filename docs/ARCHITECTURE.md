@@ -145,6 +145,14 @@ The Codex family interprets the account-level usage permission and uses known
 rate-limit windows only as a fail-closed fallback. Five-hour and weekly limits
 remain adapter details. Unsupported provider families are not constructed.
 
+The shared automation observer treats a temporary Codex App Server read error
+as an unknown provider observation rather than a process failure. In that
+cycle, Prompt Rules retain their preliminary local state, Availability
+Recovery retains its persisted transition state, and neither consumer may
+dispatch. A later successful read re-enters the same state machines normally;
+the error path does not create presence activity or synthesize an
+`unavailable -> available` transition.
+
 Immediately before delayed Availability Recovery or Prompt Rule transport, the
 Codex validator performs `thread/read` with `includeTurns=false` and checks the
 returned exact ID. An unreadable target remains armed as

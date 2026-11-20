@@ -2,6 +2,26 @@
 
 ## Estado atual e tarefas recentes
 
+### Task 071 - Release 0.15.1, pacote Debian e onboarding
+
+**Prioridade**: Critica
+**Status**: em implementacao
+**Plano**: `docs/planning/TASK-071-release-0151-onboarding.md`
+**Objetivo**: corrigir a falha do observer continuo, produzir uma release Linux
+verificavel com `.deb` atualizado e tornar instalacao e primeiro uso claros
+para pessoas sem experiencia previa com o projeto.
+
+- [ ] Tratar falha temporaria do Codex App Server sem encerrar o observer.
+- [ ] Cobrir a recuperacao fail-closed e sem despacho por testes.
+- [ ] Criar guias bilíngues de primeiros passos e solucao de problemas.
+- [ ] Atualizar referencias de versao, instalacao Linux e pacote Debian.
+- [ ] Incluir onboarding no bundle e no `.deb` sem incluir estado privado.
+- [ ] Executar quality gate, matriz Python, lintian e matriz Debian/Ubuntu.
+- [ ] Construir e verificar bundle, arquivo canonico e sidecars limpos.
+- [ ] Validar upgrade operacional `0.15.0 -> 0.15.1` e servicos.
+- [ ] Obter CI hospedado verde no commit candidato.
+- [ ] Promover `develop` para `main`, criar tag e preparar assets de upload.
+
 ### Task 070 - Recuperacao operacional e upgrade para 0.15.0
 
 **Prioridade**: Critica

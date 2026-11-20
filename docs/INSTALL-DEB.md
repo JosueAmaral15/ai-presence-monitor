@@ -16,10 +16,10 @@ bandeja. Essas operacoes permanecem explicitas por usuario.
 Mantenha o `.deb`, seu sidecar `.sha256` e `verify_deb.py` no mesmo diretorio:
 
 ```bash
-sha256sum -c ai-presence-monitor_0.13.0-1_all.deb.sha256
+sha256sum -c ai-presence-monitor_0.15.1-1_all.deb.sha256
 python3 verify_deb.py \
-  ai-presence-monitor_0.13.0-1_all.deb \
-  --expected-version 0.13.0
+  ai-presence-monitor_0.15.1-1_all.deb \
+  --expected-version 0.15.1
 ```
 
 O verificador inspeciona metadados, caminhos, permissoes, commit de origem,
@@ -30,7 +30,7 @@ dependencias e executa um smoke test isolado da CLI e do schema SQLite.
 Use o gerenciador APT para resolver a versao suportada do Python:
 
 ```bash
-sudo apt install ./ai-presence-monitor_0.13.0-1_all.deb
+sudo apt install ./ai-presence-monitor_0.15.1-1_all.deb
 /usr/bin/ai-presence --version
 ```
 
@@ -62,6 +62,13 @@ Edite o arquivo e execute:
 ```bash
 /usr/bin/ai-presence init
 /usr/bin/ai-presence doctor --strict
+```
+
+O pacote instala guias de primeiro uso em ingles e portugues:
+
+```text
+/usr/share/doc/ai-presence-monitor/GETTING-STARTED.md
+/usr/share/doc/ai-presence-monitor/PRIMEIROS-PASSOS.md
 ```
 
 Hooks, observers e automacao continuam seguindo `INSTALL-LINUX.md` e

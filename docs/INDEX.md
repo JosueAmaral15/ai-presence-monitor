@@ -2,6 +2,8 @@
 
 ## Uso
 
+- [Primeiros passos no Linux](PRIMEIROS-PASSOS.md)
+- [Getting started on Linux](GETTING-STARTED.md)
 - [Uso como ferramenta para humanos e AI-workers](USO-COMO-FERRAMENTA.md)
 - [Configuracao rapida do `.env`](CONFIGURANDO-ENV.md)
 - [Protocolo de comandos para AI-workers](AI-WORKER-COMMAND-PROTOCOL.md)
@@ -15,6 +17,7 @@
 - [Upgrade e rollback transacionais](TRANSACTIONAL-UPGRADE.md)
 - [Instalacao Linux e uso multiprojeto](INSTALL-LINUX.md)
 - [Pacote Debian, Ubuntu e Linux Mint](INSTALL-DEB.md)
+- [Canais de distribuicao Linux](DISTRIBUTION-CHANNELS.md)
 - [Suporte e compatibilidade](SUPPORT.md)
 
 ## Projeto
@@ -24,13 +27,14 @@
 - [Decisoes](DECISIONS.md)
 - [Tasks](TASKS.md)
 - [Changelog](CHANGELOG.md)
-- [Processo de release privada Linux](RELEASING.md)
+- [Processo de release Linux](RELEASING.md)
 - [Plano de orientacao para respostas Discord invalidas](planning/TASK-014-discord-reply-guidance.md)
 - [Plano de entrega nativa de respostas Discord](planning/TASK-020-native-discord-answer-routing.md)
 - [Plano do E2E nativo Discord e release Linux](planning/TASK-021-native-discord-e2e-release.md)
 - [Plano da sincronizacao bidirecional do chat Discord](planning/TASK-052-bidirectional-discord-chat-sync.md)
 - [Plano da release Linux 0.12.0](planning/TASK-053-release-0120.md)
 - [Plano do pacote Debian e matriz Linux](planning/TASK-054-debian-package.md)
+- [Plano da release 0.15.1 e onboarding](planning/TASK-071-release-0151-onboarding.md)
 - [Plano de distribuicao publica](planning/TASK-055-public-package-distribution.md)
 - [Plano de sincronizacao segura do historico Codex](planning/TASK-056-secure-codex-history-sync.md)
 - [Avaliacao da skill para Agensi](planning/TASK-057-agensi-skill-assessment.md)

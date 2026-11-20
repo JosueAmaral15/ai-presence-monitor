@@ -2,7 +2,7 @@
 
 ## Supported Installation
 
-AI Presence Monitor 0.10.0 is distributed as a public Linux prerelease bundle.
+AI Presence Monitor 0.15.1 is distributed as a verified Linux release bundle.
 The canonical archive contains a wheel, source archive, configuration template,
 fresh installer, transactional upgrade bootstrap, offline verifier, release
 manifest and `SHA256SUMS`. Bundles from 0.10.4 also contain the executable
@@ -45,7 +45,7 @@ Run the bundled installer:
 
 ```bash
 ./install-linux.sh \
-  --wheel ./ai_presence_monitor-0.10.0-py3-none-any.whl
+  --wheel ./ai_presence_monitor-0.15.1-py3-none-any.whl
 ```
 
 Default locations:

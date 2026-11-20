@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 usage() {
     cat <<'EOF'
 Usage: install-linux.sh --wheel PATH [options]
@@ -22,7 +24,7 @@ python_command="${PYTHON:-python3}"
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 install_root="$data_home/ai-presence-monitor"
-config_template="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env.example"
+config_template="$script_dir/.env.example"
 command_link="$HOME/.local/bin/ai-presence"
 
 while [[ $# -gt 0 ]]; do
@@ -137,4 +139,7 @@ ln -sfn "$installed_command" "$command_link"
 install_complete=true
 printf 'Installed command: %s -> %s\n' "$command_link" "$installed_command"
 printf 'Next: edit %s, then run `ai-presence doctor --strict`.\n' "$config_file"
+if [[ -f "$script_dir/GETTING-STARTED.md" ]]; then
+    printf 'First-run guide: %s\n' "$script_dir/GETTING-STARTED.md"
+fi
 printf 'Services and Codex hooks are not installed automatically.\n'

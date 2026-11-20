@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from ai_presence_monitor.automation_observer import observe_automations_once
 from ai_presence_monitor.codex_app_server import (
+    CodexAppServerError,
     RateLimitSnapshot,
     RateLimitWindowSnapshot,
 )
@@ -42,6 +43,117 @@ class FakeClient:
 
 
 class AutomationObserverTests(unittest.TestCase):
+    def test_temporary_account_read_failure_is_fail_closed_and_recovers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            controls = ControlStore(root / "control.json", ControlSettings())
+            presence = PresenceStore(root / "presence.db")
+            presence.record_event(
+                worker_id="worker-recovery",
+                computer="computer",
+                ia_name="codex",
+                protocol="protocol2",
+                event_type="start",
+            )
+            prompt = configure_prompt_rule(
+                None,
+                enabled=True,
+                thread_id="session-recovery",
+                trigger="after_delay",
+                delay_minutes=1,
+                text="resume after provider recovery",
+                require_usage_available=True,
+                repeat_enabled=False,
+                repeat_interval_minutes=1,
+                now=1_000.0,
+            )
+            quota = configure_quota_recovery_rule(
+                None,
+                window="availability",
+                enabled=True,
+                thread_id="session-recovery",
+                text="resume after availability recovery",
+            )
+            quota = replace(
+                quota,
+                last_state="waiting_for_availability",
+                exhausted_observed_at=900.0,
+            )
+            settings = ControlSettings(
+                task_automation_enabled=True,
+                native_input_enabled=True,
+            )
+            settings = replace_prompt_rules(settings, [prompt])
+            settings = replace_quota_recovery_rules(settings, [quota])
+            controls.save(settings, "worker-recovery")
+            client = FakeClient()
+
+            unavailable = observe_automations_once(
+                control_store=controls,
+                presence_store=presence,
+                evidence_ttl_seconds=600,
+                now=1_060.0,
+                reader=lambda **_: (_ for _ in ()).throw(
+                    CodexAppServerError("temporary provider failure")
+                ),
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "available",
+            )
+
+            self.assertEqual(unavailable.prompt_rules.observation_state, "unknown")
+            self.assertEqual(
+                unavailable.prompt_rules.rule_results[0].state,
+                "waiting_for_usage",
+            )
+            self.assertEqual(
+                unavailable.quota_recovery.window_states,
+                (("availability", "unknown"),),
+            )
+            self.assertEqual(client.calls, [])
+            self.assertTrue(
+                controls.load("worker-recovery").prompt_rules[0].enabled
+            )
+            self.assertEqual(
+                controls.load("worker-recovery").quota_recovery_rules[0].last_state,
+                "waiting_for_availability",
+            )
+
+            available = observe_automations_once(
+                control_store=controls,
+                presence_store=presence,
+                evidence_ttl_seconds=600,
+                now=1_090.0,
+                reader=lambda **_: RateLimitSnapshot(
+                    ordinary_usage_allowed=True,
+                    reached_type=None,
+                    plan_type="plus",
+                    primary=RateLimitWindowSnapshot(0, 2_000, 300),
+                    secondary=RateLimitWindowSnapshot(0, 3_000, 10_080),
+                    has_credits=False,
+                    unlimited_credits=False,
+                    spend_control_reached=False,
+                ),
+                client=client,  # type: ignore[arg-type]
+                session_validator=lambda _: "available",
+            )
+
+            self.assertEqual(available.prompt_rules.observation_state, "usage_available")
+            self.assertEqual(
+                available.prompt_rules.rule_results[0].state,
+                "dispatch_started",
+            )
+            self.assertEqual(
+                available.quota_recovery.rule_results[0].state,
+                "dispatch_started",
+            )
+            self.assertEqual(
+                client.calls,
+                [
+                    ("session-recovery", "resume after provider recovery"),
+                    ("session-recovery", "resume after availability recovery"),
+                ],
+            )
+
     def test_non_usage_rule_is_owned_by_observer_without_account_read(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

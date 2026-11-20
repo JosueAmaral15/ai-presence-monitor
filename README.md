@@ -67,9 +67,11 @@ sent only once per continuous inactivity episode. A valid `start`, `heartbeat`,
 
 ## Documentation
 
-Detailed operational documentation is currently available in Portuguese:
+Operational documentation includes an English first-run guide and detailed
+Portuguese references:
 
 - [Documentation index](docs/INDEX.md)
+- [Getting started on Linux](docs/GETTING-STARTED.md)
 - [Tool usage for humans and AI workers](docs/USO-COMO-FERRAMENTA.md)
 - [Environment setup](docs/CONFIGURANDO-ENV.md)
 - [Environment and architecture guide](docs/ENVIRONMENT-GUIDE.md)
@@ -112,13 +114,13 @@ is never described as proof that Codex interpreted a message.
 
 ## Installation
 
-AI Presence Monitor 0.13.0 is prepared as a checksummed Linux prerelease
+AI Presence Monitor 0.15.1 is prepared as a checksummed Linux release
 bundle. Verify the archive sidecar and extracted bundle before installation:
 
 ```bash
 sha256sum -c SHA256SUMS
 python3 verify_release.py .
-./install-linux.sh --wheel ./ai_presence_monitor-0.13.0-py3-none-any.whl
+./install-linux.sh --wheel ./ai_presence_monitor-0.15.1-py3-none-any.whl
 ai-presence --version
 ```
 
@@ -132,8 +134,8 @@ The same bundle includes an `Architecture: all` Debian package for Debian 12,
 Ubuntu 22.04/24.04 and compatible Linux Mint releases:
 
 ```bash
-sha256sum -c ai-presence-monitor_0.13.0-1_all.deb.sha256
-sudo apt install ./ai-presence-monitor_0.13.0-1_all.deb
+sha256sum -c ai-presence-monitor_0.15.1-1_all.deb.sha256
+sudo apt install ./ai-presence-monitor_0.15.1-1_all.deb
 /usr/bin/ai-presence --version
 ```
 
